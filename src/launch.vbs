@@ -1,4 +1,4 @@
-' Lance Jipeg sans faire clignoter de fenetre de console.
+' Starts the Jipeg converter without flashing a console window.
 Option Explicit
 Dim fso, sh, base, script, cmd, i
 Set fso = CreateObject("Scripting.FileSystemObject")

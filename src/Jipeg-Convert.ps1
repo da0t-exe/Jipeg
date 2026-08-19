@@ -1,26 +1,26 @@
 ﻿<#
-  Jipeg — convertit des images en JPEG avec l'encodeur jpegli.
-  Lance par le menu contextuel de l'Explorateur. Aucune fenetre de reglages :
-  une simple boite de progression aux couleurs de Windows, puis le resultat.
+  Jipeg — converts images to JPEG using Google's jpegli encoder.
+  Started from the Explorer context menu. No settings here: just a progress
+  window that follows the Windows theme, then the result.
 #>
 param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Paths)
 
 $ErrorActionPreference = 'Stop'
-[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
-[void][System.Reflection.Assembly]::LoadWithPartialName('System.Drawing')
+$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $Root 'Jipeg-Common.ps1')
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-$Root    = Split-Path -Parent $MyInvocation.MyCommand.Path
-$Cjpegli = Join-Path $Root 'bin\cjpegli.exe'
-$Quality = 90          # equivalent libjpeg ; 90 = haute qualite, bon defaut
-$Suffixe = '_jipeg'
+$Cjpegli  = Join-Path $Root 'bin\cjpegli.exe'
+$Settings = Get-JipegSettings
+$Theme    = Get-JipegTheme $Settings.theme
+$Suffix   = '_jipeg'
 
 $NativeExt = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.jxl',
                '.ppm', '.pnm', '.pgm', '.pam', '.pfm', '.pgx')
 $GdiExt    = @('.bmp', '.tif', '.tiff', '.ico', '.emf', '.wmf')
 $AllExt    = $NativeExt + $GdiExt
 
-# ------------------------------------------------------------------ entrees
+# ------------------------------------------------------------------- inputs
 function Expand-Inputs([string[]]$in) {
     $out = New-Object System.Collections.Generic.List[string]
     foreach ($p in @($in)) {
@@ -41,10 +41,10 @@ function Expand-Inputs([string[]]$in) {
     return $out
 }
 
-# ----------------------------------------------------- selection multiple
-# L'Explorateur lance une instance par fichier selectionne. La premiere garde un
-# verrou pendant toute sa vie ; les suivantes deposent leurs chemins dans une file
-# et rendent la main, l'instance vivante les recupere et les ajoute au lot.
+# -------------------------------------------------------- multiple selection
+# Explorer starts one process per selected file. The first one keeps a lock for
+# its whole life; the others drop their paths into a shared queue and quit. The
+# live instance picks them up, even after the batch has finished.
 $QueueFile = Join-Path $env:TEMP 'jipeg.queue'
 $LockFile  = Join-Path $env:TEMP 'jipeg.lock'
 $Mutex     = New-Object System.Threading.Mutex($false, 'Local\JipegQueue')
@@ -53,7 +53,7 @@ $Files = New-Object System.Collections.Generic.List[string]
 
 function Open-Lock {
     try { return [System.IO.File]::Open($LockFile, 'CreateNew', 'Write', 'None') } catch { }
-    try { return [System.IO.File]::Open($LockFile, 'Open', 'Write', 'None') } catch { }   # verrou orphelin
+    try { return [System.IO.File]::Open($LockFile, 'Open', 'Write', 'None') } catch { }   # stale lock
     return $null
 }
 function Read-Queue {
@@ -84,8 +84,8 @@ try {
     $script:LockFs = Open-Lock
 } finally { $Mutex.ReleaseMutex() }
 
-if (-not $script:LockFs) { exit }          # une conversion tourne deja, elle prendra le relais
-Start-Sleep -Milliseconds 700              # laisse arriver le reste de la selection
+if (-not $script:LockFs) { exit }          # a conversion is already running, it will take over
+Start-Sleep -Milliseconds 700              # let the rest of the selection arrive
 foreach ($f in @(Read-Queue)) { if ($Files -notcontains $f) { $Files.Add($f) } }
 
 if ($Files.Count -eq 0) {
@@ -94,52 +94,12 @@ if ($Files.Count -eq 0) {
 }
 if (-not (Test-Path -LiteralPath $Cjpegli)) {
     [void][System.Windows.Forms.MessageBox]::Show(
-        "cjpegli.exe est introuvable :`n$Cjpegli`n`nRelance l'installation de Jipeg.",
+        "cjpegli.exe was not found at:`n$Cjpegli`n`nRun the Jipeg installer again.",
         'Jipeg', 'OK', 'Error')
     exit 1
 }
 
-# ------------------------------------------------------------------ theme
-function Test-DarkMode {
-    try {
-        $v = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' `
-              -Name AppsUseLightTheme -ErrorAction Stop).AppsUseLightTheme
-        return ($v -eq 0)
-    } catch { return $false }
-}
-Add-Type -MemberDefinition @'
-[DllImport("dwmapi.dll")] public static extern int  DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int val, int size);
-[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hwnd, int cmd);
-[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
-[DllImport("uxtheme.dll", CharSet=CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string sub, string id);
-'@ -Name 'Dwm' -Namespace 'Jipeg' | Out-Null
-
-$Dark = Test-DarkMode
-if ($Dark) {
-    $ColBack   = [System.Drawing.Color]::FromArgb(32, 32, 32)
-    $ColText   = [System.Drawing.Color]::FromArgb(255, 255, 255)
-    $ColMuted  = [System.Drawing.Color]::FromArgb(160, 160, 160)
-    $ColBtn    = [System.Drawing.Color]::FromArgb(45, 45, 45)
-    $ColBtnHi  = [System.Drawing.Color]::FromArgb(60, 60, 60)
-    $ColBorder = [System.Drawing.Color]::FromArgb(70, 70, 70)
-    $ColPiste  = [System.Drawing.Color]::FromArgb(58, 58, 58)
-} else {
-    $ColBack   = [System.Drawing.SystemColors]::Control
-    $ColText   = [System.Drawing.SystemColors]::ControlText
-    $ColMuted  = [System.Drawing.SystemColors]::GrayText
-    $ColBtn    = [System.Drawing.SystemColors]::Control
-    $ColBtnHi  = [System.Drawing.SystemColors]::ControlLight
-    $ColBorder = [System.Drawing.SystemColors]::ControlDark
-    $ColPiste  = [System.Drawing.SystemColors]::Control
-}
-$UiFont = [System.Drawing.SystemFonts]::MessageBoxFont
-
-# ------------------------------------------------------------------ outils
-function Format-Size([double]$b) {
-    if ($b -lt 1024)    { return ('{0} o' -f [int]$b) }
-    if ($b -lt 1048576) { return ('{0:N0} Ko' -f ($b / 1024)) }
-    return ('{0:N1} Mo' -f ($b / 1048576))
-}
+# -------------------------------------------------------------------- tools
 function Get-FreePath([string]$dir, [string]$base, [string]$ext) {
     $p = Join-Path $dir ($base + $ext)
     $i = 1
@@ -147,7 +107,7 @@ function Get-FreePath([string]$dir, [string]$base, [string]$ext) {
     return $p
 }
 
-# ----------------------------------------------------------------- fenetre
+# ------------------------------------------------------------------- window
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
@@ -156,124 +116,116 @@ $form.ClientSize      = New-Object System.Drawing.Size(430, 158)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ShowInTaskbar   = $true
-$form.BackColor       = $ColBack
-$form.ForeColor       = $ColText
-$form.Font            = $UiFont
-$form.Add_HandleCreated({
-    if ($Dark) {
-        $on = 1
-        # 20 = DWMWA_USE_IMMERSIVE_DARK_MODE (Windows 11 / 10 20H1+), 19 sur les builds anterieurs
-        if ([Jipeg.Dwm]::DwmSetWindowAttribute($form.Handle, 20, [ref]$on, 4) -ne 0) {
-            [void][Jipeg.Dwm]::DwmSetWindowAttribute($form.Handle, 19, [ref]$on, 4)
-        }
-    }
-})
+$form.BackColor       = $Theme.Back
+$form.ForeColor       = $Theme.Text
+$form.Font            = $JipegFont
+$form.Add_HandleCreated({ Set-JipegChrome $form $Theme })
 
-$lblTitre = New-Object System.Windows.Forms.Label
-$lblTitre.SetBounds(16, 16, 398, 20)
-$lblTitre.ForeColor = $ColText
-$lblTitre.Text = 'Préparation…'
-$form.Controls.Add($lblTitre)
+$lblTitle = New-Object System.Windows.Forms.Label
+$lblTitle.SetBounds(16, 16, 398, 20)
+$lblTitle.ForeColor = $Theme.Text
+$lblTitle.Text = 'Getting ready...'
+$form.Controls.Add($lblTitle)
 
-$lblFichier = New-Object System.Windows.Forms.Label
-$lblFichier.SetBounds(16, 38, 398, 18)
-$lblFichier.ForeColor = $ColMuted
-$lblFichier.AutoEllipsis = $true
-$form.Controls.Add($lblFichier)
+$lblFile = New-Object System.Windows.Forms.Label
+$lblFile.SetBounds(16, 38, 398, 18)
+$lblFile.ForeColor = $Theme.Muted
+$lblFile.AutoEllipsis = $true
+$form.Controls.Add($lblFile)
 
-# En sombre, la cuvette native de la ProgressBar est blanche. Le theme
-# DarkMode_Explorer la rend transparente : on pose donc le controle sur un
-# panneau qui fournit la piste, et l'on garde le vrai controle Windows.
-$piste = New-Object System.Windows.Forms.Panel
-$piste.SetBounds(16, 64, 398, 12)
-$piste.BackColor = $ColPiste
-$form.Controls.Add($piste)
+# In dark mode the native progress bar has a white trough. The DarkMode_Explorer
+# theme makes it transparent, so a panel behind it supplies the track and we get
+# to keep the real Windows control. Both are clipped to a pill shape.
+$track = New-Object System.Windows.Forms.Panel
+$track.SetBounds(16, 64, 398, 12)
+$track.BackColor = $Theme.Track
+$form.Controls.Add($track)
 
 $bar = New-Object System.Windows.Forms.ProgressBar
 $bar.SetBounds(0, 0, 398, 12)
-$bar.Style = 'Continuous'
+$bar.Style   = 'Continuous'
 $bar.Minimum = 0
 $bar.Maximum = [math]::Max(1, $Files.Count)
-$piste.Controls.Add($bar)
+$track.Controls.Add($bar)
 
-$lblBilan = New-Object System.Windows.Forms.Label
-$lblBilan.SetBounds(16, 86, 398, 18)
-$lblBilan.ForeColor = $ColMuted
-$form.Controls.Add($lblBilan)
+Set-JipegRounded $track 6
+Set-JipegRounded $bar 6
+
+$lblResult = New-Object System.Windows.Forms.Label
+$lblResult.SetBounds(16, 86, 398, 18)
+$lblResult.ForeColor = $Theme.Muted
+$form.Controls.Add($lblResult)
 
 $btn = New-Object System.Windows.Forms.Button
 $btn.SetBounds(430 - 16 - 96, 114, 96, 30)
-$btn.Text = 'Annuler'
-$btn.Font = $UiFont
-if ($Dark) {
-    $btn.FlatStyle = 'Flat'
-    $btn.BackColor = $ColBtn
-    $btn.ForeColor = $ColText
-    $btn.FlatAppearance.BorderColor = $ColBorder
-    $btn.FlatAppearance.MouseOverBackColor = $ColBtnHi
-}
+$btn.Text = 'Cancel'
+Set-JipegButton $btn $Theme
 $form.Controls.Add($btn)
 $form.CancelButton = $btn
 
-# ----------------------------------------------------------------- moteur
-$script:Index    = 0
-$script:Ok       = 0
-$script:Echecs   = 0
-$script:TotalIn  = 0
-$script:TotalOut = 0
-$script:Annule   = $false
-$script:Fini     = $false
-$script:Proc     = $null
-$script:TmpIn    = $null
-$script:TmpOut   = $null
-$script:Courant  = $null
+# ------------------------------------------------------------------- engine
+$script:Index     = 0
+$script:Done      = 0
+$script:Failed    = 0
+$script:TotalIn   = 0
+$script:TotalOut  = 0
+$script:Cancelled = $false
+$script:Finished  = $false
+$script:Proc      = $null
+$script:TmpIn     = $null
+$script:TmpOut    = $null
+$script:Current   = $null
 
-function Set-Etat {
+function Set-Status {
     $n = $Files.Count
-    $lblTitre.Text = if ($n -eq 1) { 'Conversion en JPEG…' } else { "Conversion en JPEG… ($($script:Index) sur $n)" }
+    if ($n -eq 1) { $lblTitle.Text = 'Converting to JPEG...' }
+    else          { $lblTitle.Text = "Converting to JPEG... ($($script:Index) of $n)" }
     $bar.Value = [math]::Min($bar.Maximum, $script:Index)
 }
 
-function Start-Suivant {
-    if ($script:Annule -or $script:Index -ge $Files.Count) { Complete-Batch; return }
+function Start-Next {
+    if ($script:Cancelled -or $script:Index -ge $Files.Count) { Complete-Batch; return }
     $src = $Files[$script:Index]
-    $script:Courant = $src
-    $lblFichier.Text = [System.IO.Path]::GetFileName($src)
-    Set-Etat
+    $script:Current = $src
+    $lblFile.Text = [System.IO.Path]::GetFileName($src)
+    Set-Status
     try {
         $ext = [System.IO.Path]::GetExtension($src).ToLower()
-        $entree = $src
+        $source = $src
         $script:TmpIn = $null
         if ($GdiExt -contains $ext) {
-            # format que cjpegli ne lit pas : passage intermediaire en PNG
+            # cjpegli cannot read this format: convert to PNG first
             $tmpPng = Join-Path $env:TEMP ('jipeg-in-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
             $fs = [System.IO.File]::OpenRead($src)
             try {
                 $img = [System.Drawing.Image]::FromStream($fs, $true, $false)
                 try { $img.Save($tmpPng, [System.Drawing.Imaging.ImageFormat]::Png) } finally { $img.Dispose() }
             } finally { $fs.Close() }
-            $entree = $tmpPng; $script:TmpIn = $tmpPng
+            $source = $tmpPng; $script:TmpIn = $tmpPng
         }
         $dir = Split-Path -Parent $src
         $script:TmpOut = Join-Path $dir ('.jipeg-{0}.tmp' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
 
+        $cmdArgs = '"{0}" "{1}" -q {2}' -f $source, $script:TmpOut, $Settings.quality
+        if ($Settings.chroma444) { $cmdArgs = $cmdArgs + ' --chroma_subsampling=444' }
+
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName               = $Cjpegli
-        $psi.Arguments              = '"{0}" "{1}" -q {2}' -f $entree, $script:TmpOut, $Quality
+        $psi.Arguments              = $cmdArgs
         $psi.UseShellExecute        = $false
         $psi.CreateNoWindow         = $true
         $psi.RedirectStandardError  = $true
         $psi.RedirectStandardOutput = $true
         $script:Proc = [System.Diagnostics.Process]::Start($psi)
     } catch {
-        $script:Echecs++
+        $script:Failed++
         $script:Index++
         $script:Proc = $null
-        Start-Suivant
+        Start-Next
     }
 }
 
-function Complete-Courant {
+function Complete-Current {
     $code = 999
     try { $code = $script:Proc.ExitCode } catch { }
     try { [void]$script:Proc.StandardError.ReadToEnd(); [void]$script:Proc.StandardOutput.ReadToEnd() } catch { }
@@ -285,117 +237,123 @@ function Complete-Courant {
     }
     if ($code -eq 0 -and (Test-Path -LiteralPath $script:TmpOut)) {
         try {
-            $dir  = Split-Path -Parent $script:Courant
-            $base = [System.IO.Path]::GetFileNameWithoutExtension($script:Courant)
-            $cible = Get-FreePath $dir ($base + $Suffixe) '.jpg'
-            Move-Item -LiteralPath $script:TmpOut -Destination $cible -Force
-            $script:TotalIn  += (Get-Item -LiteralPath $script:Courant).Length
-            $script:TotalOut += (Get-Item -LiteralPath $cible).Length
-            $script:Ok++
-        } catch { $script:Echecs++ }
+            $dir    = Split-Path -Parent $script:Current
+            $base   = [System.IO.Path]::GetFileNameWithoutExtension($script:Current)
+            $target = Get-FreePath $dir ($base + $Suffix) '.jpg'
+            Move-Item -LiteralPath $script:TmpOut -Destination $target -Force
+            $script:TotalIn  += (Get-Item -LiteralPath $script:Current).Length
+            $script:TotalOut += (Get-Item -LiteralPath $target).Length
+            $script:Done++
+        } catch { $script:Failed++ }
     } else {
         Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
-        $script:Echecs++
+        $script:Failed++
     }
     $script:TmpOut = $null
     $script:Index++
 }
 
 function Resume-Batch {
-    # des fichiers sont arrives apres la fin du lot : on repart
-    $script:Fini = $false
-    $sortie.Stop()
-    $btn.Text = 'Annuler'
-    $lblBilan.Text = ''
+    # files arrived after the batch was done: pick the work back up
+    $script:Finished = $false
+    $autoClose.Stop()
+    $btn.Text = 'Cancel'
+    $form.AcceptButton = $null
+    $lblResult.Text = ''
     $bar.Maximum = [math]::Max(1, $Files.Count)
-    Set-Etat
-    $chrono.Start()
+    Set-Status
+    $engine.Start()
 }
 
 function Complete-Batch {
-    if ($script:Fini) { return }
-    $script:Fini = $true
-    $chrono.Stop()
+    if ($script:Finished) { return }
+    $script:Finished = $true
+    $engine.Stop()
     $bar.Value = $bar.Maximum
 
-    if ($script:Ok -gt 0) {
+    if ($script:Done -gt 0) {
         $pc = 0
         if ($script:TotalIn -gt 0) { $pc = [math]::Round(100 - ($script:TotalOut * 100 / $script:TotalIn)) }
-        $signe = [char]0x2212
-        if ($pc -lt 0) { $signe = '+'; $pc = [math]::Abs($pc) }
-        $lblBilan.Text = '{0} {1} {2}   ({3}{4} %)' -f (Format-Size $script:TotalIn), ([char]0x2192),
-                                                       (Format-Size $script:TotalOut), $signe, $pc
+        $sign = [char]0x2212
+        if ($pc -lt 0) { $sign = '+'; $pc = [math]::Abs($pc) }
+        $lblResult.Text = '{0} {1} {2}   ({3}{4}%)' -f (Format-JipegSize $script:TotalIn), ([char]0x2192),
+                                                       (Format-JipegSize $script:TotalOut), $sign, $pc
     }
-    $mot = 'images converties'
-    if ($script:Ok -eq 1) { $mot = 'image convertie' }
-    if ($script:Annule) {
-        $lblTitre.Text = "Annulé — $($script:Ok) $mot"
-    } elseif ($script:Echecs -gt 0) {
-        $ech = 'échecs'; if ($script:Echecs -eq 1) { $ech = 'échec' }
-        $lblTitre.Text = "$($script:Ok) $mot, $($script:Echecs) $ech"
+    $word = 'images'
+    if ($script:Done -eq 1) { $word = 'image' }
+    if ($script:Cancelled) {
+        $lblTitle.Text = "Cancelled - $($script:Done) $word converted"
+    } elseif ($script:Failed -gt 0) {
+        $f = 'failures'; if ($script:Failed -eq 1) { $f = 'failure' }
+        $lblTitle.Text = "$($script:Done) $word converted, $($script:Failed) $f"
     } else {
-        $lblTitre.Text = "$($script:Ok) $mot"
+        $lblTitle.Text = "$($script:Done) $word converted"
     }
-    $lblFichier.Text = ''
-    $btn.Text = 'Fermer'
+    $lblFile.Text = ''
+    $btn.Text = 'OK'
+    $btn.Enabled = $true
+    $form.AcceptButton = $btn
+    $btn.Focus()
 
-    # on ferme tout seul quand tout s'est bien passe ; sinon on laisse lire
-    if (-not $script:Annule -and $script:Echecs -eq 0) {
-        $sortie.Start()
+    # Only dismiss itself when the user asked for that and nothing went wrong.
+    if ($Settings.closeWhenDone -and -not $script:Cancelled -and $script:Failed -eq 0) {
+        $autoClose.Start()
     }
 }
 
-$chrono = New-Object System.Windows.Forms.Timer
-$chrono.Interval = 50
-$chrono.Add_Tick({
+$engine = New-Object System.Windows.Forms.Timer
+$engine.Interval = 50
+$engine.Add_Tick({
     if ($script:Proc -and -not $script:Proc.HasExited) { return }
-    if ($script:Proc) { Complete-Courant }
-    Start-Suivant
+    if ($script:Proc) { Complete-Current }
+    Start-Next
 })
 
-# recupere les fichiers deposes par les instances lancees apres nous
-$veille = New-Object System.Windows.Forms.Timer
-$veille.Interval = 600
-$veille.Add_Tick({
+# picks up files dropped by instances started after this one
+$watcher = New-Object System.Windows.Forms.Timer
+$watcher.Interval = 600
+$watcher.Add_Tick({
     try {
-        $neufs = @(Read-Queue)
-        $ajoutes = 0
-        foreach ($f in $neufs) {
-            if ($Files -notcontains $f) { $Files.Add($f); $ajoutes++ }
+        $incoming = @(Read-Queue)
+        $added = 0
+        foreach ($f in $incoming) {
+            if ($Files -notcontains $f) { $Files.Add($f); $added++ }
         }
-        if ($ajoutes -eq 0) { return }
-        if ($script:Fini) { Resume-Batch } else { $bar.Maximum = [math]::Max(1, $Files.Count); Set-Etat }
+        if ($added -eq 0) { return }
+        if ($script:Finished) { Resume-Batch }
+        else { $bar.Maximum = [math]::Max(1, $Files.Count); Set-Status }
     } catch { }
 })
 
-$sortie = New-Object System.Windows.Forms.Timer
-$sortie.Interval = 1300
-$sortie.Add_Tick({ $sortie.Stop(); $form.Close() })
+$autoClose = New-Object System.Windows.Forms.Timer
+$autoClose.Interval = 1300
+$autoClose.Add_Tick({ $autoClose.Stop(); $form.Close() })
 
 $btn.Add_Click({
-    if ($script:Fini) { $form.Close(); return }
-    $script:Annule = $true
+    if ($script:Finished) { $form.Close(); return }
+    $script:Cancelled = $true
     $btn.Enabled = $false
-    $lblTitre.Text = 'Annulation…'
+    $lblTitle.Text = 'Cancelling...'
 })
 
 $form.Add_Shown({
-    # wscript lance PowerShell fenetre cachee ; Windows transmet ce SW_HIDE a la
-    # premiere fenetre du processus. On impose donc l'affichage nous-memes.
-    [void][Jipeg.Dwm]::ShowWindow($form.Handle, 1)          # SW_SHOWNORMAL
-    [void][Jipeg.Dwm]::SetForegroundWindow($form.Handle)
-    if ($Dark) { [void][Jipeg.Dwm]::SetWindowTheme($bar.Handle, 'DarkMode_Explorer', $null) }
-    $chrono.Start()
-    $veille.Start()
+    Show-JipegWindow $form
+    # Despite the name, this theme class simply gives the flat accent-coloured
+    # fill Windows 11 uses, in both light and dark. Without it the bar falls
+    # back to the legacy green with a white trough.
+    [void][Jipeg.Win]::SetWindowTheme($bar.Handle, 'DarkMode_Explorer', $null)
+    $engine.Start()
+    $watcher.Start()
 })
 $form.Add_FormClosed({
-    $chrono.Stop(); $veille.Stop(); $sortie.Stop()
+    $engine.Stop(); $watcher.Stop(); $autoClose.Stop()
     try {
-        $tardifs = @(Read-Queue) | Where-Object { $Files -notcontains $_ }
-        if ($tardifs.Count -gt 0) {
+        $late = @(Read-Queue) | Where-Object { $Files -notcontains $_ }
+        if ($late.Count -gt 0) {
+            # something landed as we were closing: hand it to a fresh instance
             $vbs = Join-Path $Root 'launch.vbs'
             if (Test-Path -LiteralPath $vbs) {
-                $argv = @('"' + $vbs + '"') + ($tardifs | ForEach-Object { '"' + $_ + '"' })
+                $argv = @('"' + $vbs + '"') + ($late | ForEach-Object { '"' + $_ + '"' })
                 Start-Process wscript.exe -ArgumentList $argv
             }
         }
