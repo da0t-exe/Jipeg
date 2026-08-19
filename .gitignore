@@ -1,0 +1,7 @@
+# fichiers temporaires laisses par une conversion interrompue
+.jipeg-*.tmp
+*_jipeg.jpg
+
+# divers Windows
+Thumbs.db
+desktop.ini
