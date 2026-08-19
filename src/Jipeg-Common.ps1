@@ -4,7 +4,7 @@
 #>
 
 $JipegVersion = '1.1.0'
-$JipegRepo    = 'da0t-exe/jipeg'
+$JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Drawing')
