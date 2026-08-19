@@ -114,7 +114,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(430, 158)
+$form.ClientSize      = New-Object System.Drawing.Size(430, 168)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ShowInTaskbar   = $true
@@ -128,14 +128,15 @@ $form.Add_HandleCreated({
 })
 
 $lblTitle = New-Object System.Windows.Forms.Label
-$lblTitle.SetBounds(16, 16, 398, 20)
+$lblTitle.SetBounds(16, 18, 398, 20)
 $lblTitle.ForeColor = $Theme.Text
-$lblTitle.Text = 'Getting ready...'
+$lblTitle.Font = New-Object System.Drawing.Font($JipegFont, [System.Drawing.FontStyle]::Bold)
+$lblTitle.Text = 'Getting ready…'
 Set-JipegLabel $lblTitle $Theme $Mica
 $form.Controls.Add($lblTitle)
 
 $lblFile = New-Object System.Windows.Forms.Label
-$lblFile.SetBounds(16, 38, 398, 18)
+$lblFile.SetBounds(16, 40, 398, 18)
 $lblFile.ForeColor = $Theme.Muted
 $lblFile.AutoEllipsis = $true
 Set-JipegLabel $lblFile $Theme $Mica
@@ -146,7 +147,7 @@ $form.Controls.Add($lblFile)
 $script:BarValue = 0
 $script:BarMax   = [math]::Max(1, $Files.Count)
 $bar = New-Object System.Windows.Forms.Panel
-$bar.SetBounds(16, 64, 398, 12)
+$bar.SetBounds(16, 68, 398, 10)
 $bar.BackColor = $form.BackColor
 Set-JipegDoubleBuffer $bar
 $bar.Add_Paint({
@@ -177,13 +178,13 @@ function Set-Bar([int]$value) {
 }
 
 $lblResult = New-Object System.Windows.Forms.Label
-$lblResult.SetBounds(16, 86, 398, 18)
-$lblResult.ForeColor = $Theme.Muted
+$lblResult.SetBounds(16, 90, 398, 18)
+$lblResult.ForeColor = $Theme.Text
 Set-JipegLabel $lblResult $Theme $Mica
 $form.Controls.Add($lblResult)
 
 $btn = New-Object System.Windows.Forms.Button
-$btn.SetBounds(430 - 16 - 96, 114, 96, 30)
+$btn.SetBounds(430 - 16 - 100, 122, 100, 30)
 $btn.Text = 'Cancel'
 Set-JipegButton $btn $Theme
 $form.Controls.Add($btn)
@@ -205,8 +206,8 @@ $script:Current   = $null
 
 function Set-Status {
     $n = $Files.Count
-    if ($n -eq 1) { $lblTitle.Text = 'Converting to JPEG...' }
-    else          { $lblTitle.Text = "Converting to JPEG... ($($script:Index) of $n)" }
+    if ($n -eq 1) { $lblTitle.Text = 'Converting to JPEG…' }
+    else          { $lblTitle.Text = "Converting to JPEG… ($($script:Index) of $n)" }
     # recomputed here rather than cached: the batch can grow at any moment, and
     # a stale maximum silently pins the bar at 100%
     $script:BarMax = [math]::Max(1, $n)
@@ -312,7 +313,7 @@ function Complete-Batch {
     $word = 'images'
     if ($script:Done -eq 1) { $word = 'image' }
     if ($script:Cancelled) {
-        $lblTitle.Text = "Cancelled - $($script:Done) $word converted"
+        $lblTitle.Text = "Cancelled — $($script:Done) $word converted"
     } elseif ($script:Failed -gt 0) {
         $f = 'failures'; if ($script:Failed -eq 1) { $f = 'failure' }
         $lblTitle.Text = "$($script:Done) $word converted, $($script:Failed) $f"
@@ -362,7 +363,7 @@ $btn.Add_Click({
     if ($script:Finished) { $form.Close(); return }
     $script:Cancelled = $true
     $btn.Enabled = $false
-    $lblTitle.Text = 'Cancelling...'
+    $lblTitle.Text = 'Cancelling…'
 })
 
 $form.Add_Shown({

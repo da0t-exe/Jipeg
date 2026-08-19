@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.2.0'
+$JipegVersion = '1.2.1'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -149,13 +149,18 @@ function Set-JipegButton($b, $theme) {
 # WinForms check boxes keep a white glyph in dark mode whatever BackColor says,
 # and SetWindowTheme breaks them outright. FlatStyle draws the box from the
 # control's own colours instead, which is the only combination that stays dark.
-function Set-JipegCheck($chk, $theme) {
+function Set-JipegCheck($chk, $theme, $back = $null) {
     $chk.ForeColor = $theme.Text
-    if ($theme.Dark) {
-        $chk.FlatStyle = 'Flat'
-        $chk.BackColor = $theme.Panel
-        $chk.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(140, 140, 140)
-    }
+    if (-not $theme.Dark) { return }
+    $chk.FlatStyle = 'Flat'
+    # never transparent: the flat renderer fills the glyph from BackColor, and a
+    # transparent one comes out as a solid white square
+    if ($null -eq $back) { $back = $theme.Panel }
+    $chk.BackColor = $back
+    # FlatAppearance.CheckedBackColor has no effect on the glyph, so a ticked box
+    # stays light with a dark tick. Unticked is the common state and this is the
+    # only style that keeps it dark.
+    $chk.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(140, 140, 140)
 }
 
 function New-JipegRoundPath([single]$x, [single]$y, [single]$w, [single]$h, [single]$radius) {

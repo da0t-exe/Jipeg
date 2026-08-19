@@ -192,64 +192,73 @@ if ($Silent) {
 
 # ------------------------------------------------------------------- window
 $Theme = Get-JipegTheme 'auto'
+$Mica  = Test-JipegMica $Theme
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Install Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(470, 250)
+$form.ClientSize      = New-Object System.Drawing.Size(470, 232)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
-$form.BackColor       = $Theme.Back
 $form.ForeColor       = $Theme.Text
 $form.Font            = $JipegFont
-$form.Add_HandleCreated({ Set-JipegChrome $form $Theme })
+if ($Mica) { $form.BackColor = [System.Drawing.Color]::Black } else { $form.BackColor = $Theme.Back }
+$form.Add_HandleCreated({
+    Set-JipegChrome $form $Theme
+    if ($Mica) { [void](Set-JipegMica $form $Theme) }
+})
 
 $lbl1 = New-Object System.Windows.Forms.Label
 $lbl1.SetBounds(16, 16, 438, 40)
 $lbl1.ForeColor = $Theme.Text
-$lbl1.Text = "Jipeg adds ""$Verb"" to the right-click menu on images and converts them with Google's jpegli encoder."
+$Quote1 = [char]0x201C
+$Quote2 = [char]0x201D
+$lbl1.Text = 'Jipeg adds {0}{1}{2} to the right-click menu on images and converts them with Google''s jpegli encoder.' -f $Quote1, $Verb, $Quote2
+Set-JipegLabel $lbl1 $Theme $Mica
 $form.Controls.Add($lbl1)
 
 $lbl2 = New-Object System.Windows.Forms.Label
 $lbl2.SetBounds(16, 62, 438, 36)
 $lbl2.ForeColor = $Theme.Muted
 $lbl2.Text = "Installs to: $Dest" + [Environment]::NewLine + 'No administrator rights required.'
+Set-JipegLabel $lbl2 $Theme $Mica
 $form.Controls.Add($lbl2)
 
 $IsWin11 = ([Environment]::OSVersion.Version.Build -ge 22000)
 $chk = New-Object System.Windows.Forms.CheckBox
-$chk.SetBounds(16, 106, 438, 22)
+$chk.SetBounds(16, 108, 438, 22)
 $chk.Checked = $IsWin11
 $chk.Enabled = $IsWin11
 $chk.Text = 'Show the entry directly in the right-click menu'
-Set-JipegCheck $chk $Theme
-$chk.BackColor = $Theme.Back
+Set-JipegCheck $chk $Theme $Theme.Back
 if (-not $IsWin11) { $chk.Text = 'Classic context menu - not needed on this Windows'; $chk.ForeColor = $Theme.Muted }
 $form.Controls.Add($chk)
 
 $lblChk = New-Object System.Windows.Forms.Label
-$lblChk.SetBounds(35, 128, 419, 34)
+$lblChk.SetBounds(35, 132, 419, 34)
 $lblChk.ForeColor = $Theme.Muted
-$lblChk.Text = 'Otherwise Windows 11 hides it under "Show more options".' + [Environment]::NewLine +
-               'Explorer restarts briefly.'
+$lblChk.Text = ('Otherwise Windows 11 hides it under {0}Show more options{1}.' -f $Quote1, $Quote2) +
+               [Environment]::NewLine + 'Explorer restarts briefly.'
 if (-not $IsWin11) { $lblChk.Text = 'Your Windows already shows the full menu.' }
+Set-JipegLabel $lblChk $Theme $Mica
 $form.Controls.Add($lblChk)
 
 $lblState = New-Object System.Windows.Forms.Label
-$lblState.SetBounds(16, 206, 210, 20)
+$lblState.SetBounds(16, 191, 240, 20)
 $lblState.ForeColor = $Theme.Muted
+Set-JipegLabel $lblState $Theme $Mica
 $form.Controls.Add($lblState)
 
 $btnGo = New-Object System.Windows.Forms.Button
-$btnGo.SetBounds(470 - 16 - 96 - 8 - 110, 200, 110, 30)
+$btnGo.SetBounds(470 - 16 - 96 - 8 - 96, 186, 96, 30)
 $btnGo.Text = 'Install'
 Set-JipegButton $btnGo $Theme
 $form.Controls.Add($btnGo)
 Set-JipegRounded $btnGo 5
 
 $btnNo = New-Object System.Windows.Forms.Button
-$btnNo.SetBounds(470 - 16 - 96, 200, 96, 30)
+$btnNo.SetBounds(470 - 16 - 96, 186, 96, 30)
 $btnNo.Text = 'Cancel'
 Set-JipegButton $btnNo $Theme
 $btnNo.Add_Click({ $form.Close() })
@@ -270,7 +279,7 @@ $btnGo.Add_Click({
         $form.Cursor = 'Default'
         [void][System.Windows.Forms.MessageBox]::Show(
             'Jipeg is installed.' + [Environment]::NewLine + [Environment]::NewLine +
-            "Right-click an image  ->  $Verb",
+            "Right-click an image   →   $Verb",
             'Jipeg', 'OK', 'Information')
         $form.Close()
     } catch {
