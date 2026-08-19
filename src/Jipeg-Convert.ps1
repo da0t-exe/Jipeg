@@ -108,6 +108,8 @@ function Get-FreePath([string]$dir, [string]$base, [string]$ext) {
 }
 
 # ------------------------------------------------------------------- window
+$Mica = ($Settings.mica -and (Test-JipegMica $Theme))
+
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
@@ -116,44 +118,68 @@ $form.ClientSize      = New-Object System.Drawing.Size(430, 158)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ShowInTaskbar   = $true
-$form.BackColor       = $Theme.Back
 $form.ForeColor       = $Theme.Text
 $form.Font            = $JipegFont
-$form.Add_HandleCreated({ Set-JipegChrome $form $Theme })
+if ($Mica) { $form.BackColor = [System.Drawing.Color]::Black } else { $form.BackColor = $Theme.Back }
+Set-JipegDoubleBuffer $form
+$form.Add_HandleCreated({
+    Set-JipegChrome $form $Theme
+    if ($Mica) { [void](Set-JipegMica $form $Theme) }
+})
 
 $lblTitle = New-Object System.Windows.Forms.Label
 $lblTitle.SetBounds(16, 16, 398, 20)
 $lblTitle.ForeColor = $Theme.Text
 $lblTitle.Text = 'Getting ready...'
+Set-JipegLabel $lblTitle $Theme $Mica
 $form.Controls.Add($lblTitle)
 
 $lblFile = New-Object System.Windows.Forms.Label
 $lblFile.SetBounds(16, 38, 398, 18)
 $lblFile.ForeColor = $Theme.Muted
 $lblFile.AutoEllipsis = $true
+Set-JipegLabel $lblFile $Theme $Mica
 $form.Controls.Add($lblFile)
 
-# In dark mode the native progress bar has a white trough. The DarkMode_Explorer
-# theme makes it transparent, so a panel behind it supplies the track and we get
-# to keep the real Windows control. Both are clipped to a pill shape.
-$track = New-Object System.Windows.Forms.Panel
-$track.SetBounds(16, 64, 398, 12)
-$track.BackColor = $Theme.Track
-$form.Controls.Add($track)
+# The native ProgressBar animates its fill and cannot be recoloured reliably,
+# so the bar is drawn here: one flat accent colour, rounded, no animation.
+$script:BarValue = 0
+$script:BarMax   = [math]::Max(1, $Files.Count)
+$bar = New-Object System.Windows.Forms.Panel
+$bar.SetBounds(16, 64, 398, 12)
+$bar.BackColor = $form.BackColor
+Set-JipegDoubleBuffer $bar
+$bar.Add_Paint({
+    $g = $_.Graphics
+    $g.SmoothingMode = 'AntiAlias'
+    $w = $this.Width; $h = $this.Height
+    $track = New-JipegRoundPath 0 0 $w $h ($h / 2)
+    $tb = New-Object System.Drawing.SolidBrush($Theme.Track)
+    $g.FillPath($tb, $track); $tb.Dispose(); $track.Dispose()
+    # Plain comparisons on purpose: [math]::Min(1, $frac) would pick the
+    # Min(int, int) overload and round $frac to 0 before comparing.
+    $frac = 0.0
+    if ($script:BarMax -gt 0) { $frac = [double]$script:BarValue / [double]$script:BarMax }
+    if ($frac -lt 0.0) { $frac = 0.0 }
+    if ($frac -gt 1.0) { $frac = 1.0 }
+    $fw = [int][math]::Round([double]$w * $frac)
+    if ($fw -ge 2) {
+        $fill = New-JipegRoundPath 0 0 $fw $h ($h / 2)
+        $fb = New-Object System.Drawing.SolidBrush($Theme.Accent)
+        $g.FillPath($fb, $fill); $fb.Dispose(); $fill.Dispose()
+    }
+})
+$form.Controls.Add($bar)
 
-$bar = New-Object System.Windows.Forms.ProgressBar
-$bar.SetBounds(0, 0, 398, 12)
-$bar.Style   = 'Continuous'
-$bar.Minimum = 0
-$bar.Maximum = [math]::Max(1, $Files.Count)
-$track.Controls.Add($bar)
-
-Set-JipegRounded $track 6
-Set-JipegRounded $bar 6
+function Set-Bar([int]$value) {
+    $script:BarValue = $value
+    $bar.Invalidate()
+}
 
 $lblResult = New-Object System.Windows.Forms.Label
 $lblResult.SetBounds(16, 86, 398, 18)
 $lblResult.ForeColor = $Theme.Muted
+Set-JipegLabel $lblResult $Theme $Mica
 $form.Controls.Add($lblResult)
 
 $btn = New-Object System.Windows.Forms.Button
@@ -161,6 +187,7 @@ $btn.SetBounds(430 - 16 - 96, 114, 96, 30)
 $btn.Text = 'Cancel'
 Set-JipegButton $btn $Theme
 $form.Controls.Add($btn)
+Set-JipegRounded $btn 5
 $form.CancelButton = $btn
 
 # ------------------------------------------------------------------- engine
@@ -180,7 +207,10 @@ function Set-Status {
     $n = $Files.Count
     if ($n -eq 1) { $lblTitle.Text = 'Converting to JPEG...' }
     else          { $lblTitle.Text = "Converting to JPEG... ($($script:Index) of $n)" }
-    $bar.Value = [math]::Min($bar.Maximum, $script:Index)
+    # recomputed here rather than cached: the batch can grow at any moment, and
+    # a stale maximum silently pins the bar at 100%
+    $script:BarMax = [math]::Max(1, $n)
+    Set-Bar $script:Index
 }
 
 function Start-Next {
@@ -260,7 +290,6 @@ function Resume-Batch {
     $btn.Text = 'Cancel'
     $form.AcceptButton = $null
     $lblResult.Text = ''
-    $bar.Maximum = [math]::Max(1, $Files.Count)
     Set-Status
     $engine.Start()
 }
@@ -269,7 +298,8 @@ function Complete-Batch {
     if ($script:Finished) { return }
     $script:Finished = $true
     $engine.Stop()
-    $bar.Value = $bar.Maximum
+    $script:BarMax = [math]::Max(1, $Files.Count)
+    Set-Bar $script:BarMax
 
     if ($script:Done -gt 0) {
         $pc = 0
@@ -320,8 +350,7 @@ $watcher.Add_Tick({
             if ($Files -notcontains $f) { $Files.Add($f); $added++ }
         }
         if ($added -eq 0) { return }
-        if ($script:Finished) { Resume-Batch }
-        else { $bar.Maximum = [math]::Max(1, $Files.Count); Set-Status }
+        if ($script:Finished) { Resume-Batch } else { Set-Status }
     } catch { }
 })
 
@@ -338,10 +367,6 @@ $btn.Add_Click({
 
 $form.Add_Shown({
     Show-JipegWindow $form
-    # Despite the name, this theme class simply gives the flat accent-coloured
-    # fill Windows 11 uses, in both light and dark. Without it the bar falls
-    # back to the legacy green with a white trough.
-    [void][Jipeg.Win]::SetWindowTheme($bar.Handle, 'DarkMode_Explorer', $null)
     $engine.Start()
     $watcher.Start()
 })

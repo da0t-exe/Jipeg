@@ -3,14 +3,16 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.1.0'
+$JipegVersion = '1.2.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Drawing')
 
 Add-Type -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)] public struct MARGINS { public int Left, Right, Top, Bottom; }
 [DllImport("dwmapi.dll")] public static extern int  DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int val, int size);
+[DllImport("dwmapi.dll")] public static extern int  DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS m);
 [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hwnd, int cmd);
 [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
 [DllImport("uxtheme.dll", CharSet=CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string sub, string id);
@@ -25,6 +27,7 @@ function Get-JipegDefaults {
         quality       = 90          # libjpeg scale, 1..100
         chroma444     = $false      # keep full colour detail (bigger files)
         closeWhenDone = $false      # dismiss the progress window automatically
+        mica          = $true       # translucent Mica window background
     }
 }
 
@@ -57,6 +60,22 @@ function Test-SystemDark {
     } catch { return $false }
 }
 
+# Windows keeps eight shades of the user's accent colour, light to dark. The
+# light ones read well on a dark background and vice versa, which is exactly
+# what Windows itself picks from.
+function Get-JipegAccent([bool]$dark) {
+    $fallback = [System.Drawing.Color]::FromArgb(255, 76, 148, 255)
+    try {
+        $pal = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent' `
+                -Name AccentPalette -ErrorAction Stop).AccentPalette
+        if ($pal.Length -lt 32) { return $fallback }
+        $i = 4      # a deeper shade, for light backgrounds
+        if ($dark) { $i = 2 }
+        $o = $i * 4
+        return [System.Drawing.Color]::FromArgb(255, $pal[$o], $pal[$o + 1], $pal[$o + 2])
+    } catch { return $fallback }
+}
+
 function Get-JipegTheme([string]$preference) {
     $dark = switch ($preference) {
         'dark'  { $true }
@@ -74,6 +93,7 @@ function Get-JipegTheme([string]$preference) {
             Edge    = [System.Drawing.Color]::FromArgb(70, 70, 70)
             Track   = [System.Drawing.Color]::FromArgb(58, 58, 58)
             Field   = [System.Drawing.Color]::FromArgb(45, 45, 45)
+            Accent  = Get-JipegAccent $true
         }
     }
     return @{
@@ -86,6 +106,7 @@ function Get-JipegTheme([string]$preference) {
         Edge    = [System.Drawing.Color]::FromArgb(205, 205, 205)
         Track   = [System.Drawing.Color]::FromArgb(222, 222, 222)
         Field   = [System.Drawing.Color]::FromArgb(255, 255, 255)
+        Accent  = Get-JipegAccent $false
     }
 }
 
@@ -107,6 +128,10 @@ function Set-JipegChrome($form, $theme) {
 function Show-JipegWindow($form) {
     [void][Jipeg.Win]::ShowWindow($form.Handle, 1)      # SW_SHOWNORMAL
     [void][Jipeg.Win]::SetForegroundWindow($form.Handle)
+}
+
+function Set-JipegLabel($lbl, $theme, [bool]$mica) {
+    if ($mica) { $lbl.BackColor = [System.Drawing.Color]::Transparent }
 }
 
 function Set-JipegButton($b, $theme) {
@@ -133,21 +158,52 @@ function Set-JipegCheck($chk, $theme) {
     }
 }
 
+function New-JipegRoundPath([single]$x, [single]$y, [single]$w, [single]$h, [single]$radius) {
+    $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+    $d = [math]::Min([double]$radius, [double][math]::Min($w, $h) / 2.0) * 2.0
+    if ($d -le 0) {
+        $path.AddRectangle((New-Object System.Drawing.RectangleF($x, $y, $w, $h)))
+        return $path
+    }
+    $path.AddArc($x, $y, $d, $d, 180, 90)
+    $path.AddArc($x + $w - $d, $y, $d, $d, 270, 90)
+    $path.AddArc($x + $w - $d, $y + $h - $d, $d, $d, 0, 90)
+    $path.AddArc($x, $y + $h - $d, $d, $d, 90, 90)
+    $path.CloseFigure()
+    return $path
+}
+
+function Set-JipegDoubleBuffer($ctrl) {
+    $p = $ctrl.GetType().GetProperty('DoubleBuffered', [System.Reflection.BindingFlags]'Instance,NonPublic')
+    if ($p) { $p.SetValue($ctrl, $true, $null) }
+}
+
+# Mica draws the desktop through the window. Its tint comes from the *system*
+# light/dark setting, not ours, so it is only used when the two agree -
+# otherwise a dark backdrop would sit behind light controls. Needs Windows 11
+# 22H2 for the backdrop attribute, and a black client area as the glass key.
+function Test-JipegMica($theme) {
+    if ([Environment]::OSVersion.Version.Build -lt 22621) { return $false }
+    return ($theme.Dark -eq (Test-SystemDark))
+}
+
+# DWM keys the glass on black pixels, so the form background must be black and
+# labels transparent. Nothing else in the UI is pure black, so nothing else
+# disappears.
+function Set-JipegMica($form, $theme) {
+    if (-not (Test-JipegMica $theme)) { return $false }
+    $type = 2                                    # DWMSBT_MAINWINDOW (Mica)
+    if ([Jipeg.Win]::DwmSetWindowAttribute($form.Handle, 38, [ref]$type, 4) -ne 0) { return $false }
+    $m = New-Object Jipeg.Win+MARGINS
+    $m.Left = -1; $m.Right = -1; $m.Top = -1; $m.Bottom = -1
+    if ([Jipeg.Win]::DwmExtendFrameIntoClientArea($form.Handle, [ref]$m) -ne 0) { return $false }
+    return $true
+}
+
 function Set-JipegRounded($ctrl, [single]$radius) {
     $w = $ctrl.Width; $h = $ctrl.Height
     if ($w -le 0 -or $h -le 0) { return }
-    $r = [math]::Min($radius, [math]::Min($w, $h) / 2)
-    $d = $r * 2
-    $path = New-Object System.Drawing.Drawing2D.GraphicsPath
-    if ($r -le 0) {
-        $path.AddRectangle((New-Object System.Drawing.RectangleF(0, 0, $w, $h)))
-    } else {
-        $path.AddArc(0, 0, $d, $d, 180, 90)
-        $path.AddArc($w - $d, 0, $d, $d, 270, 90)
-        $path.AddArc($w - $d, $h - $d, $d, $d, 0, 90)
-        $path.AddArc(0, $h - $d, $d, $d, 90, 90)
-        $path.CloseFigure()
-    }
+    $path = New-JipegRoundPath 0 0 $w $h $radius
     $ctrl.Region = New-Object System.Drawing.Region($path)
     $path.Dispose()
 }

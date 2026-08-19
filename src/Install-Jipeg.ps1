@@ -30,7 +30,7 @@ function New-JipegIcon([string]$outPath) {
         $bmp = New-Object System.Drawing.Bitmap($s, $s)
         $g = [System.Drawing.Graphics]::FromImage($bmp)
         $g.SmoothingMode = 'AntiAlias'; $g.TextRenderingHint = 'AntiAliasGridFit'
-        $r = [math]::Max(2, $s * 0.23)
+        $r = [math]::Max(2.0, [double]$s * 0.23)
         $d = $r * 2
         $gp = New-Object System.Drawing.Drawing2D.GraphicsPath
         $gp.AddArc(0, 0, $d, $d, 180, 90)
@@ -246,6 +246,7 @@ $btnGo.SetBounds(470 - 16 - 96 - 8 - 110, 200, 110, 30)
 $btnGo.Text = 'Install'
 Set-JipegButton $btnGo $Theme
 $form.Controls.Add($btnGo)
+Set-JipegRounded $btnGo 5
 
 $btnNo = New-Object System.Windows.Forms.Button
 $btnNo.SetBounds(470 - 16 - 96, 200, 96, 30)
@@ -253,6 +254,7 @@ $btnNo.Text = 'Cancel'
 Set-JipegButton $btnNo $Theme
 $btnNo.Add_Click({ $form.Close() })
 $form.Controls.Add($btnNo)
+Set-JipegRounded $btnNo 5
 $form.CancelButton = $btnNo
 $form.AcceptButton = $btnGo
 

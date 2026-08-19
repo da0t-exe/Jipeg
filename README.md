@@ -29,8 +29,9 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 - Right-click a **folder** to take every image inside it.
 - The original is **never** modified or deleted. The result is written next to it with a
   `_jipeg` suffix (`photo.png` → `photo_jipeg.jpg`).
-- The window shows progress, then the result (`697 KB → 214 KB (−69%)`) and waits for you
-  to click **OK**. **Cancel** stops the batch after the current file.
+- The window shows progress in your Windows accent colour, then the result
+  (`697 KB → 214 KB (−69%)`), and waits for you to click **OK**. **Cancel** stops the batch
+  after the current file.
 
 ## Settings
 
@@ -43,6 +44,7 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 | **JPEG quality** | libjpeg scale. 90 is the default; 78 is light enough for the web, 96 is close to lossless. |
 | **Keep full colour detail (4:4:4)** | Disables chroma subsampling. Worth it for screenshots, text and sharp colour edges; files get larger. Pointless on photographs. |
 | **Theme** | Follow Windows, or force Light or Dark. |
+| **Translucent window background (Mica)** | The Windows 11 Mica material behind the windows. Ignored when the theme is forced to the opposite of the Windows one. |
 | **Close the window automatically** | Off by default, so the result stays until you dismiss it. |
 | **Check for updates** | Asks GitHub whether a newer release exists and offers to open the download page. It never downloads or runs anything on its own. |
 
@@ -91,12 +93,24 @@ window closes it hands those files to a fresh instance instead of losing them.
 
 ### Why it looks the way it does
 
-Every window uses real Windows controls, so it inherits the system font, the accent colour and
-the rounded corners Windows 11 draws itself. Two things needed help: the native progress bar
-has a white trough in dark mode, so the `DarkMode_Explorer` theme class is applied to it and a
-panel behind supplies the track; and check boxes keep a white glyph whatever you set, so in
-dark mode they are switched to `FlatStyle`. Acrylic and Mica backdrops were tried and dropped —
-standard controls do not composite correctly on glass.
+Every window uses real Windows controls, so it inherits the system font and the rounded corners
+Windows 11 draws itself. Four things needed help:
+
+- **Mica.** The window background is the translucent Mica material, applied through
+  `DWMWA_SYSTEMBACKDROP_TYPE` with the client area extended into the frame. DWM keys the glass
+  on black pixels, so the form background is black and labels are transparent — nothing else in
+  the UI is pure black, so nothing else disappears. Buttons must be `FlatStyle` with their own
+  background, otherwise the themed renderer leaves an opaque halo around them. Mica is only used
+  when the chosen theme matches the Windows theme, because its tint comes from the system
+  setting rather than ours.
+- **The progress bar is drawn, not native.** The stock `ProgressBar` animates its fill, cannot
+  be recoloured reliably, and has a white trough in dark mode. This one is a rounded rectangle
+  in a single flat colour that never animates.
+- **The colour is yours.** It comes from the Windows accent palette in the registry — a light
+  shade on dark backgrounds, a deeper one on light, the same way Windows picks.
+- **Check boxes** keep a white glyph whatever `BackColor` says, and `SetWindowTheme` breaks them
+  outright, so in dark mode they switch to `FlatStyle`. `NumericUpDown` cannot be darkened at
+  all, which is why quality is a drop-down.
 
 ## Layout
 

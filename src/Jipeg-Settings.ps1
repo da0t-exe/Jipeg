@@ -10,6 +10,7 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Settings = Get-JipegSettings
 $Theme    = Get-JipegTheme $Settings.theme
 $Bold     = New-Object System.Drawing.Font($JipegFont, [System.Drawing.FontStyle]::Bold)
+$Mica     = ($Settings.mica -and (Test-JipegMica $Theme))
 
 function Quality-Label([int]$q) {
     if ($q -ge 99) { return "$q - maximum, very large files" }
@@ -27,13 +28,16 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg Settings'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(480, 470)
+$form.ClientSize      = New-Object System.Drawing.Size(480, 500)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
-$form.BackColor       = $Theme.Back
 $form.ForeColor       = $Theme.Text
 $form.Font            = $JipegFont
-$form.Add_HandleCreated({ Set-JipegChrome $form $Theme })
+if ($Mica) { $form.BackColor = [System.Drawing.Color]::Black } else { $form.BackColor = $Theme.Back }
+$form.Add_HandleCreated({
+    Set-JipegChrome $form $Theme
+    if ($Mica) { [void](Set-JipegMica $form $Theme) }
+})
 $icoPath = Join-Path $Root 'jipeg.ico'
 if (Test-Path -LiteralPath $icoPath) { try { $form.Icon = New-Object System.Drawing.Icon($icoPath) } catch { } }
 
@@ -43,6 +47,7 @@ function New-Section([string]$text, [int]$y) {
     $l.Font = $Bold
     $l.ForeColor = $Theme.Text
     $l.Text = $text
+    Set-JipegLabel $l $Theme $Mica
     $form.Controls.Add($l)
 }
 function New-Card([int]$y, [int]$h) {
@@ -102,7 +107,7 @@ $card1.Controls.Add($chk444)
 
 # --------------------------------------------------------------- appearance
 New-Section 'Appearance' 170
-$card2 = New-Card 192 74
+$card2 = New-Card 192 104
 
 $lblT = New-Object System.Windows.Forms.Label
 $lblT.SetBounds(16, 16, 200, 20)
@@ -122,9 +127,16 @@ $card2.Controls.Add($cmbT)
 
 [void](New-Hint 'Changing this takes effect the next time a window opens.' 16 44 416 $card2)
 
+$chkMica = New-Object System.Windows.Forms.CheckBox
+$chkMica.SetBounds(16, 70, 416, 20)
+$chkMica.Text = 'Translucent window background (Mica)'
+$chkMica.Checked = [bool]$Settings.mica
+Set-JipegCheck $chkMica $Theme
+$card2.Controls.Add($chkMica)
+
 # ------------------------------------------------------------------ finish
-New-Section 'When a conversion finishes' 280
-$card3 = New-Card 302 66
+New-Section 'When a conversion finishes' 310
+$card3 = New-Card 332 66
 
 $chkClose = New-Object System.Windows.Forms.CheckBox
 $chkClose.SetBounds(16, 12, 416, 20)
@@ -136,22 +148,25 @@ $card3.Controls.Add($chkClose)
 
 # ----------------------------------------------------------------- version
 $lblVer = New-Object System.Windows.Forms.Label
-$lblVer.SetBounds(16, 384, 240, 18)
+$lblVer.SetBounds(16, 414, 240, 18)
 $lblVer.ForeColor = $Theme.Text
 $lblVer.Text = "Jipeg $JipegVersion"
+Set-JipegLabel $lblVer $Theme $Mica
 $form.Controls.Add($lblVer)
 
 $lblUpd = New-Object System.Windows.Forms.Label
-$lblUpd.SetBounds(16, 404, 290, 18)
+$lblUpd.SetBounds(16, 434, 290, 18)
 $lblUpd.ForeColor = $Theme.Muted
 $lblUpd.Text = ''
+Set-JipegLabel $lblUpd $Theme $Mica
 $form.Controls.Add($lblUpd)
 
 $btnUpd = New-Object System.Windows.Forms.Button
-$btnUpd.SetBounds(314, 380, 150, 28)
+$btnUpd.SetBounds(314, 410, 150, 28)
 $btnUpd.Text = 'Check for updates'
 Set-JipegButton $btnUpd $Theme
 $form.Controls.Add($btnUpd)
+Set-JipegRounded $btnUpd 5
 
 $script:NewUrl = $null
 $btnUpd.Add_Click({
@@ -176,17 +191,19 @@ $btnUpd.Add_Click({
 
 # --------------------------------------------------------------- OK/Cancel
 $btnOK = New-Object System.Windows.Forms.Button
-$btnOK.SetBounds(276, 424, 90, 30)
+$btnOK.SetBounds(276, 454, 90, 30)
 $btnOK.Text = 'OK'
 Set-JipegButton $btnOK $Theme
 $form.Controls.Add($btnOK)
+Set-JipegRounded $btnOK 5
 
 $btnCancel = New-Object System.Windows.Forms.Button
-$btnCancel.SetBounds(374, 424, 90, 30)
+$btnCancel.SetBounds(374, 454, 90, 30)
 $btnCancel.Text = 'Cancel'
 Set-JipegButton $btnCancel $Theme
 $btnCancel.Add_Click({ $form.Close() })
 $form.Controls.Add($btnCancel)
+Set-JipegRounded $btnCancel 5
 $form.AcceptButton = $btnOK
 $form.CancelButton = $btnCancel
 
@@ -194,6 +211,7 @@ $btnOK.Add_Click({
     $Settings.quality       = [int]$QualityValues[$cmbQ.SelectedIndex]
     $Settings.chroma444     = [bool]$chk444.Checked
     $Settings.closeWhenDone = [bool]$chkClose.Checked
+    $Settings.mica          = [bool]$chkMica.Checked
     $Settings.theme         = switch ($cmbT.SelectedIndex) { 1 { 'light' } 2 { 'dark' } default { 'auto' } }
     try {
         Save-JipegSettings $Settings
