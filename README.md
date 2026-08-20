@@ -74,10 +74,12 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 
 ## Supported formats
 
-PNG, APNG, JPEG, GIF, JXL, PPM/PNM/PGM/PAM/PFM directly;
-BMP, TIFF and ICO through an automatic intermediate conversion.
-
-WebP is not supported — `cjpegli` cannot read it.
+| | |
+|---|---|
+| **Read by the encoder itself** | PNG, APNG, JPEG, GIF, JXL, PPM/PNM/PGM/PAM/PFM |
+| **Decoded first, then encoded** | BMP, TIFF, ICO, EMF, WMF — through Windows' own imaging |
+| **WebP** | Decoded by `dwebp.exe`, libwebp's own tool, shipped with Jipeg. Nothing already on a Windows machine reads WebP: `cjpegli` refuses it, GDI+ never knew it, and Windows only decodes it if someone installed the Store extension. |
+| **HEIC, HEIF, AVIF, JPEG XR** | Handed to Windows, which reads them when the matching codec is installed — *HEIF Image Extensions* for HEIC, *AV1 Video Extension* for AVIF, both free. Without it you get the name of the one to install rather than a bare failure. |
 
 ## Worth knowing
 
@@ -107,6 +109,8 @@ installer turned it on — the classic context menu tweak. Converted images are 
 | Registry keys | `HKCU\Software\Classes\SystemFileAssociations\<ext>\shell\JipegConvert` and `HKCU\Software\Classes\Directory\shell\JipegConvert` |
 | Encoder | `cjpegli.exe` from **libjxl v0.11.1** — the last release to ship that binary (v0.12 dropped it, and `google/jpegli` publishes none) |
 | Binary SHA-256 | `db564007b69b8f038eb4703fc72278c15a992aad9865fa59166735d6fd41b740` |
+| WebP decoder | `dwebp.exe` from **libwebp 1.5.0**, the WebM project's own Windows build |
+| Its SHA-256 | `ee66951df0f868f0c41f49fcc2d0fc53072912b7357836317ca177cbae5eb343` |
 | UI | PowerShell 5.1 + WinForms, standard Windows controls, light/dark theme followed automatically |
 
 The binary is committed so the ZIP is installable as-is. If it is missing, the installer
@@ -174,18 +178,26 @@ corners Windows 11 draws itself. What needed doing by hand:
 - **Surfaces are filled with a GDI+ brush** rather than left to `BackColor`, and the labels on
   them are transparent so the surface's own fill shows through — otherwise every line of text
   wears a slightly different rectangle behind it.
-- **The same radius on all four corners.** GDI+ samples the right and bottom edges of a path
-  differently from the left and top, so a rounded rectangle drawn the obvious way is not
-  symmetric: measured across the antialiasing ramps, the four corners of a field differed by up
-  to 21 levels out of 255, and the curve visibly ran tighter on two of them. Drawing on integer
-  bounds one pixel short of the control, with the pen laid inside the path rather than centred
-  on it, brings the worst difference between corners down to 6 while the shape still occupies
-  exactly the size it was given — a field measures 280 x 26 pixels on the nose. Supersampling
-  the whole field at 8x and scaling it down was tried and reached 3, which is not worth a
-  bitmap on every repaint.
-- **Focus is drawn, not borrowed.** `ControlPaint.DrawFocusRectangle` paints a hard black
-  dotted box whatever the theme, which on a dark surface reads as stray pixels. Focus is a thin
-  rounded outline in the accent colour instead.
+- **The same radius on all four corners, to the byte.** Two separate things were wrong. Buttons
+  and cards were rounded with a `Region`, which is all-or-nothing per pixel: measured, their
+  four corners differed by up to 45 levels out of 255 and the diagonal through a corner held
+  only two distinct values — a staircase, not a curve. Painting the shape instead fixes that,
+  but not the second problem: GDI+ rasterises the right and bottom edges of a path differently
+  from the left and top, which left a residual difference of 14. No geometry fixes it —
+  rebuilding the shape from a mirrored point set instead of four arcs gives the same 14 at every
+  point count tried, and supersampling at 8x only reached 3. So every rounded shape is drawn
+  into a buffer and its top-left quarter is mirrored over the other three. A rounded rectangle
+  is symmetric by definition and its straight edges are uniform, so this changes nothing about
+  the intended shape — it makes the four corners identical byte for byte. Buttons, cards,
+  fields, check boxes and the progress bar all measure **0** difference between corners. Text
+  and glyphs are drawn afterwards, straight onto the control, so they keep subpixel rendering:
+  a check mark is not symmetric and mirroring would fold it in half.
+- **Focus is drawn, not borrowed — and only when Windows would draw it.**
+  `ControlPaint.DrawFocusRectangle` paints a hard black dotted box whatever the theme, which on
+  a dark surface reads as stray pixels. Focus is a thin rounded outline in the accent colour
+  instead. Drawn on plain focus it appeared the moment a check box was clicked — a blue outline
+  236 pixels wide that no native control would have drawn — so it now asks `WM_QUERYUISTATE`
+  first, the same flag every native control obeys: hidden after a click, shown after Tab.
 - **The drop-down list is a separate system window** of class `ComboLBox`. Windows 11 will
   round it and give it a border, but only once it exists, so it is asked just after the list
   opens.
@@ -197,6 +209,7 @@ install.ps1              one-line installer, fetches the latest release
 Install.bat              runs the installer
 Uninstall.bat            runs the uninstaller
 bin/cjpegli.exe          the jpegli encoder (+ component licences)
+bin/dwebp.exe            libwebp's WebP decoder
 src/Jipeg-Common.ps1     settings, theming and Win32 helpers
 src/Jipeg-Convert.ps1    the converter and its progress window
 src/Jipeg-Settings.ps1   the settings window
@@ -215,5 +228,7 @@ src/settings.vbs         starts the settings window without a console window
   libjxl project and does not modify their code.
 - The icon is drawn from the **JPEG format mark** — a square with its corner taken out and the
   removed piece set beside it. Jipeg is not affiliated with or endorsed by the JPEG committee.
+- WebP input is decoded by **[libwebp](https://github.com/webmproject/libwebp)**'s `dwebp`,
+  taken from the WebM project's own Windows release. Jipeg does not modify it.
 - Third-party licences: `bin/LICENSE.*` (BSD-3-Clause, Apache-2.0, zlib and others).
 - Jipeg itself is MIT licensed — see [LICENSE](LICENSE).

@@ -10,6 +10,10 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Settings = Get-JipegSettings
 $Theme    = Get-JipegTheme $Settings.theme
 $Mica     = ($Settings.mica -and (Test-JipegMica $Theme))
+# What lies behind every rounded shape, and therefore what has to be painted in
+# the corners outside it. On a Mica window that is black: the material is keyed
+# on it, so the glass carries on through the corners instead of being boxed off.
+$Backdrop = $(if ($Mica) { [System.Drawing.Color]::Black } else { $Theme.Back })
 
 # Everything sits on a 4-pixel grid: 20 outside the window, 16 inside a card.
 $W        = 540
@@ -75,27 +79,33 @@ function New-Card([int]$y, [int]$h) {
     Set-JipegDoubleBuffer $c
     $c.Add_Paint({
         $g = $_.Graphics
-        $g.SmoothingMode = 'AntiAlias'
-        # Integer origin with the pen laid inside the path, rather than the
-        # half-pixel inset this used to use. GDI+ samples the right and bottom
-        # edges of a path differently from the left and top, so the same radius
-        # came out tighter on two of the four corners; measured across the corner
-        # ramps, the worst difference between corners drops from 14 levels to 6,
-        # and the shape still occupies exactly the size it was given.
+        # The corners outside the rounded shape are the window's own backdrop.
+        # This used to be a Region clip instead, which is all-or-nothing per
+        # pixel: the four corners of a card measured 44 levels apart out of 255
+        # and the curve was a staircase. Painting them costs nothing and leaves
+        # the Mica glass showing through, which a clipped region also did.
+        # Drawn in a buffer so Copy-JipegCorners can make the four corners
+        # identical before any of it reaches the screen.
+        $buf = New-Object System.Drawing.Bitmap($this.Width, $this.Height)
+        $bg = [System.Drawing.Graphics]::FromImage($buf)
+        $bg.Clear($Backdrop)
+        $bg.SmoothingMode = 'AntiAlias'
         $p = New-JipegRoundPath 0 0 ($this.Width - 1) ($this.Height - 1) 8
         # Filled here rather than left to BackColor: over Mica, the background
         # WinForms paints comes out with no alpha and the backdrop shows through,
         # so the card was translucent - measured at #494B50 instead of #2B2B2B.
         # A GDI+ brush writes opaque pixels.
         $fill = New-Object System.Drawing.SolidBrush($Theme.Panel)
-        $g.FillPath($fill, $p); $fill.Dispose()
+        $bg.FillPath($fill, $p); $fill.Dispose()
         $pen = New-Object System.Drawing.Pen($Theme.CardEdge, 1)
         $pen.Alignment = 'Inset'
-        $g.DrawPath($pen, $p)
-        $pen.Dispose(); $p.Dispose()
+        $bg.DrawPath($pen, $p)
+        $pen.Dispose(); $p.Dispose(); $bg.Dispose()
+        Copy-JipegCorners $buf
+        $g.DrawImageUnscaled($buf, 0, 0)
+        $buf.Dispose()
     })
     $form.Controls.Add($c)
-    Set-JipegRounded $c 8
     return $c
 }
 
@@ -200,23 +210,33 @@ function New-Combo([int]$y, $parent) {
         # (#383B40 where the surface should have been flat #2B2B2B). Clear
         # ignores smoothing and writes the whole surface opaque.
         $g.Clear($this.BackColor)
-        $g.SmoothingMode = 'AntiAlias'
         $g.TextRenderingHint = 'ClearTypeGridFit'
 
         # the field is the bottom $FieldH rows; anything above is the lifted
-        # control, painted over in the card colour
+        # control, left in the card colour. The shape is drawn on its own, in a
+        # buffer its exact size, so its four corners can be made identical before
+        # it is placed - mirroring the face itself would move the shape, which
+        # does not sit in the middle of it.
         $w = $this.Width
         $h = $FieldH
-        $top = [double]($this.Height - $FieldH)
-        $shape = New-JipegRoundPath 0 $top ($w - 1.0) ($h - 1.0) 5
+        $top = [int]($this.Height - $FieldH)
+        $buf = New-Object System.Drawing.Bitmap($w, $h)
+        $bg = [System.Drawing.Graphics]::FromImage($buf)
+        $bg.Clear($this.BackColor)
+        $bg.SmoothingMode = 'AntiAlias'
+        $shape = New-JipegRoundPath 0 0 ($w - 1.0) ($h - 1.0) 5
         $fill = New-Object System.Drawing.SolidBrush($Theme.Field)
-        $g.FillPath($fill, $shape); $fill.Dispose()
+        $bg.FillPath($fill, $shape); $fill.Dispose()
         $edge = $Theme.CardEdge
         $width = 1.0
-        if ($this.Focused) { $edge = $Theme.Accent; $width = 1.4 }
+        if ($this.Focused -and (Test-JipegFocusCue $this)) { $edge = $Theme.Accent; $width = 1.4 }
         $pen = New-Object System.Drawing.Pen($edge, $width)
         $pen.Alignment = 'Inset'
-        $g.DrawPath($pen, $shape); $pen.Dispose(); $shape.Dispose()
+        $bg.DrawPath($pen, $shape); $pen.Dispose(); $shape.Dispose(); $bg.Dispose()
+        Copy-JipegCorners $buf
+        $g.DrawImageUnscaled($buf, 0, $top)
+        $buf.Dispose()
+        $g.SmoothingMode = 'AntiAlias'
 
         $text = ''
         if ($this.Tag) { $text = [string]$this.Tag.Text }
@@ -335,9 +355,8 @@ $form.Controls.Add($lblUpd)
 $btnUpd = New-Object System.Windows.Forms.Button
 $btnUpd.SetBounds(($W - $Margin - 160), 646, 160, 32)
 $btnUpd.Text = 'Check for updates'
-Set-JipegButton $btnUpd $Theme
+Set-JipegButton $btnUpd $Theme $Backdrop
 $form.Controls.Add($btnUpd)
-Set-JipegRounded $btnUpd 5
 
 $script:NewTag = $null
 $script:Check  = $null
@@ -442,17 +461,15 @@ $btnUpd.Add_Click({
 $btnCancel = New-Object System.Windows.Forms.Button
 $btnCancel.SetBounds(($W - $Margin - 100), 708, 100, 32)
 $btnCancel.Text = 'Cancel'
-Set-JipegButton $btnCancel $Theme
+Set-JipegButton $btnCancel $Theme $Backdrop
 $btnCancel.Add_Click({ $form.Close() })
 $form.Controls.Add($btnCancel)
-Set-JipegRounded $btnCancel 5
 
 $btnOK = New-Object System.Windows.Forms.Button
 $btnOK.SetBounds(($W - $Margin - 208), 708, 100, 32)
 $btnOK.Text = 'OK'
-Set-JipegButton $btnOK $Theme
+Set-JipegButton $btnOK $Theme $Backdrop
 $form.Controls.Add($btnOK)
-Set-JipegRounded $btnOK 5
 
 $form.AcceptButton = $btnOK
 $form.CancelButton = $btnCancel

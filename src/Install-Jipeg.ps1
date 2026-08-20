@@ -18,8 +18,18 @@ $ZipUrl = 'https://github.com/libjxl/libjxl/releases/download/v0.11.1/jxl-x64-wi
 $ZipSha = '8F53EBCE91820C30C9FC9294F06380213C1E2E66B361718880580246B2BE008E'
 $Verb   = 'Convert to JPEG (Jipeg)'
 
+# libwebp's own Windows build, from the WebM project's release host. Only
+# dwebp.exe is taken out of it: nothing else on a stock Windows reads WebP.
+$WebpUrl  = 'https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.5.0-windows-x64.zip'
+$WebpSha  = 'E8FE3BC7EB09774E69261A42BF9FA8A37AB5F3EECAAB199F6420E6F9E822090C'
+$DwebpSha = 'EE66951DF0F868F0C41F49FCC2D0FC53072912B7357836317CA177CBAE5EB343'
+
 $Exts = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.bmp', '.tif', '.tiff',
-          '.jxl', '.ppm', '.pnm', '.pgm', '.pam', '.pfm')
+          '.jxl', '.ppm', '.pnm', '.pgm', '.pam', '.pfm',
+          # decoded by the bundled dwebp.exe
+          '.webp',
+          # decoded by Windows, when the matching codec is installed
+          '.heic', '.heif', '.avif', '.jxr', '.wdp', '.hdp')
 
 # --------------------------------------------------------------------- icon
 function New-JipegIcon([string]$outPath) {
@@ -127,6 +137,41 @@ function Get-Cjpegli([scriptblock]$report) {
     Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
 }
 
+function Get-Dwebp([scriptblock]$report) {
+    $target = Join-Path $Dest 'bin\dwebp.exe'
+    $local  = Join-Path $Project 'bin\dwebp.exe'
+    if (Test-Path -LiteralPath $local) {
+        & $report 'Copying dwebp.exe'
+        Copy-Item -LiteralPath $local -Destination $target -Force
+        return
+    }
+    & $report 'Downloading libwebp 1.5.0 (~4 MB)'
+    $zip = Join-Path $env:TEMP 'jipeg-libwebp.zip'
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+    $wc = New-Object System.Net.WebClient
+    $wc.DownloadFile($WebpUrl, $zip)
+    $wc.Dispose()
+    & $report 'Verifying SHA-256'
+    if ((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash -ne $WebpSha) {
+        Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+        throw 'The downloaded libwebp archive does not match the expected checksum.'
+    }
+    & $report 'Extracting dwebp.exe'
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $arch = [System.IO.Compression.ZipFile]::OpenRead($zip)
+    try {
+        $entry = $arch.Entries | Where-Object { $_.Name -eq 'dwebp.exe' } | Select-Object -First 1
+        if (-not $entry) { throw 'dwebp.exe is missing from the archive.' }
+        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+    } finally { $arch.Dispose() }
+    Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+    # the archive was checked, and so is the one file taken out of it
+    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ne $DwebpSha) {
+        Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
+        throw 'The extracted dwebp.exe does not match the expected checksum.'
+    }
+}
+
 function Set-ContextMenu([string]$icon) {
     $cmd = 'wscript.exe "{0}" "%1"' -f (Join-Path $Dest 'launch.vbs')
     foreach ($e in $Exts) {
@@ -178,6 +223,7 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
     & $report 'Creating the install folder'
     New-Item -ItemType Directory -Path (Join-Path $Dest 'bin') -Force | Out-Null
     Get-Cjpegli $report
+    Get-Dwebp $report
     & $report 'Installing Jipeg'
     foreach ($f in @('Jipeg-Common.ps1', 'Jipeg-Convert.ps1', 'Jipeg-Settings.ps1',
                      'Jipeg-Update.ps1', 'Uninstall-Jipeg.ps1',
@@ -235,6 +281,7 @@ if ($Silent) {
 # ------------------------------------------------------------------- window
 $Theme = Get-JipegTheme 'auto'
 $Mica  = ((Get-JipegSettings).mica -and (Test-JipegMica $Theme))   # suit le reglage, comme les autres fenetres
+$Backdrop = $(if ($Mica) { [System.Drawing.Color]::Black } else { $Theme.Back })
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Install Jipeg'
@@ -305,17 +352,15 @@ $form.Controls.Add($lblState)
 $btnGo = New-Object System.Windows.Forms.Button
 $btnGo.SetBounds(520 - 20 - 100 - 8 - 100, 230, 100, 32)
 $btnGo.Text = 'Install'
-Set-JipegButton $btnGo $Theme
+Set-JipegButton $btnGo $Theme $Backdrop
 $form.Controls.Add($btnGo)
-Set-JipegRounded $btnGo 5
 
 $btnNo = New-Object System.Windows.Forms.Button
 $btnNo.SetBounds(520 - 20 - 100, 230, 100, 32)
 $btnNo.Text = 'Cancel'
-Set-JipegButton $btnNo $Theme
+Set-JipegButton $btnNo $Theme $Backdrop
 $btnNo.Add_Click({ $form.Close() })
 $form.Controls.Add($btnNo)
-Set-JipegRounded $btnNo 5
 $form.CancelButton = $btnNo
 $form.AcceptButton = $btnGo
 

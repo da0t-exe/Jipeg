@@ -18,7 +18,17 @@ $Suffix   = '_jipeg'
 $NativeExt = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.jxl',
                '.ppm', '.pnm', '.pgm', '.pam', '.pfm', '.pgx')
 $GdiExt    = @('.bmp', '.tif', '.tiff', '.ico', '.emf', '.wmf')
-$AllExt    = $NativeExt + $GdiExt
+# WebP comes with its own decoder, because nothing already on the machine reads
+# it: cjpegli refuses it, GDI+ has never known it, and Windows only decodes it
+# if someone installed the Store extension - measured on a clean Windows 11,
+# WIC answers "no imaging component suitable".
+$WebpExt   = @('.webp')
+# These are handed to Windows itself. It decodes them when the matching codec is
+# present - HEIF Image Extensions for HEIC, AV1 Video Extension for AVIF - and
+# says so plainly when it is not, rather than failing without a reason.
+$WicExt    = @('.heic', '.heif', '.avif', '.jxr', '.wdp', '.hdp')
+$AllExt    = $NativeExt + $GdiExt + $WebpExt + $WicExt
+$Dwebp     = Join-Path $Root 'bin\dwebp.exe'
 
 # ------------------------------------------------------------------- inputs
 function Expand-Inputs([string[]]$in) {
@@ -108,6 +118,7 @@ function Get-FreePath([string]$dir, [string]$base, [string]$ext) {
 
 # ------------------------------------------------------------------- window
 $Mica = ($Settings.mica -and (Test-JipegMica $Theme))
+$Backdrop = $(if ($Mica) { [System.Drawing.Color]::Black } else { $Theme.Back })
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
@@ -147,6 +158,7 @@ $form.Controls.Add($lblFile)
 # and has a white trough in dark mode, so the bar is drawn here: one flat accent
 # colour, rounded ends, and it glides to each new value instead of jumping.
 $script:BarShown  = 0.0
+$script:BarMuted  = $false
 $script:BarTarget = 0.0
 $bar = New-Object System.Windows.Forms.Panel
 $bar.SetBounds(16, 76, 398, 10)
@@ -154,16 +166,37 @@ $bar.BackColor = $form.BackColor
 Set-JipegDoubleBuffer $bar
 $bar.Add_Paint({
     $g = $_.Graphics
-    $g.SmoothingMode = 'AntiAlias'
     $w = $this.Width; $h = $this.Height
-    $track = New-JipegRoundPath 0 0 $w $h ($h / 2)
+    # Track and fill are mirrored separately. Passing the whole bar through
+    # Copy-JipegCorners would fold the fill back onto the right-hand side, since
+    # a half-filled bar is not symmetric - but each rounded end on its own is.
+    $buf = New-Object System.Drawing.Bitmap($w, $h)
+    $bg = [System.Drawing.Graphics]::FromImage($buf)
+    $bg.Clear($this.BackColor)
+    $bg.SmoothingMode = 'AntiAlias'
+    $track = New-JipegRoundPath 0 0 ($w - 1) ($h - 1) ($h / 2)
     $tb = New-Object System.Drawing.SolidBrush($Theme.Track)
-    $g.FillPath($tb, $track); $tb.Dispose(); $track.Dispose()
+    $bg.FillPath($tb, $track); $tb.Dispose(); $track.Dispose(); $bg.Dispose()
+    Copy-JipegCorners $buf
+    $g.DrawImageUnscaled($buf, 0, 0)
+    $buf.Dispose()
+
     $fw = [int][math]::Round([double]$w * $script:BarShown)
     if ($fw -ge 2) {
-        $fill = New-JipegRoundPath 0 0 $fw $h ($h / 2)
-        $fb = New-Object System.Drawing.SolidBrush($Theme.Accent)
-        $g.FillPath($fb, $fill); $fb.Dispose(); $fill.Dispose()
+        # grey rather than the accent colour when the batch ended without a
+        # single conversion: a full bar in the accent reads as success, and it
+        # sat directly under the words "0 images converted, 1 failure"
+        $ink = $(if ($script:BarMuted) { $Theme.Muted } else { $Theme.Accent })
+        $fbuf = New-Object System.Drawing.Bitmap($fw, $h)
+        $fg = [System.Drawing.Graphics]::FromImage($fbuf)
+        $fg.Clear($Theme.Track)
+        $fg.SmoothingMode = 'AntiAlias'
+        $fill = New-JipegRoundPath 0 0 ($fw - 1) ($h - 1) ($h / 2)
+        $fb = New-Object System.Drawing.SolidBrush($ink)
+        $fg.FillPath($fb, $fill); $fb.Dispose(); $fill.Dispose(); $fg.Dispose()
+        Copy-JipegCorners $fbuf
+        $g.DrawImageUnscaled($fbuf, 0, 0)
+        $fbuf.Dispose()
     }
 })
 $form.Controls.Add($bar)
@@ -186,15 +219,15 @@ $form.Controls.Add($lblSizes)
 $btn = New-Object System.Windows.Forms.Button
 $btn.SetBounds(430 - 16 - 100, 102, 100, 32)
 $btn.Text = 'Cancel'
-Set-JipegButton $btn $Theme
+Set-JipegButton $btn $Theme $Backdrop
 $form.Controls.Add($btn)
-Set-JipegRounded $btn 5
 $form.CancelButton = $btn
 
 # ------------------------------------------------------------------- engine
 $script:Index     = 0
 $script:Done      = 0
 $script:Failed    = 0
+$script:Reason    = ''
 $script:TotalIn   = 0
 $script:TotalOut  = 0
 $script:Cancelled = $false
@@ -219,6 +252,66 @@ function Set-Status {
     if ($n -gt 0) { Set-Bar ($script:Index / [double]$n) } else { Set-Bar 0 }
 }
 
+# --------------------------------------------------------------- decoding
+function ConvertTo-JipegPng-Gdi([string]$src, [string]$dst) {
+    $fs = [System.IO.File]::OpenRead($src)
+    try {
+        $img = [System.Drawing.Image]::FromStream($fs, $true, $false)
+        try { $img.Save($dst, [System.Drawing.Imaging.ImageFormat]::Png) } finally { $img.Dispose() }
+    } finally { $fs.Close() }
+}
+
+function ConvertTo-JipegPng-Webp([string]$src, [string]$dst) {
+    if (-not (Test-Path -LiteralPath $Dwebp)) {
+        throw "WebP needs bin\dwebp.exe. Run the Jipeg installer again."
+    }
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName               = $Dwebp
+    $psi.Arguments              = '"{0}" -o "{1}"' -f $src, $dst
+    $psi.UseShellExecute        = $false
+    $psi.CreateNoWindow         = $true
+    $psi.RedirectStandardError  = $true
+    $psi.RedirectStandardOutput = $true
+    $p = [System.Diagnostics.Process]::Start($psi)
+    $err = $p.StandardError.ReadToEnd()
+    [void]$p.StandardOutput.ReadToEnd()
+    $p.WaitForExit()
+    $code = $p.ExitCode
+    $p.Dispose()
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $dst)) {
+        throw ("WebP could not be read: " + $err.Trim())
+    }
+}
+
+# Windows' own imaging layer. It reads HEIC, AVIF and JPEG XR only when the
+# matching codec is installed, so the failure is named rather than left as a
+# bare count: the fix is a free download and the user should hear which one.
+function ConvertTo-JipegPng-Wic([string]$src, [string]$dst, [string]$ext) {
+    # loaded here, not at startup: it is a heavy assembly and most conversions
+    # never come near it
+    Add-Type -AssemblyName PresentationCore
+    try {
+        $uri = New-Object System.Uri($src)
+        $dec = [System.Windows.Media.Imaging.BitmapDecoder]::Create($uri,
+            [System.Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,
+            [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
+    } catch {
+        $need = switch ($ext) {
+            '.heic' { 'HEIF Image Extensions' }
+            '.heif' { 'HEIF Image Extensions' }
+            '.avif' { 'AV1 Video Extension' }
+            default { 'the matching extension' }
+        }
+        # kept short on purpose: it is shown in a 398 px label, and the longer
+        # wording measured 478 px and was cut off mid-sentence
+        throw ("No {0} codec on this PC. Install {1} from the Store." -f $ext, $need)
+    }
+    $enc = New-Object System.Windows.Media.Imaging.PngBitmapEncoder
+    $enc.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($dec.Frames[0]))
+    $out = [System.IO.File]::Create($dst)
+    try { $enc.Save($out) } finally { $out.Close() }
+}
+
 function Start-Next {
     if ($script:Cancelled -or $script:Index -ge $Files.Count) { Complete-Batch; return }
     $src = $Files[$script:Index]
@@ -229,14 +322,13 @@ function Start-Next {
         $ext = [System.IO.Path]::GetExtension($src).ToLower()
         $source = $src
         $script:TmpIn = $null
-        if ($GdiExt -contains $ext) {
-            # cjpegli cannot read this format: convert to PNG first
+        if ($GdiExt -contains $ext -or $WebpExt -contains $ext -or $WicExt -contains $ext) {
+            # cjpegli reads none of these: decode to PNG first, by whichever
+            # route knows the format, and hand it that instead
             $tmpPng = Join-Path $env:TEMP ('jipeg-in-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
-            $fs = [System.IO.File]::OpenRead($src)
-            try {
-                $img = [System.Drawing.Image]::FromStream($fs, $true, $false)
-                try { $img.Save($tmpPng, [System.Drawing.Imaging.ImageFormat]::Png) } finally { $img.Dispose() }
-            } finally { $fs.Close() }
+            if ($WebpExt -contains $ext)    { ConvertTo-JipegPng-Webp $src $tmpPng }
+            elseif ($WicExt -contains $ext) { ConvertTo-JipegPng-Wic $src $tmpPng $ext }
+            else                            { ConvertTo-JipegPng-Gdi $src $tmpPng }
             $source = $tmpPng; $script:TmpIn = $tmpPng
         }
         $dir = Split-Path -Parent $src
@@ -265,6 +357,7 @@ function Start-Next {
         $psi.RedirectStandardOutput = $true
         $script:Proc = [System.Diagnostics.Process]::Start($psi)
     } catch {
+        if (-not $script:Reason) { $script:Reason = $_.Exception.Message }
         $script:Failed++
         $script:Index++
         $script:Proc = $null
@@ -316,6 +409,7 @@ function Complete-Batch {
     if ($script:Finished) { return }
     $script:Finished = $true
     $engine.Stop()
+    $script:BarMuted = ($script:Done -eq 0 -and $script:Failed -gt 0)
     Set-Bar 1
 
     if ($script:Done -gt 0) {
@@ -340,6 +434,7 @@ function Complete-Batch {
         $lblTitle.Text = "$($script:Done) $word converted"
     }
     $lblFile.Text = ''
+    if ($script:Failed -gt 0 -and $script:Reason) { $lblFile.Text = $script:Reason }
     $btn.Text = 'OK'
     $btn.Enabled = $true
     $form.AcceptButton = $btn

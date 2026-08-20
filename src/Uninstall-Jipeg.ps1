@@ -7,8 +7,6 @@ $ErrorActionPreference = 'SilentlyContinue'
 $Dest      = Join-Path $env:LOCALAPPDATA 'Jipeg'
 $UninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jipeg'
 $Shortcut  = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Jipeg Settings.lnk'
-$Exts = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.bmp', '.tif', '.tiff',
-          '.jxl', '.ppm', '.pnm', '.pgm', '.pam', '.pfm')
 
 if (-not $Silent) {
     $r = [System.Windows.Forms.MessageBox]::Show(
@@ -19,8 +17,15 @@ if (-not $Silent) {
     if ($r -ne 'Yes') { exit }
 }
 
-foreach ($e in $Exts) {
-    Remove-Item -Path "HKCU:\Software\Classes\SystemFileAssociations\$e\shell\JipegConvert" -Recurse -Force
+# Every association that actually carries our key, rather than a copy of the
+# installer's list: the two lists were already drifting apart, and an extension
+# added to one and not the other would have been left behind here for good.
+$assoc = 'HKCU:\Software\Classes\SystemFileAssociations'
+if (Test-Path -LiteralPath $assoc) {
+    Get-ChildItem -LiteralPath $assoc -ErrorAction SilentlyContinue | ForEach-Object {
+        $key = Join-Path $_.PSPath 'shell\JipegConvert'
+        if (Test-Path -LiteralPath $key) { Remove-Item -LiteralPath $key -Recurse -Force }
+    }
 }
 Remove-Item -Path 'HKCU:\Software\Classes\Directory\shell\JipegConvert' -Recurse -Force
 Remove-Item -LiteralPath $Shortcut -Force

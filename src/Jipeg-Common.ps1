@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.9.0'
+$JipegVersion = '1.10.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -18,6 +18,7 @@ Add-Type -MemberDefinition @'
 [DllImport("uxtheme.dll", CharSet=CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string sub, string id);
 [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
 [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string name);
+[DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr w, IntPtr l);
 '@ -Name 'Win' -Namespace 'Jipeg' | Out-Null
 
 # ------------------------------------------------------------------ settings
@@ -194,7 +195,7 @@ function Get-JipegTheme([string]$preference) {
         Panel   = [System.Drawing.Color]::FromArgb(251, 251, 251)
         Text    = [System.Drawing.Color]::FromArgb(26, 26, 26)
         Muted   = [System.Drawing.Color]::FromArgb(80, 80, 80)          # 7.9:1 sur les cartes
-        Button  = [System.Drawing.SystemColors]::Control
+        Button  = [System.Drawing.Color]::FromArgb(253, 253, 253)
         Edge    = [System.Drawing.Color]::FromArgb(205, 205, 205)
         Track   = [System.Drawing.Color]::FromArgb(222, 222, 222)
         Field   = [System.Drawing.Color]::FromArgb(255, 255, 255)
@@ -269,14 +270,141 @@ function Set-JipegLabel($lbl, $theme, [bool]$mica) {
     if ($mica) { $lbl.BackColor = [System.Drawing.Color]::Transparent }
 }
 
-function Set-JipegButton($b, $theme) {
-    $b.Font = $JipegFont
-    if ($theme.Dark) {
-        $b.FlatStyle = 'Flat'
-        $b.BackColor = $theme.Button
-        $b.ForeColor = $theme.Text
-        $b.FlatAppearance.BorderColor = $theme.Edge
+# GDI+ rasterises the right and bottom edges of a path differently from the left
+# and top. Measured on a button, the four corner ramps differed by 14 levels out
+# of 255, and no geometry fixes it: rebuilding the shape from a mirrored point
+# set instead of four arcs gives the same 14, at every point count tried.
+#
+# So the shape is drawn once into a buffer and its top-left quarter is mirrored
+# over the other three. A rounded rectangle is symmetric by definition and its
+# straight edges are uniform, so this changes nothing about the intended shape -
+# it only makes the four corners identical byte for byte instead of merely
+# close. Only the shape goes through here; text and glyphs are drawn afterwards,
+# straight onto the control, so they keep subpixel rendering and stay put.
+function Copy-JipegCorners($bmp) {
+    $w = $bmp.Width; $h = $bmp.Height
+    if ($w -lt 2 -or $h -lt 2) { return }
+    $hw = [int][math]::Ceiling($w / 2.0)
+    $hh = [int][math]::Ceiling($h / 2.0)
+    $tl = $bmp.Clone((New-Object System.Drawing.Rectangle(0, 0, $hw, $hh)), $bmp.PixelFormat)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.CompositingMode = 'SourceCopy'
+    foreach ($spec in @(@('RotateNoneFlipX', ($w - $hw), 0),
+                        @('RotateNoneFlipY', 0, ($h - $hh)),
+                        @('RotateNoneFlipXY', ($w - $hw), ($h - $hh)))) {
+        $c = $tl.Clone()
+        $c.RotateFlip($spec[0])
+        $g.DrawImageUnscaled($c, [int]$spec[1], [int]$spec[2])
+        $c.Dispose()
     }
+    $g.Dispose(); $tl.Dispose()
+}
+
+
+# Lighter or darker by a fraction, for the hover and pressed states. Windows
+# lifts a dark button on hover and presses both themes down.
+function New-JipegShade($c, [double]$amount) {
+    if ($amount -ge 0) {
+        return [System.Drawing.Color]::FromArgb(255,
+            [int]([double]$c.R + (255.0 - $c.R) * $amount),
+            [int]([double]$c.G + (255.0 - $c.G) * $amount),
+            [int]([double]$c.B + (255.0 - $c.B) * $amount))
+    }
+    $k = 1.0 + $amount
+    return [System.Drawing.Color]::FromArgb(255,
+        [int]([double]$c.R * $k), [int]([double]$c.G * $k), [int]([double]$c.B * $k))
+}
+
+# Windows keeps focus rectangles hidden until someone navigates with the
+# keyboard, and every native control obeys it; WM_QUERYUISTATE reports the flag
+# for a window. Asking it means clicking a check box no longer paints a ring
+# nobody asked for, while Tab still shows one.
+function Test-JipegFocusCue($ctrl) {
+    if (-not $ctrl.IsHandleCreated) { return $false }
+    try {
+        $state = [Jipeg.Win]::SendMessage($ctrl.Handle, 0x0129, [IntPtr]::Zero, [IntPtr]::Zero)
+        return ((([int]$state) -band 0x1) -eq 0)      # UISF_HIDEFOCUS clear = show it
+    } catch { return $false }
+}
+
+# Buttons are painted for the same reason the fields are. Set-JipegRounded put a
+# Region on them, and a region is all-or-nothing per pixel: measured, the four
+# corners of a button differed by 45 levels out of 255 and the diagonal through
+# a corner held only two distinct values - a staircase, not a curve. Painting
+# gives an antialiased edge and the same radius on all four corners.
+#
+# $backdrop is whatever lies behind the button, because the corners outside the
+# rounded shape have to be that and nothing else. On a Mica window it is black,
+# which is what the material is keyed on, so the glass carries on through them.
+function Set-JipegButton($b, $theme, $backdrop = $null) {
+    if ($null -eq $backdrop) { $backdrop = $theme.Back }
+    $b.Font = $JipegFont
+    $b.FlatStyle = 'Flat'
+    $b.FlatAppearance.BorderSize = 0
+    $b.ForeColor = $theme.Text
+    $b.BackColor = $backdrop
+    $b.UseVisualStyleBackColor = $false
+    $b.FlatAppearance.MouseOverBackColor = $backdrop
+    $b.FlatAppearance.MouseDownBackColor = $backdrop
+    Set-JipegDoubleBuffer $b
+    $b.Tag = [pscustomobject]@{ Theme = $theme; Hot = $false; Down = $false }
+    $b.Add_MouseEnter({ $this.Tag.Hot = $true;  $this.Invalidate() })
+    $b.Add_MouseLeave({ $this.Tag.Hot = $false; $this.Tag.Down = $false; $this.Invalidate() })
+    $b.Add_MouseDown({  $this.Tag.Down = $true;  $this.Invalidate() })
+    $b.Add_MouseUp({    $this.Tag.Down = $false; $this.Invalidate() })
+    $b.Add_GotFocus({   $this.Invalidate() })
+    $b.Add_LostFocus({  $this.Invalidate() })
+    $b.Add_EnabledChanged({ $this.Invalidate() })
+    $b.Add_Paint({
+        $g  = $_.Graphics
+        $st = $this.Tag
+        $t  = $st.Theme
+
+        $face = $t.Button
+        if (-not $this.Enabled) {
+            $face = $(if ($t.Dark) { New-JipegShade $t.Button -0.25 } else { New-JipegShade $t.Button -0.03 })
+        } elseif ($st.Down) {
+            $face = New-JipegShade $t.Button $(if ($t.Dark) { -0.18 } else { -0.09 })
+        } elseif ($st.Hot) {
+            $face = New-JipegShade $t.Button $(if ($t.Dark) { 0.09 } else { -0.035 })
+        }
+
+        # the shape is built in a buffer so its corners can be made identical
+        # before it reaches the screen
+        $buf = New-Object System.Drawing.Bitmap($this.Width, $this.Height)
+        $bg = [System.Drawing.Graphics]::FromImage($buf)
+        # cleared before smoothing goes on, or the outermost column is left
+        # half covered and a Mica backdrop shows through the gap
+        $bg.Clear($this.BackColor)
+        $bg.SmoothingMode = 'AntiAlias'
+
+        $p = New-JipegRoundPath 0 0 ($this.Width - 1) ($this.Height - 1) 5
+        $fill = New-Object System.Drawing.SolidBrush($face)
+        $bg.FillPath($fill, $p); $fill.Dispose()
+        $pen = New-Object System.Drawing.Pen($t.Edge, 1)
+        $pen.Alignment = 'Inset'
+        $bg.DrawPath($pen, $p); $pen.Dispose()
+
+        if ($this.Focused -and (Test-JipegFocusCue $this)) {
+            $ring = New-JipegRoundPath 1.0 1.0 ($this.Width - 3.0) ($this.Height - 3.0) 4
+            $rp = New-Object System.Drawing.Pen($t.Accent, 1.4)
+            $rp.Alignment = 'Inset'
+            $bg.DrawPath($rp, $ring); $rp.Dispose(); $ring.Dispose()
+        }
+        $p.Dispose(); $bg.Dispose()
+        Copy-JipegCorners $buf
+        $g.DrawImageUnscaled($buf, 0, 0)
+        $buf.Dispose()
+        $g.TextRenderingHint = 'ClearTypeGridFit'
+
+        $ink = $(if ($this.Enabled) { $t.Text } else { $t.Muted })
+        [System.Windows.Forms.TextRenderer]::DrawText($g, $this.Text, $this.Font,
+            $this.ClientRectangle, $ink,
+            ([System.Windows.Forms.TextFormatFlags]::HorizontalCenter -bor
+             [System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
+             [System.Windows.Forms.TextFormatFlags]::EndEllipsis -bor
+             [System.Windows.Forms.TextFormatFlags]::NoPrefix))
+    })
 }
 
 # Clips a control to a rounded rectangle. Used on the progress bar and its
@@ -319,12 +447,32 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
         $g.SmoothingMode = 'AntiAlias'
         $g.TextRenderingHint = 'ClearTypeGridFit'
 
-        $side = 18.0
-        $top  = [math]::Floor(($this.Height - $side) / 2.0)
-        $box  = New-JipegRoundPath 0 $top ($side - 1.0) ($side - 1.0) 4
+        # The box goes through a buffer of its own size so its four corners come
+        # out identical; the tick is drawn afterwards, on the control, because a
+        # check mark is not symmetric and mirroring would fold it in half.
+        $side = 18
+        $top  = [int][math]::Floor(($this.Height - $side) / 2.0)
+        $buf = New-Object System.Drawing.Bitmap($side, $side)
+        $bg = [System.Drawing.Graphics]::FromImage($buf)
+        $bg.Clear($this.BackColor)
+        $bg.SmoothingMode = 'AntiAlias'
+        $box = New-JipegRoundPath 0 0 ($side - 1.0) ($side - 1.0) 4
         if ($this.Checked) {
             $fill = New-Object System.Drawing.SolidBrush($t.Accent)
-            $g.FillPath($fill, $box); $fill.Dispose()
+            $bg.FillPath($fill, $box); $fill.Dispose()
+        } else {
+            $fill = New-Object System.Drawing.SolidBrush($t.Field)
+            $bg.FillPath($fill, $box); $fill.Dispose()
+            $pen = New-Object System.Drawing.Pen($t.CheckEdge, 1)
+            $pen.Alignment = 'Inset'
+            $bg.DrawPath($pen, $box); $pen.Dispose()
+        }
+        $box.Dispose(); $bg.Dispose()
+        Copy-JipegCorners $buf
+        $g.DrawImageUnscaled($buf, 0, $top)
+        $buf.Dispose()
+
+        if ($this.Checked) {
             $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::White, 1.9)
             $pen.StartCap = 'Round'; $pen.EndCap = 'Round'; $pen.LineJoin = 'Round'
             $tick = @(
@@ -333,26 +481,22 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
                 (New-Object System.Drawing.PointF(13.4, ($top + 5.6)))
             )
             $g.DrawLines($pen, $tick); $pen.Dispose()
-        } else {
-            $fill = New-Object System.Drawing.SolidBrush($t.Field)
-            $g.FillPath($fill, $box); $fill.Dispose()
-            $pen = New-Object System.Drawing.Pen($t.CheckEdge, 1)
-            $pen.Alignment = 'Inset'
-            $g.DrawPath($pen, $box); $pen.Dispose()
         }
-        $box.Dispose()
 
         $r = New-Object System.Drawing.Rectangle(26, 0, ($this.Width - 26), $this.Height)
         [System.Windows.Forms.TextRenderer]::DrawText($g, $this.Text, $this.Font, $r, $this.ForeColor,
             ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
              [System.Windows.Forms.TextFormatFlags]::NoPrefix))
-        if ($this.Focused) {
-            # ControlPaint's focus rectangle is a hard black dotted box whatever
-            # the theme, which on a dark surface reads as a scattering of black
-            # pixels. A thin rounded outline in the accent colour says the same
-            # thing and belongs to the design.
+        # ControlPaint's focus rectangle is a hard black dotted box whatever the
+        # theme, which on a dark surface reads as a scattering of black pixels.
+        # A thin rounded outline in the accent colour says the same thing and
+        # belongs to the design - but only when Windows is showing focus cues at
+        # all. Drawn on plain focus, it appeared the moment the box was clicked:
+        # a blue outline 236 pixels wide that no native control would have drawn.
+        if ($this.Focused -and (Test-JipegFocusCue $this)) {
             $ring = New-JipegRoundPath 0 ($top - 3.0) ($this.Width - 1.0) ($side + 6.0) 5
             $pen = New-Object System.Drawing.Pen($t.Accent, 1)
+            $pen.Alignment = 'Inset'
             $g.DrawPath($pen, $ring)
             $pen.Dispose(); $ring.Dispose()
         }
@@ -419,14 +563,6 @@ function Set-JipegMica($form, $theme) {
     $m.Left = -1; $m.Right = -1; $m.Top = -1; $m.Bottom = -1
     if ([Jipeg.Win]::DwmExtendFrameIntoClientArea($form.Handle, [ref]$m) -ne 0) { return $false }
     return $true
-}
-
-function Set-JipegRounded($ctrl, [single]$radius) {
-    $w = $ctrl.Width; $h = $ctrl.Height
-    if ($w -le 0 -or $h -le 0) { return }
-    $path = New-JipegRoundPath 0 0 $w $h $radius
-    $ctrl.Region = New-Object System.Drawing.Region($path)
-    $path.Dispose()
 }
 
 function Format-JipegSize([double]$b) {
