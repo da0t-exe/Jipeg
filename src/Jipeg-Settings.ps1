@@ -10,10 +10,12 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Settings = Get-JipegSettings
 $Theme    = Get-JipegTheme $Settings.theme
 $Mica     = ($Settings.mica -and (Test-JipegMica $Theme))
-# What lies behind every rounded shape, and therefore what has to be painted in
-# the corners outside it. On a Mica window that is black: the material is keyed
-# on it, so the glass carries on through the corners instead of being boxed off.
-$Backdrop = $(if ($Mica) { [System.Drawing.Color]::Black } else { $Theme.Back })
+# What gets painted in the corners outside every rounded shape. Never black,
+# even on a Mica window: DWM composites a child control opaquely, so black there
+# stays black and each button and card wore four #000000 notches against a
+# backdrop measuring #1D2025. The theme's own background is within a few levels
+# of what the material renders, so the corners disappear into it.
+$Backdrop = $Theme.Back
 
 # Everything sits on a 4-pixel grid: 20 outside the window, 16 inside a card.
 $W        = 540

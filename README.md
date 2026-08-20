@@ -76,8 +76,8 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 
 | | |
 |---|---|
-| **Read by the encoder itself** | PNG, APNG, JPEG, GIF, JXL, PPM/PNM/PGM/PAM/PFM |
-| **Decoded first, then encoded** | BMP, TIFF, ICO, EMF, WMF — through Windows' own imaging |
+| **Read by the encoder itself** | PNG, JPEG, JXL, PPM/PNM/PGM/PAM/PFM |
+| **Decoded first, then encoded** | BMP, TIFF, ICO, EMF, WMF, GIF, APNG — through Windows' own imaging. Animated files keep their first frame. |
 | **WebP** | Decoded by `dwebp.exe`, libwebp's own tool, shipped with Jipeg. Nothing already on a Windows machine reads WebP: `cjpegli` refuses it, GDI+ never knew it, and Windows only decodes it if someone installed the Store extension. |
 | **HEIC, HEIF, AVIF, JPEG XR** | Handed to Windows, which reads them when the matching codec is installed — *HEIF Image Extensions* for HEIC, *AV1 Video Extension* for AVIF, both free. Without it you get the name of the one to install rather than a bare failure. |
 
@@ -86,6 +86,15 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 - **Re-encoding an already compressed JPEG can make it bigger.** jpegli shines on
   uncompressed sources (PNG, TIFF) or high-quality JPEGs. When the result grows, the summary
   says so with a `+`: the number shown is always the real one.
+- **Transparency becomes white.** JPEG has no alpha channel, so something has to go behind it.
+  `cjpegli` uses black, which turned a logo on a transparent background into a logo on a black
+  square; anything carrying alpha is flattened onto white first, the way every other tool does
+  it. A PNG with no transparency is untouched and still goes straight to the encoder.
+- **GIF and APNG never actually worked before 1.10.1.** `cjpegli` lists them as input formats
+  and does read them, then fails at the encode step — measured on a plain 100x100 static GIF
+  and on a two-frame APNG, both answered *"jpegli encoding failed"*. They are decoded by
+  Windows now. An animated PNG usually calls itself `.png`, so the file's own header is checked
+  for an `acTL` chunk rather than trusting the extension.
 - Metadata (EXIF, ICC profile) is not carried over by `cjpegli`. For a photograph taken on a
   phone this includes the orientation tag, so a picture that was stored rotated comes back the
   way it was actually captured.
@@ -192,6 +201,14 @@ corners Windows 11 draws itself. What needed doing by hand:
   fields, check boxes and the progress bar all measure **0** difference between corners. Text
   and glyphs are drawn afterwards, straight onto the control, so they keep subpixel rendering:
   a check mark is not symmetric and mirroring would fold it in half.
+- **What sits in the corners outside a rounded shape.** The old `Region` clip excluded them from
+  the window entirely, so the Mica glass showed through. Painting the shape means painting those
+  corners too, and painting them black — the colour the material is keyed on — does not work:
+  Windows composites a child control opaquely, so each button and card wore four `#000000`
+  notches against a backdrop measuring `#1D2025`. They are filled with the theme's own
+  background instead, which lands **5 levels** from what the material renders. Invisible in
+  practice, but not free: only a shape drawn by the window itself, rather than by a control
+  sitting on it, can be true glass at the corners.
 - **Focus is drawn, not borrowed — and only when Windows would draw it.**
   `ControlPaint.DrawFocusRectangle` paints a hard black dotted box whatever the theme, which on
   a dark surface reads as stray pixels. Focus is a thin rounded outline in the accent colour

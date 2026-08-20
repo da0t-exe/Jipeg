@@ -281,7 +281,9 @@ if ($Silent) {
 # ------------------------------------------------------------------- window
 $Theme = Get-JipegTheme 'auto'
 $Mica  = ((Get-JipegSettings).mica -and (Test-JipegMica $Theme))   # suit le reglage, comme les autres fenetres
-$Backdrop = $(if ($Mica) { [System.Drawing.Color]::Black } else { $Theme.Back })
+# never black: DWM composites a child control opaquely, so black in the corners
+# outside a rounded shape stays black instead of turning to glass
+$Backdrop = $Theme.Back
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Install Jipeg'

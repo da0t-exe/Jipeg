@@ -15,9 +15,14 @@ $Settings = Get-JipegSettings
 $Theme    = Get-JipegTheme $Settings.theme
 $Suffix   = '_jipeg'
 
-$NativeExt = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.jxl',
+$NativeExt = @('.png', '.jpg', '.jpeg', '.jpe', '.jxl',
                '.ppm', '.pnm', '.pgm', '.pam', '.pfm', '.pgx')
-$GdiExt    = @('.bmp', '.tif', '.tiff', '.ico', '.emf', '.wmf')
+# GIF and APNG are in this list, not the one above, even though cjpegli claims
+# to read them: it does read them, then fails at the encode step. Measured on a
+# plain 100x100 static GIF and on a two-frame APNG, both answered "jpegli
+# encoding failed" with exit code 1 - every GIF Jipeg was offered had been
+# failing silently. Handed over as PNG, both convert.
+$GdiExt    = @('.bmp', '.tif', '.tiff', '.ico', '.emf', '.wmf', '.gif', '.apng')
 # WebP comes with its own decoder, because nothing already on the machine reads
 # it: cjpegli refuses it, GDI+ has never known it, and Windows only decodes it
 # if someone installed the Store extension - measured on a clean Windows 11,
@@ -118,7 +123,9 @@ function Get-FreePath([string]$dir, [string]$base, [string]$ext) {
 
 # ------------------------------------------------------------------- window
 $Mica = ($Settings.mica -and (Test-JipegMica $Theme))
-$Backdrop = $(if ($Mica) { [System.Drawing.Color]::Black } else { $Theme.Back })
+# never black: DWM composites a child control opaquely, so black in the corners
+# outside a rounded shape stays black instead of turning to glass
+$Backdrop = $Theme.Back
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
@@ -253,12 +260,63 @@ function Set-Status {
 }
 
 # --------------------------------------------------------------- decoding
+# JPEG has no transparency, so something has to be put behind it. cjpegli uses
+# black, which turned a logo on a transparent background into a logo on a black
+# square; every other tool in the world uses white. Anything carrying alpha is
+# flattened onto white here first. The image is drawn into a rectangle its own
+# size rather than with DrawImageUnscaled, which would rescale it whenever the
+# file carries a DPI different from the screen's.
 function ConvertTo-JipegPng-Gdi([string]$src, [string]$dst) {
     $fs = [System.IO.File]::OpenRead($src)
     try {
         $img = [System.Drawing.Image]::FromStream($fs, $true, $false)
-        try { $img.Save($dst, [System.Drawing.Imaging.ImageFormat]::Png) } finally { $img.Dispose() }
+        try {
+            $bmp = New-Object System.Drawing.Bitmap($img.Width, $img.Height,
+                       [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+            try {
+                $g = [System.Drawing.Graphics]::FromImage($bmp)
+                $g.Clear([System.Drawing.Color]::White)
+                $g.PixelOffsetMode   = 'Half'
+                $g.InterpolationMode = 'NearestNeighbor'
+                $g.DrawImage($img, (New-Object System.Drawing.Rectangle(0, 0, $img.Width, $img.Height)))
+                $g.Dispose()
+                $bmp.Save($dst, [System.Drawing.Imaging.ImageFormat]::Png)
+            } finally { $bmp.Dispose() }
+        } finally { $img.Dispose() }
     } finally { $fs.Close() }
+}
+
+# Read from the PNG header rather than by decoding the file: whether it carries
+# transparency, and whether it is animated. Colour types 4 and 6 hold an alpha
+# channel; a palette image (3) is transparent only if a tRNS chunk appears
+# before the pixel data; an APNG is one with an acTL chunk, and it usually calls
+# itself .png, so the extension says nothing. Both send the file the long way
+# round - cjpegli lays transparency on black, and fails outright on animation.
+function Test-JipegPngNeedsDecode([string]$path) {
+    $fs = $null
+    try {
+        $fs = [System.IO.File]::OpenRead($path)
+        $head = New-Object byte[] 26
+        if ($fs.Read($head, 0, 26) -lt 26) { return $false }
+        $type = [int]$head[25]
+        $alpha = ($type -eq 4 -or $type -eq 6)
+        # 8 signature bytes, then IHDR: 4 length + 4 name + 13 data + 4 CRC.
+        # Reading 26 bytes to reach the colour type leaves the cursor inside
+        # IHDR's data, so the chunk walk has to be put back on the boundary.
+        $fs.Position = 33
+        $br = New-Object System.IO.BinaryReader($fs)
+        while ($fs.Position -lt $fs.Length) {
+            $len = ([int]$br.ReadByte() -shl 24) -bor ([int]$br.ReadByte() -shl 16) -bor
+                   ([int]$br.ReadByte() -shl 8)  -bor  [int]$br.ReadByte()
+            $name = [System.Text.Encoding]::ASCII.GetString($br.ReadBytes(4))
+            if ($name -eq 'acTL') { return $true }              # animated
+            if ($name -eq 'tRNS') { $alpha = $true }
+            if ($name -eq 'IDAT') { return $alpha }             # header is over
+            [void]$br.ReadBytes($len + 4)                       # data plus its CRC
+        }
+        return $alpha
+    } catch { } finally { if ($fs) { $fs.Dispose() } }
+    return $false
 }
 
 function ConvertTo-JipegPng-Webp([string]$src, [string]$dst) {
@@ -322,13 +380,25 @@ function Start-Next {
         $ext = [System.IO.Path]::GetExtension($src).ToLower()
         $source = $src
         $script:TmpIn = $null
-        if ($GdiExt -contains $ext -or $WebpExt -contains $ext -or $WicExt -contains $ext) {
+        # a PNG only needs the detour if it is transparent or animated
+        $awkward = ($ext -eq '.png' -and (Test-JipegPngNeedsDecode $src))
+        if ($GdiExt -contains $ext -or $WebpExt -contains $ext -or
+            $WicExt -contains $ext -or $awkward) {
             # cjpegli reads none of these: decode to PNG first, by whichever
             # route knows the format, and hand it that instead
             $tmpPng = Join-Path $env:TEMP ('jipeg-in-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
-            if ($WebpExt -contains $ext)    { ConvertTo-JipegPng-Webp $src $tmpPng }
-            elseif ($WicExt -contains $ext) { ConvertTo-JipegPng-Wic $src $tmpPng $ext }
-            else                            { ConvertTo-JipegPng-Gdi $src $tmpPng }
+            if ($WebpExt -contains $ext -or $WicExt -contains $ext) {
+                $raw = Join-Path $env:TEMP ('jipeg-raw-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
+                if ($WebpExt -contains $ext) { ConvertTo-JipegPng-Webp $src $raw }
+                else                         { ConvertTo-JipegPng-Wic  $src $raw $ext }
+                # these decoders keep the alpha channel, so the same flattening
+                # applies to them
+                if (Test-JipegPngNeedsDecode $raw) { ConvertTo-JipegPng-Gdi $raw $tmpPng }
+                else { Move-Item -LiteralPath $raw -Destination $tmpPng -Force }
+                Remove-Item -LiteralPath $raw -Force -ErrorAction SilentlyContinue
+            } else {
+                ConvertTo-JipegPng-Gdi $src $tmpPng
+            }
             $source = $tmpPng; $script:TmpIn = $tmpPng
         }
         $dir = Split-Path -Parent $src
