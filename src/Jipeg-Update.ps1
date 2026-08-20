@@ -35,9 +35,20 @@ try {
     $settings = Get-JipegSettings
     if (-not $Force -and -not $settings.autoUpdate) { exit 2 }
 
-    # never while the converter is working: cjpegli.exe would be locked and the
-    # copy would fail halfway through
-    if (Test-Path -LiteralPath (Join-Path $env:TEMP 'jipeg.lock')) { exit 2 }
+    # Never while the converter is working: cjpegli.exe would be locked and the
+    # copy would fail halfway through. Presence alone is not the test - a
+    # converter that was killed rather than closed leaves the file behind, and
+    # testing for the file would then have switched quiet updates off for good.
+    # What counts is whether anything still holds it open.
+    $lock = Join-Path $env:TEMP 'jipeg.lock'
+    if (Test-Path -LiteralPath $lock) {
+        try {
+            $fs = [System.IO.File]::Open($lock, 'Open', 'Write', 'None')
+            $fs.Close()          # opened exclusively, so nobody else has it: stale
+        } catch {
+            exit 2               # still held, a conversion is running
+        }
+    }
 
     $rel = Get-JipegLatestRelease
     if (-not $rel) { exit 3 }                     # offline; try again tomorrow
