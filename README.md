@@ -11,7 +11,18 @@ progress window in your Windows theme, done.
 
 ## Install
 
-1. Download the repository (**Code → Download ZIP**) and unpack it.
+One line in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/install.ps1 | iex
+```
+
+It fetches the latest release, checks it against the SHA-256 GitHub publishes for
+that file, and runs the installer.
+
+Or by hand:
+
+1. Download the ZIP from [Releases](https://github.com/da0t-exe/Jipeg/releases/latest) and unpack it.
 2. Double-click **`Install.bat`**.
 3. Click **Install**.
 
@@ -46,7 +57,7 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 | **Theme** | Follow Windows, or force Light or Dark. |
 | **Translucent window background (Mica)** | The Windows 11 Mica material behind the windows. Ignored when the theme is forced to the opposite of the Windows one. |
 | **Close the window automatically** | Off by default, so the result stays until you dismiss it. |
-| **Check for updates** | Asks GitHub whether a newer release exists and offers to open the download page. It never downloads or runs anything on its own. |
+| **Updates** | The window checks for a newer release on its own when it opens, without blocking. If one exists the button becomes *Open download page*. It never downloads or runs anything by itself. |
 
 ## Supported formats
 
@@ -108,13 +119,19 @@ Windows 11 draws itself. Four things needed help:
   in a single flat colour that never animates.
 - **The colour is yours.** It comes from the Windows accent palette in the registry — a light
   shade on dark backgrounds, a deeper one on light, the same way Windows picks.
-- **Check boxes** keep a white glyph whatever `BackColor` says, and `SetWindowTheme` breaks them
-  outright, so in dark mode they switch to `FlatStyle`. `NumericUpDown` cannot be darkened at
-  all, which is why quality is a drop-down.
+- **Check boxes** have no single style that works in dark mode: `Standard` draws a white box
+  when unticked but the correct blue box with a white tick when ticked, and `Flat` does the
+  opposite — dark when unticked, an unreadable light box with a pale tick when ticked. So the
+  style follows the state. `SetWindowTheme` does not help; it breaks the control outright.
+  `NumericUpDown` cannot be darkened at all, which is why quality is a drop-down.
+- **Text sizing and contrast.** The body font is the system dialog typeface at 10 pt rather than
+  the default 9 pt, so it still follows the user's font and DPI. Secondary text sits at roughly
+  7.8:1 against its background — WCAG AAA — where the usual dimmed grey lands nearer 5:1.
 
 ## Layout
 
 ```
+install.ps1              one-line installer, fetches the latest release
 Install.bat              runs the installer
 Uninstall.bat            runs the uninstaller
 bin/cjpegli.exe          the jpegli encoder (+ component licences)

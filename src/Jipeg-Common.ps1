@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.2.1'
+$JipegVersion = '1.3.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -88,7 +88,7 @@ function Get-JipegTheme([string]$preference) {
             Back    = [System.Drawing.Color]::FromArgb(32, 32, 32)
             Panel   = [System.Drawing.Color]::FromArgb(43, 43, 43)
             Text    = [System.Drawing.Color]::FromArgb(255, 255, 255)
-            Muted   = [System.Drawing.Color]::FromArgb(160, 160, 160)
+            Muted   = [System.Drawing.Color]::FromArgb(192, 192, 192)   # 7.8:1 sur les cartes
             Button  = [System.Drawing.Color]::FromArgb(45, 45, 45)
             Edge    = [System.Drawing.Color]::FromArgb(70, 70, 70)
             Track   = [System.Drawing.Color]::FromArgb(58, 58, 58)
@@ -101,7 +101,7 @@ function Get-JipegTheme([string]$preference) {
         Back    = [System.Drawing.Color]::FromArgb(243, 243, 243)
         Panel   = [System.Drawing.Color]::FromArgb(251, 251, 251)
         Text    = [System.Drawing.Color]::FromArgb(26, 26, 26)
-        Muted   = [System.Drawing.Color]::FromArgb(93, 93, 93)
+        Muted   = [System.Drawing.Color]::FromArgb(80, 80, 80)          # 7.9:1 sur les cartes
         Button  = [System.Drawing.SystemColors]::Control
         Edge    = [System.Drawing.Color]::FromArgb(205, 205, 205)
         Track   = [System.Drawing.Color]::FromArgb(222, 222, 222)
@@ -110,7 +110,11 @@ function Get-JipegTheme([string]$preference) {
     }
 }
 
-$JipegFont = [System.Drawing.SystemFonts]::MessageBoxFont
+# The system dialog font at 9 pt is small for body text; 10 pt in the same
+# family keeps the user's typeface and still scales with their DPI setting.
+$JipegFont = New-Object System.Drawing.Font(
+    [System.Drawing.SystemFonts]::MessageBoxFont.FontFamily, 10.0)
+$JipegFontBold = New-Object System.Drawing.Font($JipegFont, [System.Drawing.FontStyle]::Bold)
 
 # Windows 11 rounds top-level windows on its own; this only syncs the title bar
 # with the theme the user picked, which may differ from the system one.
@@ -149,18 +153,30 @@ function Set-JipegButton($b, $theme) {
 # WinForms check boxes keep a white glyph in dark mode whatever BackColor says,
 # and SetWindowTheme breaks them outright. FlatStyle draws the box from the
 # control's own colours instead, which is the only combination that stays dark.
+# In dark mode neither style is right on its own: Standard draws a white box
+# when unticked but the proper blue box with a white tick when ticked, and Flat
+# does the opposite - a dark box unticked, an unreadable light box with a pale
+# tick when ticked. So the style follows the state.
+function Set-JipegCheckStyle($chk, $theme) {
+    if (-not $theme.Dark) { return }
+    if ($chk.Checked) {
+        $chk.FlatStyle = 'Standard'
+    } else {
+        $chk.FlatStyle = 'Flat'
+        $chk.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
+    }
+}
+
 function Set-JipegCheck($chk, $theme, $back = $null) {
     $chk.ForeColor = $theme.Text
     if (-not $theme.Dark) { return }
-    $chk.FlatStyle = 'Flat'
     # never transparent: the flat renderer fills the glyph from BackColor, and a
     # transparent one comes out as a solid white square
     if ($null -eq $back) { $back = $theme.Panel }
     $chk.BackColor = $back
-    # FlatAppearance.CheckedBackColor has no effect on the glyph, so a ticked box
-    # stays light with a dark tick. Unticked is the common state and this is the
-    # only style that keeps it dark.
-    $chk.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(140, 140, 140)
+    $chk.Tag = $theme
+    Set-JipegCheckStyle $chk $theme
+    $chk.Add_CheckedChanged({ Set-JipegCheckStyle $this $this.Tag })
 }
 
 function New-JipegRoundPath([single]$x, [single]$y, [single]$w, [single]$h, [single]$radius) {
@@ -222,6 +238,31 @@ function Format-JipegSize([double]$b) {
 # ------------------------------------------------------------------ updates
 # Only ever reports; downloading and running an installer unattended is not
 # something this tool should do behind the user's back.
+# Started without blocking the window; the caller polls IsCompleted from a timer.
+function Start-JipegUpdateCheck {
+    try {
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+        $req = [System.Net.HttpWebRequest]::Create("https://api.github.com/repos/$JipegRepo/releases/latest")
+        $req.UserAgent = 'Jipeg'
+        $req.Timeout   = 8000
+        return [pscustomobject]@{ Request = $req; Async = $req.BeginGetResponse($null, $null) }
+    } catch { return $null }
+}
+
+function Complete-JipegUpdateCheck($state) {
+    try {
+        $resp = $state.Request.EndGetResponse($state.Async)
+        $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
+        $json = $reader.ReadToEnd()
+        $reader.Close(); $resp.Close()
+        $rel = $json | ConvertFrom-Json
+        return [pscustomobject]@{
+            Tag = ($rel.tag_name -replace '^v', '')
+            Url = $rel.html_url
+        }
+    } catch { return $null }
+}
+
 function Get-JipegLatestRelease {
     try {
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12

@@ -198,7 +198,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Install Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(470, 232)
+$form.ClientSize      = New-Object System.Drawing.Size(470, 250)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
@@ -210,7 +210,7 @@ $form.Add_HandleCreated({
 })
 
 $lbl1 = New-Object System.Windows.Forms.Label
-$lbl1.SetBounds(16, 16, 438, 40)
+$lbl1.SetBounds(16, 16, 438, 44)
 $lbl1.ForeColor = $Theme.Text
 $Quote1 = [char]0x201C
 $Quote2 = [char]0x201D
@@ -219,7 +219,7 @@ Set-JipegLabel $lbl1 $Theme $Mica
 $form.Controls.Add($lbl1)
 
 $lbl2 = New-Object System.Windows.Forms.Label
-$lbl2.SetBounds(16, 62, 438, 36)
+$lbl2.SetBounds(16, 66, 438, 40)
 $lbl2.ForeColor = $Theme.Muted
 $lbl2.Text = "Installs to: $Dest" + [Environment]::NewLine + 'No administrator rights required.'
 Set-JipegLabel $lbl2 $Theme $Mica
@@ -227,7 +227,7 @@ $form.Controls.Add($lbl2)
 
 $IsWin11 = ([Environment]::OSVersion.Version.Build -ge 22000)
 $chk = New-Object System.Windows.Forms.CheckBox
-$chk.SetBounds(16, 108, 438, 22)
+$chk.SetBounds(16, 114, 438, 24)
 $chk.Checked = $IsWin11
 $chk.Enabled = $IsWin11
 $chk.Text = 'Show the entry directly in the right-click menu'
@@ -236,7 +236,7 @@ if (-not $IsWin11) { $chk.Text = 'Classic context menu - not needed on this Wind
 $form.Controls.Add($chk)
 
 $lblChk = New-Object System.Windows.Forms.Label
-$lblChk.SetBounds(35, 132, 419, 34)
+$lblChk.SetBounds(35, 140, 419, 40)
 $lblChk.ForeColor = $Theme.Muted
 $lblChk.Text = ('Otherwise Windows 11 hides it under {0}Show more options{1}.' -f $Quote1, $Quote2) +
                [Environment]::NewLine + 'Explorer restarts briefly.'
@@ -245,20 +245,20 @@ Set-JipegLabel $lblChk $Theme $Mica
 $form.Controls.Add($lblChk)
 
 $lblState = New-Object System.Windows.Forms.Label
-$lblState.SetBounds(16, 191, 240, 20)
+$lblState.SetBounds(16, 206, 240, 22)
 $lblState.ForeColor = $Theme.Muted
 Set-JipegLabel $lblState $Theme $Mica
 $form.Controls.Add($lblState)
 
 $btnGo = New-Object System.Windows.Forms.Button
-$btnGo.SetBounds(470 - 16 - 96 - 8 - 96, 186, 96, 30)
+$btnGo.SetBounds(470 - 16 - 96 - 8 - 96, 202, 96, 32)
 $btnGo.Text = 'Install'
 Set-JipegButton $btnGo $Theme
 $form.Controls.Add($btnGo)
 Set-JipegRounded $btnGo 5
 
 $btnNo = New-Object System.Windows.Forms.Button
-$btnNo.SetBounds(470 - 16 - 96, 186, 96, 30)
+$btnNo.SetBounds(470 - 16 - 96, 202, 96, 32)
 $btnNo.Text = 'Cancel'
 Set-JipegButton $btnNo $Theme
 $btnNo.Add_Click({ $form.Close() })

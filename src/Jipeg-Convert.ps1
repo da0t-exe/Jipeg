@@ -114,7 +114,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(430, 168)
+$form.ClientSize      = New-Object System.Drawing.Size(430, 176)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ShowInTaskbar   = $true
@@ -128,15 +128,15 @@ $form.Add_HandleCreated({
 })
 
 $lblTitle = New-Object System.Windows.Forms.Label
-$lblTitle.SetBounds(16, 18, 398, 20)
+$lblTitle.SetBounds(16, 18, 398, 22)
 $lblTitle.ForeColor = $Theme.Text
-$lblTitle.Font = New-Object System.Drawing.Font($JipegFont, [System.Drawing.FontStyle]::Bold)
+$lblTitle.Font = $JipegFontBold
 $lblTitle.Text = 'Getting ready…'
 Set-JipegLabel $lblTitle $Theme $Mica
 $form.Controls.Add($lblTitle)
 
 $lblFile = New-Object System.Windows.Forms.Label
-$lblFile.SetBounds(16, 40, 398, 18)
+$lblFile.SetBounds(16, 43, 398, 20)
 $lblFile.ForeColor = $Theme.Muted
 $lblFile.AutoEllipsis = $true
 Set-JipegLabel $lblFile $Theme $Mica
@@ -147,7 +147,7 @@ $form.Controls.Add($lblFile)
 $script:BarValue = 0
 $script:BarMax   = [math]::Max(1, $Files.Count)
 $bar = New-Object System.Windows.Forms.Panel
-$bar.SetBounds(16, 68, 398, 10)
+$bar.SetBounds(16, 73, 398, 10)
 $bar.BackColor = $form.BackColor
 Set-JipegDoubleBuffer $bar
 $bar.Add_Paint({
@@ -178,13 +178,13 @@ function Set-Bar([int]$value) {
 }
 
 $lblResult = New-Object System.Windows.Forms.Label
-$lblResult.SetBounds(16, 90, 398, 18)
+$lblResult.SetBounds(16, 94, 398, 20)
 $lblResult.ForeColor = $Theme.Text
 Set-JipegLabel $lblResult $Theme $Mica
 $form.Controls.Add($lblResult)
 
 $btn = New-Object System.Windows.Forms.Button
-$btn.SetBounds(430 - 16 - 100, 122, 100, 30)
+$btn.SetBounds(430 - 16 - 100, 128, 100, 32)
 $btn.Text = 'Cancel'
 Set-JipegButton $btn $Theme
 $form.Controls.Add($btn)
