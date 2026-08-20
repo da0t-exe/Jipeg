@@ -180,7 +180,8 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
     Get-Cjpegli $report
     & $report 'Installing Jipeg'
     foreach ($f in @('Jipeg-Common.ps1', 'Jipeg-Convert.ps1', 'Jipeg-Settings.ps1',
-                     'Uninstall-Jipeg.ps1', 'launch.vbs', 'settings.vbs')) {
+                     'Jipeg-Update.ps1', 'Uninstall-Jipeg.ps1',
+                     'launch.vbs', 'settings.vbs', 'update.vbs')) {
         Copy-Item -LiteralPath (Join-Path $Here $f) -Destination $Dest -Force
     }
     $licSrc = Join-Path $Project 'bin'
@@ -279,7 +280,7 @@ $chk.AutoSize = $true   # la bande opaque epouse le texte au lieu de barrer le M
 $chk.Checked = $IsWin11
 $chk.Enabled = $IsWin11
 $chk.Text = 'Show the entry directly in the right-click menu'
-Set-JipegCheck $chk $Theme $Theme.Back
+Set-JipegCheck $chk $Theme $Theme.Back   # posee sur le fond de fenetre, pas sur une carte
 if (-not $IsWin11) { $chk.Text = 'Classic context menu - not needed on this Windows'; $chk.ForeColor = $Theme.Muted }
 $form.Controls.Add($chk)
 

@@ -20,15 +20,22 @@ $InnerW   = $CardW - 2 * $Pad
 $FieldW   = 280
 $FieldX   = $CardW - $Pad - $FieldW
 
+# One label per value, spelled out. Two entries reading "light, for the web"
+# told the reader nothing about the difference between them.
+$QualityText = @{
+    100 = 'maximum, files get very large'
+     96 = 'visually lossless'
+     92 = 'very high quality'
+     90 = 'high quality (default)'
+     85 = 'balanced'
+     80 = 'small files, still crisp'
+     75 = 'light, made for the web'
+     70 = 'strong compression'
+     60 = 'very strong, artefacts show'
+}
 function Quality-Label([int]$q) {
-    if ($q -ge 99) { return "$q - maximum, very large files" }
-    if ($q -ge 95) { return "$q - visually lossless" }
-    if ($q -ge 92) { return "$q - very high quality" }
-    if ($q -eq 90) { return "$q - high quality (default)" }
-    if ($q -ge 84) { return "$q - balanced" }
-    if ($q -ge 78) { return "$q - light, for the web" }
-    if ($q -ge 70) { return "$q - strong compression" }
-    return "$q - very strong compression"
+    if ($QualityText.ContainsKey($q)) { return "$q - $($QualityText[$q])" }
+    return "$q - custom"
 }
 
 # ------------------------------------------------------------------- window
@@ -36,7 +43,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg Settings'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size($W, 608)
+$form.ClientSize      = New-Object System.Drawing.Size($W, 740)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
@@ -70,6 +77,12 @@ function New-Card([int]$y, [int]$h) {
         $g = $_.Graphics
         $g.SmoothingMode = 'AntiAlias'
         $p = New-JipegRoundPath 0.5 0.5 ($this.Width - 1) ($this.Height - 1) 8
+        # Filled here rather than left to BackColor: over Mica, the background
+        # WinForms paints comes out with no alpha and the backdrop shows through,
+        # so the card was translucent - measured at #494B50 instead of #2B2B2B.
+        # A GDI+ brush writes opaque pixels.
+        $fill = New-Object System.Drawing.SolidBrush($Theme.Panel)
+        $g.FillPath($fill, $p); $fill.Dispose()
         $pen = New-Object System.Drawing.Pen($Theme.CardEdge, 1)
         $g.DrawPath($pen, $p)
         $pen.Dispose(); $p.Dispose()
@@ -83,6 +96,10 @@ function New-Label([string]$text, [int]$x, [int]$y, [int]$w, $parent) {
     $l = New-Object System.Windows.Forms.Label
     $l.SetBounds($x, $y, $w, 22)
     $l.ForeColor = $Theme.Text
+    # Transparent so the card's own painted fill shows through. Left opaque, the
+    # label's background is drawn by WinForms with no alpha and the Mica backdrop
+    # bleeds into it, leaving a lighter rectangle around every line of text.
+    $l.BackColor = [System.Drawing.Color]::Transparent
     $l.Text = $text
     $parent.Controls.Add($l)
     return $l
@@ -93,6 +110,7 @@ function New-Hint([string]$text, [int]$x, [int]$y, [int]$w, $parent) {
     $l.SetBounds($x, $y, $w, 18)
     $l.Font = $JipegFontHint
     $l.ForeColor = $Theme.Muted
+    $l.BackColor = [System.Drawing.Color]::Transparent
     $l.Text = $text
     $parent.Controls.Add($l)
     return $l
@@ -102,6 +120,13 @@ function New-Hint([string]$text, [int]$x, [int]$y, [int]$w, $parent) {
 # default dropdown. The control is still a real ComboBox: it simply sits in a
 # frame narrower than itself, so the grey system arrow button falls outside and
 # is clipped away, and a chevron is drawn in its place.
+$script:PopupTimer = New-Object System.Windows.Forms.Timer
+$script:PopupTimer.Interval = 40
+$script:PopupTimer.Add_Tick({
+    $script:PopupTimer.Stop()
+    Set-JipegPopupChrome $Theme
+})
+
 function New-Combo([int]$y, $parent) {
     $frame = New-Object System.Windows.Forms.Panel
     $frame.SetBounds($FieldX, $y, $FieldW, 26)
@@ -160,6 +185,7 @@ function New-Combo([int]$y, $parent) {
             $pen.Dispose()
         }
     })
+    $c.Add_DropDown({ $script:PopupTimer.Start() })
     $frame.Controls.Add($c)
     return $c
 }
@@ -169,7 +195,7 @@ New-Section 'Conversion' 20
 $card1 = New-Card 50 132
 
 [void](New-Label 'JPEG quality' $Pad 16 160 $card1)
-$QualityValues = @(100, 96, 92, 90, 85, 80, 78, 70, 60)
+$QualityValues = @(100, 96, 92, 90, 85, 80, 75, 70, 60)
 $cmbQ = New-Combo 14 $card1
 foreach ($v in $QualityValues) { [void]$cmbQ.Items.Add((Quality-Label $v)) }
 $saved = [int]$Settings.quality
@@ -187,7 +213,7 @@ $chk444.Text = 'Keep full colour detail (4:4:4)'
 $chk444.Checked = [bool]$Settings.chroma444
 Set-JipegCheck $chk444 $Theme
 $card1.Controls.Add($chk444)
-[void](New-Hint 'Better for screenshots, text and sharp colour edges. Larger files.' ($Pad + 20) 98 ($InnerW - 20) $card1)
+[void](New-Hint 'Better for screenshots, text and sharp colour edges. Larger files.' ($Pad + 26) 98 ($InnerW - 26) $card1)
 
 # --------------------------------------------------------------- appearance
 New-Section 'Appearance' 202
@@ -207,9 +233,21 @@ $chkMica.Checked = [bool]$Settings.mica
 Set-JipegCheck $chkMica $Theme
 $card2.Controls.Add($chkMica)
 
+New-Section 'Updates' 364
+$card4 = New-Card 394 76
+$chkAuto = New-Object System.Windows.Forms.CheckBox
+$chkAuto.SetBounds($Pad, 16, $InnerW, 22)
+$chkAuto.Text = 'Install new versions quietly'
+$chkAuto.Checked = [bool]$Settings.autoUpdate
+Set-JipegCheck $chkAuto $Theme
+$card4.Controls.Add($chkAuto)
+$autoHint = 'Checked once a day after a conversion, never during one.'
+if ($Settings.lastUpdate) { $autoHint = [string]$Settings.lastUpdate }
+[void](New-Hint $autoHint ($Pad + 26) 42 ($InnerW - 26) $card4)
+
 # ------------------------------------------------------------------ finish
-New-Section 'When a conversion finishes' 364
-$card3 = New-Card 394 76
+New-Section 'When a conversion finishes' 496
+$card3 = New-Card 526 76
 
 $chkClose = New-Object System.Windows.Forms.CheckBox
 $chkClose.SetBounds($Pad, 16, $InnerW, 22)
@@ -217,25 +255,25 @@ $chkClose.Text = 'Close the window automatically'
 $chkClose.Checked = [bool]$Settings.closeWhenDone
 Set-JipegCheck $chkClose $Theme
 $card3.Controls.Add($chkClose)
-[void](New-Hint 'Otherwise the result stays on screen until you click OK.' ($Pad + 20) 42 ($InnerW - 20) $card3)
+[void](New-Hint 'Otherwise the result stays on screen until you click OK.' ($Pad + 26) 42 ($InnerW - 26) $card3)
 
 # ----------------------------------------------------------------- version
 $lblVer = New-Object System.Windows.Forms.Label
-$lblVer.SetBounds($Margin, 494, 260, 22)
+$lblVer.SetBounds($Margin, 626, 260, 22)
 $lblVer.ForeColor = $Theme.Text
 $lblVer.Text = "Jipeg $JipegVersion"
 Set-JipegLabel $lblVer $Theme $Mica
 $form.Controls.Add($lblVer)
 
 $lblUpd = New-Object System.Windows.Forms.Label
-$lblUpd.SetBounds($Margin, 518, 320, 18)
+$lblUpd.SetBounds($Margin, 650, 320, 18)
 $lblUpd.Font = $JipegFontHint
 $lblUpd.ForeColor = $Theme.Muted
 Set-JipegLabel $lblUpd $Theme $Mica
 $form.Controls.Add($lblUpd)
 
 $btnUpd = New-Object System.Windows.Forms.Button
-$btnUpd.SetBounds(($W - $Margin - 160), 496, 160, 32)
+$btnUpd.SetBounds(($W - $Margin - 160), 628, 160, 32)
 $btnUpd.Text = 'Check for updates'
 Set-JipegButton $btnUpd $Theme
 $form.Controls.Add($btnUpd)
@@ -289,7 +327,7 @@ $btnUpd.Add_Click({
 
 # --------------------------------------------------------------- OK/Cancel
 $btnCancel = New-Object System.Windows.Forms.Button
-$btnCancel.SetBounds(($W - $Margin - 100), 556, 100, 32)
+$btnCancel.SetBounds(($W - $Margin - 100), 688, 100, 32)
 $btnCancel.Text = 'Cancel'
 Set-JipegButton $btnCancel $Theme
 $btnCancel.Add_Click({ $form.Close() })
@@ -297,7 +335,7 @@ $form.Controls.Add($btnCancel)
 Set-JipegRounded $btnCancel 5
 
 $btnOK = New-Object System.Windows.Forms.Button
-$btnOK.SetBounds(($W - $Margin - 208), 556, 100, 32)
+$btnOK.SetBounds(($W - $Margin - 208), 688, 100, 32)
 $btnOK.Text = 'OK'
 Set-JipegButton $btnOK $Theme
 $form.Controls.Add($btnOK)
@@ -311,6 +349,7 @@ $btnOK.Add_Click({
     $Settings.chroma444     = [bool]$chk444.Checked
     $Settings.closeWhenDone = [bool]$chkClose.Checked
     $Settings.mica          = [bool]$chkMica.Checked
+    $Settings.autoUpdate    = [bool]$chkAuto.Checked
     $Settings.theme         = switch ($cmbT.SelectedIndex) { 1 { 'light' } 2 { 'dark' } default { 'auto' } }
     try {
         Save-JipegSettings $Settings

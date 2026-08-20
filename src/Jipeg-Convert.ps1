@@ -428,6 +428,19 @@ $form.Add_FormClosed({
             Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
         } finally { $Mutex.ReleaseMutex() }
     }
+    # Quiet update, once a day at most, and only after the lock is gone so it
+    # can never collide with a conversion. Nothing is shown either way.
+    try {
+        if ($Settings.autoUpdate) {
+            $age = [DateTime]::UtcNow.Ticks - [int64]$Settings.lastCheck
+            if ($age -gt ([TimeSpan]::FromHours(24)).Ticks) {
+                $vbs = Join-Path $Root 'update.vbs'
+                if (Test-Path -LiteralPath $vbs) {
+                    Start-Process wscript.exe -ArgumentList ('"' + $vbs + '"')
+                }
+            }
+        }
+    } catch { }
 })
 
 [System.Windows.Forms.Application]::Run($form)

@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.6.0'
+$JipegVersion = '1.7.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -17,6 +17,7 @@ Add-Type -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
 [DllImport("uxtheme.dll", CharSet=CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string sub, string id);
 [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
+[DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string name);
 '@ -Name 'Win' -Namespace 'Jipeg' | Out-Null
 
 # ------------------------------------------------------------------ settings
@@ -34,14 +35,33 @@ function Set-JipegIcon($form, [string]$root) {
 
 $JipegSettingsPath = Join-Path (Join-Path $env:LOCALAPPDATA 'Jipeg') 'settings.json' 
 
+# Bumped when the meaning of a stored value changes, so an older file can be
+# brought forward instead of being thrown away or misread.
+$JipegSchema = 1
+
 function Get-JipegDefaults {
     return [pscustomobject]@{
+        schema        = $JipegSchema
+        writtenBy     = $JipegVersion
         theme         = 'auto'      # auto | light | dark
         quality       = 90          # libjpeg scale, 1..100
         chroma444     = $false      # keep full colour detail (bigger files)
         closeWhenDone = $false      # dismiss the progress window automatically
         mica          = $true       # translucent Mica window background
+        autoUpdate    = $true       # fetch and install newer releases quietly
+        lastCheck     = 0           # ticks of the last update check
+        lastUpdate    = ''          # what the last quiet update did
     }
+}
+
+# Settings survive an upgrade: unknown keys from a newer build are ignored,
+# missing ones take today's default, and anything whose meaning changed is
+# rewritten here rather than silently misread.
+function Update-JipegSchema($s) {
+    if ($null -eq $s.schema) { $s.schema = 0 }
+    # (no migrations yet - schema 1 is the first stamped format)
+    $s.schema = $JipegSchema
+    return $s
 }
 
 function Get-JipegSettings {
@@ -54,12 +74,15 @@ function Get-JipegSettings {
             }
         }
     } catch { }   # a corrupt file must never stop a conversion
+    $s = Update-JipegSchema $s
     if ($s.quality -lt 1 -or $s.quality -gt 100) { $s.quality = 90 }
     if ('auto', 'light', 'dark' -notcontains $s.theme) { $s.theme = 'auto' }
     return $s
 }
 
 function Save-JipegSettings($s) {
+    $s.schema = $JipegSchema
+    $s.writtenBy = $JipegVersion
     $dir = Split-Path -Parent $JipegSettingsPath
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     ($s | ConvertTo-Json) | Set-Content -LiteralPath $JipegSettingsPath -Encoding UTF8
@@ -107,6 +130,7 @@ function Get-JipegTheme([string]$preference) {
             Track   = [System.Drawing.Color]::FromArgb(58, 58, 58)
             Field   = [System.Drawing.Color]::FromArgb(56, 56, 56)   # doit trancher sur la carte
             CardEdge = [System.Drawing.Color]::FromArgb(58, 58, 58)
+            CheckEdge = [System.Drawing.Color]::FromArgb(122, 122, 122)
             Accent  = Get-JipegAccent $true
         }
     }
@@ -121,6 +145,7 @@ function Get-JipegTheme([string]$preference) {
         Track   = [System.Drawing.Color]::FromArgb(222, 222, 222)
         Field   = [System.Drawing.Color]::FromArgb(255, 255, 255)
         CardEdge = [System.Drawing.Color]::FromArgb(226, 226, 226)
+        CheckEdge = [System.Drawing.Color]::FromArgb(140, 140, 140)
         Accent  = Get-JipegAccent $false
     }
 }
@@ -165,6 +190,24 @@ function Show-JipegWindow($form) {
     [void][Jipeg.Win]::SetForegroundWindow($form.Handle)
 }
 
+# A combo box drops its list in a separate system window of class ComboLBox.
+# Windows 11 will round it for us, but only if asked once the window exists -
+# hence the short delay after DropDown fires.
+function Set-JipegPopupChrome($theme) {
+    try {
+        $lb = [Jipeg.Win]::FindWindow('ComboLBox', $null)
+        if ($lb -eq [IntPtr]::Zero) { return }
+        $round = 2                                   # DWMWA_WINDOW_CORNER_PREFERENCE
+        [void][Jipeg.Win]::DwmSetWindowAttribute($lb, 33, [ref]$round, 4)
+        $dark = 0
+        if ($theme.Dark) { $dark = 1 }
+        [void][Jipeg.Win]::DwmSetWindowAttribute($lb, 20, [ref]$dark, 4)
+        # a border, or the list melts into whatever is behind it
+        $edge = ($theme.CardEdge.B -shl 16) -bor ($theme.CardEdge.G -shl 8) -bor $theme.CardEdge.R
+        [void][Jipeg.Win]::DwmSetWindowAttribute($lb, 34, [ref]$edge, 4)
+    } catch { }
+}
+
 function Set-JipegLabel($lbl, $theme, [bool]$mica) {
     if ($mica) { $lbl.BackColor = [System.Drawing.Color]::Transparent }
 }
@@ -184,30 +227,77 @@ function Set-JipegButton($b, $theme) {
 # WinForms check boxes keep a white glyph in dark mode whatever BackColor says,
 # and SetWindowTheme breaks them outright. FlatStyle draws the box from the
 # control's own colours instead, which is the only combination that stays dark.
-# In dark mode neither style is right on its own: Standard draws a white box
-# when unticked but the proper blue box with a white tick when ticked, and Flat
-# does the opposite - a dark box unticked, an unreadable light box with a pale
-# tick when ticked. So the style follows the state.
-function Set-JipegCheckStyle($chk, $theme) {
-    if (-not $theme.Dark) { return }
-    if ($chk.Checked) {
-        $chk.FlatStyle = 'Standard'
-    } else {
-        $chk.FlatStyle = 'Flat'
-        $chk.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
-    }
-}
-
+# Neither built-in style is presentable: Standard draws a white box when
+# unticked, Flat an unreadable light one when ticked, and SetWindowTheme breaks
+# the control outright. So the glyph is painted here. The control itself is
+# still a real CheckBox, which keeps focus, Space, and accessibility.
 function Set-JipegCheck($chk, $theme, $back = $null) {
-    $chk.ForeColor = $theme.Text
-    if (-not $theme.Dark) { return }
-    # never transparent: the flat renderer fills the glyph from BackColor, and a
-    # transparent one comes out as a solid white square
+    $chk.FlatStyle = 'Flat'
+    $chk.FlatAppearance.BorderSize = 0
+    # Opaque on purpose, taken from whatever it sits on. It has to erase what the
+    # control drew for itself first: left transparent, the native caption shows
+    # through underneath the one painted here and the text renders twice.
     if ($null -eq $back) { $back = $theme.Panel }
     $chk.BackColor = $back
+    $chk.ForeColor = $theme.Text
+    $chk.AutoSize  = $false
     $chk.Tag = $theme
-    Set-JipegCheckStyle $chk $theme
-    $chk.Add_CheckedChanged({ Set-JipegCheckStyle $this $this.Tag })
+    Set-JipegDoubleBuffer $chk
+
+    # The font is pinned before measuring: an unparented control still reports the
+    # default 9 pt, so measuring against it clipped the text once the control
+    # inherited the form's 10 pt. Width hugs the text so the opaque strip does
+    # not cut a band across the Mica background.
+    $chk.Font = $JipegFont
+    $measured = [System.Windows.Forms.TextRenderer]::MeasureText($chk.Text, $JipegFont)
+    $chk.Width = 26 + $measured.Width + 8
+
+    $chk.Add_Paint({
+        $t = $this.Tag
+        $g = $_.Graphics
+        $g.SmoothingMode = 'AntiAlias'
+        $g.TextRenderingHint = 'ClearTypeGridFit'
+        if ($this.BackColor.A -ne 0) {
+            $b = New-Object System.Drawing.SolidBrush($this.BackColor)
+            $g.FillRectangle($b, $this.ClientRectangle); $b.Dispose()
+        }
+
+        $side = 18.0
+        $top  = [math]::Floor(($this.Height - $side) / 2.0)
+        $box  = New-JipegRoundPath 0.5 ($top + 0.5) ($side - 1.0) ($side - 1.0) 4
+        if ($this.Checked) {
+            $fill = New-Object System.Drawing.SolidBrush($t.Accent)
+            $g.FillPath($fill, $box); $fill.Dispose()
+            $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::White, 1.9)
+            $pen.StartCap = 'Round'; $pen.EndCap = 'Round'; $pen.LineJoin = 'Round'
+            $tick = @(
+                (New-Object System.Drawing.PointF(4.8, ($top + 9.2))),
+                (New-Object System.Drawing.PointF(7.8, ($top + 12.4))),
+                (New-Object System.Drawing.PointF(13.4, ($top + 5.6)))
+            )
+            $g.DrawLines($pen, $tick); $pen.Dispose()
+        } else {
+            $fill = New-Object System.Drawing.SolidBrush($t.Field)
+            $g.FillPath($fill, $box); $fill.Dispose()
+            $pen = New-Object System.Drawing.Pen($t.CheckEdge, 1)
+            $g.DrawPath($pen, $box); $pen.Dispose()
+        }
+        $box.Dispose()
+
+        $r = New-Object System.Drawing.Rectangle(26, 0, ($this.Width - 26), $this.Height)
+        [System.Windows.Forms.TextRenderer]::DrawText($g, $this.Text, $this.Font, $r, $this.ForeColor,
+            ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
+             [System.Windows.Forms.TextFormatFlags]::NoPrefix))
+        if ($this.Focused) {
+            $ring = New-Object System.Drawing.Rectangle(0, ($top - 2), ($this.Width - 1), ($side + 4))
+            [System.Windows.Forms.ControlPaint]::DrawFocusRectangle($g, $ring)
+        }
+    })
+    $chk.Add_CheckedChanged({ $this.Invalidate() })
+    $chk.Add_GotFocus({ $this.Invalidate() })
+    $chk.Add_LostFocus({ $this.Invalidate() })
+    $chk.Add_MouseEnter({ $this.Invalidate() })
+    $chk.Add_MouseLeave({ $this.Invalidate() })
 }
 
 function New-JipegRoundPath([single]$x, [single]$y, [single]$w, [single]$h, [single]$radius) {
@@ -287,11 +377,26 @@ function Complete-JipegUpdateCheck($state) {
         $json = $reader.ReadToEnd()
         $reader.Close(); $resp.Close()
         $rel = $json | ConvertFrom-Json
-        return [pscustomobject]@{
-            Tag = ($rel.tag_name -replace '^v', '')
-            Url = $rel.html_url
-        }
+        return (ConvertTo-JipegRelease $rel)
     } catch { return $null }
+}
+
+# Everything the quiet updater needs, including the checksum GitHub publishes
+# for the asset, so a download can be rejected before anything is run.
+function ConvertTo-JipegRelease($rel) {
+    $asset = $rel.assets | Where-Object { $_.name -like '*.zip' } | Select-Object -First 1
+    $digest = ''
+    if ($asset -and $asset.digest -and $asset.digest -match '^sha256:(?<h>[0-9a-fA-F]{64})$') {
+        $digest = $Matches['h'].ToUpper()
+    }
+    $url = ''
+    if ($asset) { $url = $asset.browser_download_url }
+    return [pscustomobject]@{
+        Tag      = ($rel.tag_name -replace '^v', '')
+        Url      = $rel.html_url
+        AssetUrl = $url
+        Digest   = $digest
+    }
 }
 
 function Get-JipegLatestRelease {
@@ -305,11 +410,7 @@ function Get-JipegLatestRelease {
         $json = $reader.ReadToEnd()
         $reader.Close(); $resp.Close()
         $rel = $json | ConvertFrom-Json
-        return [pscustomobject]@{
-            Tag     = ($rel.tag_name -replace '^v', '')
-            Url     = $rel.html_url
-            Name    = $rel.name
-        }
+        return (ConvertTo-JipegRelease $rel)
     } catch { return $null }
 }
 

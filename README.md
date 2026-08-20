@@ -69,7 +69,8 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 | **Theme** | Follow Windows, or force Light or Dark. |
 | **Translucent window background (Mica)** | The Windows 11 Mica material behind the windows. Ignored when the theme is forced to the opposite of the Windows one. |
 | **Close the window automatically** | Off by default, so the result stays until you dismiss it. |
-| **Updates** | The window checks for a newer release on its own when it opens, without blocking. If one exists the button becomes *Open download page*. It never downloads or runs anything by itself. |
+| **Install new versions quietly** | Once a day, after a conversion and never during one, Jipeg looks for a newer release and installs it without showing anything. Only from this repository, only a strictly higher version, and only if the archive matches the SHA-256 GitHub publishes for it. Turn it off and nothing is fetched. |
+| **Check for updates** | The settings window also checks when it opens, without blocking. If a newer release exists the button becomes *Open download page*. |
 
 ## Supported formats
 
@@ -142,11 +143,21 @@ corners Windows 11 draws itself. What needed doing by hand:
   than the frame holding it and offset on every side: the border and the arrow fall outside
   and are clipped away, leaving a clean rounded field, and a chevron is drawn in their place.
   The list items are owner-drawn so they follow the theme.
-- **Check boxes** have no single style that works in dark mode: `Standard` draws a white box
-  when unticked but the correct blue box with a white tick when ticked, and `Flat` does the
-  opposite. So the style follows the state. `SetWindowTheme` does not help; it breaks the
-  control outright. `NumericUpDown` cannot be darkened at all, which is why quality is a
-  drop-down.
+- **Check boxes are painted here.** No built-in style is presentable in dark mode: `Standard`
+  draws a white box when unticked, `Flat` an unreadable light one when ticked, and
+  `SetWindowTheme` breaks the control outright. The glyph is drawn instead — a rounded square,
+  accent-filled with a white tick when on. It is still a real `CheckBox`, so focus, Space and
+  accessibility keep working. Its background must stay opaque: left transparent, the control's
+  own caption shows through underneath the painted one and the text renders twice.
+  `NumericUpDown` cannot be darkened at all, which is why quality is a drop-down.
+- **Opaque means painting it yourself.** Over Mica, the background WinForms fills in for a
+  control carries no alpha and the backdrop bleeds through it. A card set to `#2B2B2B`
+  measured `#494B50` on screen. Surfaces are filled with a GDI+ brush, and the labels sitting
+  on them are transparent so the card's own fill shows — otherwise every line of text wears a
+  lighter rectangle.
+- **The drop-down list is a separate system window** of class `ComboLBox`. Windows 11 will
+  round it and give it a border, but only once it exists, so it is asked just after the list
+  opens.
 
 ## Layout
 
@@ -158,6 +169,7 @@ bin/cjpegli.exe          the jpegli encoder (+ component licences)
 src/Jipeg-Common.ps1     settings, theming and Win32 helpers
 src/Jipeg-Convert.ps1    the converter and its progress window
 src/Jipeg-Settings.ps1   the settings window
+src/Jipeg-Update.ps1     the quiet update check
 src/Install-Jipeg.ps1    installer (window, or -Silent for deployment)
 src/Uninstall-Jipeg.ps1
 src/launch.vbs           starts the converter without a console window
