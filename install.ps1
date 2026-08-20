@@ -192,7 +192,8 @@ try {
             Write-Host ''
             Say 'Windows 11 hides new right-click entries under "Show more options".' 'DarkGray'
             Say 'Jipeg can restore the classic menu so it appears directly.' 'DarkGray'
-            Say 'Explorer restarts for about a second; your open windows stay open.' 'DarkGray'
+            Say 'Explorer restarts: the taskbar goes away for a few seconds, and any' 'DarkGray'
+            Say 'open File Explorer windows are closed.' 'DarkGray'
             $classic = Read-YesNoTimed 'Show Jipeg directly in the right-click menu?' 10 $true
         }
         $psArgs += '-Silent'

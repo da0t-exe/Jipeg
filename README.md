@@ -39,9 +39,10 @@ Or by hand:
 
 No administrator rights. Everything stays inside your user profile.
 
-On Windows 11, leave the checkbox ticked: otherwise the entry only shows up under
-**Show more options** (or Shift + F10). Ticking it restores the classic context menu and
-restarts Explorer briefly.
+On Windows 11, say yes: otherwise the entry only shows up under **Show more options**
+(or Shift + F10). Saying yes restores the classic context menu, which needs Explorer to
+restart — the taskbar goes away for a few seconds and any open File Explorer windows are
+closed. Say no and Jipeg still installs; it just stays in the second menu.
 
 ## Use
 

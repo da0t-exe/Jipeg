@@ -223,7 +223,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Install Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(470, 250)
+$form.ClientSize      = New-Object System.Drawing.Size(470, 272)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
@@ -265,29 +265,30 @@ if (-not $IsWin11) { $chk.Text = 'Classic context menu - not needed on this Wind
 $form.Controls.Add($chk)
 
 $lblChk = New-Object System.Windows.Forms.Label
-$lblChk.SetBounds(35, 140, 419, 40)
+$lblChk.SetBounds(35, 140, 419, 58)
 $lblChk.ForeColor = $Theme.Muted
 $lblChk.Text = ('Otherwise Windows 11 hides it under {0}Show more options{1}.' -f $Quote1, $Quote2) +
-               [Environment]::NewLine + 'Explorer restarts briefly.'
+               [Environment]::NewLine + 'Explorer restarts: the taskbar and any open folders' +
+               [Environment]::NewLine + 'close, and come back after a few seconds.'
 if (-not $IsWin11) { $lblChk.Text = 'Your Windows already shows the full menu.' }
 Set-JipegLabel $lblChk $Theme $Mica
 $form.Controls.Add($lblChk)
 
 $lblState = New-Object System.Windows.Forms.Label
-$lblState.SetBounds(16, 206, 240, 22)
+$lblState.SetBounds(16, 228, 240, 22)
 $lblState.ForeColor = $Theme.Muted
 Set-JipegLabel $lblState $Theme $Mica
 $form.Controls.Add($lblState)
 
 $btnGo = New-Object System.Windows.Forms.Button
-$btnGo.SetBounds(470 - 16 - 96 - 8 - 96, 202, 96, 32)
+$btnGo.SetBounds(470 - 16 - 96 - 8 - 96, 224, 96, 32)
 $btnGo.Text = 'Install'
 Set-JipegButton $btnGo $Theme
 $form.Controls.Add($btnGo)
 Set-JipegRounded $btnGo 5
 
 $btnNo = New-Object System.Windows.Forms.Button
-$btnNo.SetBounds(470 - 16 - 96, 202, 96, 32)
+$btnNo.SetBounds(470 - 16 - 96, 224, 96, 32)
 $btnNo.Text = 'Cancel'
 Set-JipegButton $btnNo $Theme
 $btnNo.Add_Click({ $form.Close() })
