@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.8.0'
+$JipegVersion = '1.9.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -37,7 +37,7 @@ $JipegSettingsPath = Join-Path (Join-Path $env:LOCALAPPDATA 'Jipeg') 'settings.j
 
 # Bumped when the meaning of a stored value changes, so an older file can be
 # brought forward instead of being thrown away or misread.
-$JipegSchema = 1
+$JipegSchema = 2
 
 function Get-JipegDefaults {
     return [pscustomobject]@{
@@ -45,9 +45,9 @@ function Get-JipegDefaults {
         writtenBy     = $JipegVersion
         theme         = 'auto'      # auto | light | dark
         quality       = 90          # libjpeg scale, 1..100
-        chroma444     = $false      # keep full colour detail (bigger files)
+        chroma        = 'auto'      # auto | always | never, see Test-JipegSourceFullChroma
         closeWhenDone = $false      # dismiss the progress window automatically
-        mica          = $false      # off by default: see the note on Set-JipegMica
+        mica          = $true       # the Windows 11 backdrop behind the windows
         autoUpdate    = $true       # fetch and install newer releases quietly
         lastCheck     = 0           # ticks of the last update check
         lastUpdate    = ''          # what the last quiet update did
@@ -57,15 +57,33 @@ function Get-JipegDefaults {
 # Settings survive an upgrade: unknown keys from a newer build are ignored,
 # missing ones take today's default, and anything whose meaning changed is
 # rewritten here rather than silently misread.
-function Update-JipegSchema($s) {
-    if ($null -eq $s.schema) { $s.schema = 0 }
-    # (no migrations yet - schema 1 is the first stamped format)
+function Update-JipegSchema($s, $raw) {
+    # The version to migrate FROM is the one in the file, never the one already
+    # sitting in $s: that came from the defaults and is always current, so a file
+    # written before the field existed would look up to date and be left alone.
+    $s.schema = 0
+    if ($raw -and $null -ne $raw.schema) { $s.schema = [int]$raw.schema }
+    if ([int]$s.schema -lt 2 -and $raw) {
+        # 1 -> 2: chroma stopped being a yes/no. Ticked was a deliberate act, so
+        # it is kept as 'always'. Unticked was merely the old default - nobody
+        # chose it - so it becomes the new default rather than pinning those
+        # users to 4:2:0 forever.
+        if ($null -ne $raw.chroma444) {
+            if ([bool]$raw.chroma444) { $s.chroma = 'always' } else { $s.chroma = 'auto' }
+        }
+        # mica changed meaning rather than value: in schema 1 it meant "accept
+        # colours that come out lighter than they were picked", which is why it
+        # was off. The palette is compensated now, so the old answer was to a
+        # different question and the new default applies.
+        $s.mica = (Get-JipegDefaults).mica
+    }
     $s.schema = $JipegSchema
     return $s
 }
 
 function Get-JipegSettings {
     $s = Get-JipegDefaults
+    $raw = $null
     try {
         if (Test-Path -LiteralPath $JipegSettingsPath) {
             $raw = Get-Content -LiteralPath $JipegSettingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -74,10 +92,46 @@ function Get-JipegSettings {
             }
         }
     } catch { }   # a corrupt file must never stop a conversion
-    $s = Update-JipegSchema $s
+    $s = Update-JipegSchema $s $raw
     if ($s.quality -lt 1 -or $s.quality -gt 100) { $s.quality = 90 }
     if ('auto', 'light', 'dark' -notcontains $s.theme) { $s.theme = 'auto' }
+    if ('auto', 'always', 'never' -notcontains $s.chroma) { $s.chroma = 'auto' }
     return $s
+}
+
+# Whether the source still holds full colour detail, so "follow the source" can
+# be an answer rather than a guess from the file extension: a JPEG states its
+# sampling factors in the start-of-frame header, and anything lossless has all
+# of its colour by definition. Every ReadByte is cast before shifting - shifting
+# a [byte] in PowerShell masks the shift count and quietly returns the wrong
+# number.
+function Test-JipegSourceFullChroma([string]$path) {
+    $ext = [System.IO.Path]::GetExtension($path).ToLower()
+    if ('.jpg', '.jpeg', '.jpe', '.jfif' -notcontains $ext) { return $true }
+    $fs = $null
+    try {
+        $fs = [System.IO.File]::OpenRead($path)
+        $br = New-Object System.IO.BinaryReader($fs)
+        if ([int]$br.ReadByte() -ne 0xFF -or [int]$br.ReadByte() -ne 0xD8) { return $false }
+        while ($true) {
+            if ([int]$br.ReadByte() -ne 0xFF) { continue }   # resync on the next marker
+            $m = [int]$br.ReadByte()
+            while ($m -eq 0xFF) { $m = [int]$br.ReadByte() } # fill bytes before a marker
+            if ($m -eq 0x01 -or ($m -ge 0xD0 -and $m -le 0xD8)) { continue }   # no payload
+            if ($m -eq 0xD9 -or $m -eq 0xDA) { break }       # image data: no frame header
+            $len = ([int]$br.ReadByte() -shl 8) -bor [int]$br.ReadByte()
+            if ($len -lt 2) { break }
+            $isFrame = ($m -ge 0xC0 -and $m -le 0xCF -and $m -ne 0xC4 -and $m -ne 0xC8 -and $m -ne 0xCC)
+            if (-not $isFrame) { [void]$br.ReadBytes($len - 2); continue }
+            [void]$br.ReadByte()                             # sample precision
+            [void]$br.ReadBytes(4)                           # height, width
+            if ([int]$br.ReadByte() -lt 3) { return $true }  # greyscale: nothing subsampled
+            [void]$br.ReadByte()                             # component id
+            $hv = [int]$br.ReadByte()
+            return ((($hv -shr 4) -eq 1) -and (($hv -band 0x0F) -eq 1))
+        }
+    } catch { } finally { if ($fs) { $fs.Dispose() } }
+    return $false      # unreadable header: treat it as an ordinary subsampled photo
 }
 
 function Save-JipegSettings($s) {
@@ -202,8 +256,11 @@ function Set-JipegPopupChrome($theme) {
         $dark = 0
         if ($theme.Dark) { $dark = 1 }
         [void][Jipeg.Win]::DwmSetWindowAttribute($lb, 20, [ref]$dark, 4)
-        # a border, or the list melts into whatever is behind it
-        $edge = ($theme.CardEdge.B -shl 16) -bor ($theme.CardEdge.G -shl 8) -bor $theme.CardEdge.R
+        # A border, or the list melts into whatever is behind it. The casts are
+        # load-bearing: shifting a [byte] in PowerShell masks the shift count to
+        # three bits, so 58 -shl 16 gives back 58 and the colour arrived as
+        # 0x0000003A - pure red - instead of 0x003A3A3A.
+        $edge = ([int]$theme.CardEdge.B -shl 16) -bor ([int]$theme.CardEdge.G -shl 8) -bor [int]$theme.CardEdge.R
         [void][Jipeg.Win]::DwmSetWindowAttribute($lb, 34, [ref]$edge, 4)
     } catch { }
 }
@@ -255,16 +312,16 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
     $chk.Add_Paint({
         $t = $this.Tag
         $g = $_.Graphics
+        # Cleared before smoothing is switched on: an antialiased FillRectangle
+        # leaves its outermost row only partly covered, and over Mica the
+        # backdrop shows through the gap as a faint line.
+        if ($this.BackColor.A -ne 0) { $g.Clear($this.BackColor) }
         $g.SmoothingMode = 'AntiAlias'
         $g.TextRenderingHint = 'ClearTypeGridFit'
-        if ($this.BackColor.A -ne 0) {
-            $b = New-Object System.Drawing.SolidBrush($this.BackColor)
-            $g.FillRectangle($b, $this.ClientRectangle); $b.Dispose()
-        }
 
         $side = 18.0
         $top  = [math]::Floor(($this.Height - $side) / 2.0)
-        $box  = New-JipegRoundPath 0.5 ($top + 0.5) ($side - 1.0) ($side - 1.0) 4
+        $box  = New-JipegRoundPath 0 $top ($side - 1.0) ($side - 1.0) 4
         if ($this.Checked) {
             $fill = New-Object System.Drawing.SolidBrush($t.Accent)
             $g.FillPath($fill, $box); $fill.Dispose()
@@ -280,6 +337,7 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
             $fill = New-Object System.Drawing.SolidBrush($t.Field)
             $g.FillPath($fill, $box); $fill.Dispose()
             $pen = New-Object System.Drawing.Pen($t.CheckEdge, 1)
+            $pen.Alignment = 'Inset'
             $g.DrawPath($pen, $box); $pen.Dispose()
         }
         $box.Dispose()
@@ -293,7 +351,7 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
             # the theme, which on a dark surface reads as a scattering of black
             # pixels. A thin rounded outline in the accent colour says the same
             # thing and belongs to the design.
-            $ring = New-JipegRoundPath 0.5 ($top - 2.5) ($this.Width - 2.0) ($side + 4.0) 5
+            $ring = New-JipegRoundPath 0 ($top - 3.0) ($this.Width - 1.0) ($side + 6.0) 5
             $pen = New-Object System.Drawing.Pen($t.Accent, 1)
             $g.DrawPath($pen, $ring)
             $pen.Dispose(); $ring.Dispose()
@@ -330,6 +388,13 @@ function Set-JipegDoubleBuffer($ctrl) {
 # light/dark setting, not ours, so it is only used when the two agree -
 # otherwise a dark backdrop would sit behind light controls. Needs Windows 11
 # 22H2 for the backdrop attribute, and a black client area as the glass key.
+# Mica needs no colour compensation. What DWM lifts is the window background,
+# which is erased by WinForms with no alpha and is meant to be glass: painted
+# black, it comes back as #202020, and that is the material showing through.
+# Every surface on top of it - cards, fields, check boxes - is filled with a GDI+
+# brush, which writes opaque pixels: a card drawn #2B2B2B measures #2B2B2B with
+# the backdrop on. An earlier build compensated for a lift that those surfaces
+# never had, and only made them darker than they were picked.
 function Test-JipegMica($theme) {
     if ([Environment]::OSVersion.Version.Build -lt 22621) { return $false }
     return ($theme.Dark -eq (Test-SystemDark))

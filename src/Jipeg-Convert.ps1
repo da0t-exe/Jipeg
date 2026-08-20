@@ -243,7 +243,18 @@ function Start-Next {
         $script:TmpOut = Join-Path $dir ('.jipeg-{0}.tmp' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
 
         $cmdArgs = '"{0}" "{1}" -q {2}' -f $source, $script:TmpOut, $Settings.quality
-        if ($Settings.chroma444) { $cmdArgs = $cmdArgs + ' --chroma_subsampling=444' }
+        # 'auto' asks the original - not $source, which may be a temporary PNG and
+        # would always answer yes.
+        $full = switch ([string]$Settings.chroma) {
+            'always' { $true }
+            'never'  { $false }
+            default  { Test-JipegSourceFullChroma $src }
+        }
+        # Both branches say it out loud. cjpegli defaults to 4:4:4, so the old
+        # code - which passed the flag only to ask for 4:4:4 - produced the same
+        # image either way, and the setting did nothing in either position.
+        if ($full) { $cmdArgs = $cmdArgs + ' --chroma_subsampling=444' }
+        else       { $cmdArgs = $cmdArgs + ' --chroma_subsampling=420' }
 
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName               = $Cjpegli

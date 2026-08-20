@@ -76,7 +76,13 @@ function New-Card([int]$y, [int]$h) {
     $c.Add_Paint({
         $g = $_.Graphics
         $g.SmoothingMode = 'AntiAlias'
-        $p = New-JipegRoundPath 0.5 0.5 ($this.Width - 1) ($this.Height - 1) 8
+        # Integer origin with the pen laid inside the path, rather than the
+        # half-pixel inset this used to use. GDI+ samples the right and bottom
+        # edges of a path differently from the left and top, so the same radius
+        # came out tighter on two of the four corners; measured across the corner
+        # ramps, the worst difference between corners drops from 14 levels to 6,
+        # and the shape still occupies exactly the size it was given.
+        $p = New-JipegRoundPath 0 0 ($this.Width - 1) ($this.Height - 1) 8
         # Filled here rather than left to BackColor: over Mica, the background
         # WinForms paints comes out with no alpha and the backdrop shows through,
         # so the card was translucent - measured at #494B50 instead of #2B2B2B.
@@ -84,6 +90,7 @@ function New-Card([int]$y, [int]$h) {
         $fill = New-Object System.Drawing.SolidBrush($Theme.Panel)
         $g.FillPath($fill, $p); $fill.Dispose()
         $pen = New-Object System.Drawing.Pen($Theme.CardEdge, 1)
+        $pen.Alignment = 'Inset'
         $g.DrawPath($pen, $p)
         $pen.Dispose(); $p.Dispose()
     })
@@ -117,9 +124,7 @@ function New-Hint([string]$text, [int]$x, [int]$y, [int]$w, $parent) {
 }
 
 # The list items are drawn so they follow the theme instead of the system's
-# default dropdown. The control is still a real ComboBox: it simply sits in a
-# frame narrower than itself, so the grey system arrow button falls outside and
-# is clipped away, and a chevron is drawn in its place.
+# default dropdown.
 $script:PopupTimer = New-Object System.Windows.Forms.Timer
 $script:PopupTimer.Interval = 40
 $script:PopupTimer.Add_Tick({
@@ -127,72 +132,125 @@ $script:PopupTimer.Add_Tick({
     Set-JipegPopupChrome $Theme
 })
 
-function New-Combo([int]$y, $parent) {
-    $frame = New-Object System.Windows.Forms.Panel
-    $frame.SetBounds($FieldX, $y, $FieldW, 26)
-    $frame.BackColor = $Theme.Field
-    $parent.Controls.Add($frame)
-    Set-JipegRounded $frame 4
+# The visible field is painted here, not clipped. A Region clip is binary, so
+# rounded corners came out as a hard staircase; painting gives the same radius
+# on all four corners, antialiased. The ComboBox itself stays underneath purely
+# to provide the system drop-down list, and a Button is used as the face so it
+# keeps focus and answers to Space and Enter.
+#
+# A ComboBox ignores the height it is given - it is always ItemHeight + 6, here
+# 32 against the 26 the field is drawn at. The face used to be 26 too, so the
+# last six rows of the real control showed underneath it: a #F0F0F0 strip with a
+# white line under it, the pale bar that kept appearing below every drop-down.
+# The face now covers the control completely, and the control is lifted by the
+# difference so its bottom edge - where Windows hangs the list - lands exactly on
+# the bottom of the painted field.
+$FieldH = 26
 
-    # A ComboBox ignores the height you give it: it is always ItemHeight + 6. So
-    # ItemHeight is chosen to make the control taller than the frame, and the
-    # control is offset on every side, which puts its pale system border outside
-    # the frame where the clip removes it. The frame's fill is the only edge left.
-    $c = New-Object System.Windows.Forms.ComboBox
-    $c.SetBounds(-2, -3, ($FieldW + 30), 32)
-    $c.DropDownStyle = 'DropDownList'
-    $c.FlatStyle = 'Flat'
-    $c.BackColor = $Theme.Field
-    $c.ForeColor = $Theme.Text
-    $c.Font = $JipegFont
-    $c.DrawMode = 'OwnerDrawFixed'
-    $c.ItemHeight = 26
-    $c.DropDownWidth = $FieldW
-    $c.Add_DrawItem({
+function New-Combo([int]$y, $parent) {
+    $combo = New-Object System.Windows.Forms.ComboBox
+    $combo.SetBounds($FieldX, $y, $FieldW, $FieldH)
+    $combo.DropDownStyle = 'DropDownList'
+    $combo.FlatStyle = 'Flat'
+    $combo.Font = $JipegFont
+    $combo.BackColor = $Theme.Field
+    $combo.ForeColor = $Theme.Text
+    $combo.DropDownWidth = $FieldW
+    $combo.DrawMode = 'OwnerDrawFixed'
+    $combo.ItemHeight = 26
+    $combo.Add_DrawItem({
         $e = $_
-        $g = $e.Graphics
-        $isClosed = (($e.State -band [System.Windows.Forms.DrawItemState]::ComboBoxEdit) -ne 0)
         $back = $Theme.Field
-        if (-not $isClosed -and (($e.State -band [System.Windows.Forms.DrawItemState]::Selected) -ne 0)) {
-            $back = $Theme.Accent
-        }
+        if (($e.State -band [System.Windows.Forms.DrawItemState]::Selected) -ne 0) { $back = $Theme.Accent }
         $b = New-Object System.Drawing.SolidBrush($back)
-        $g.FillRectangle($b, $e.Bounds)
+        $e.Graphics.FillRectangle($b, $e.Bounds)
         $b.Dispose()
         if ($e.Index -ge 0) {
-            $right = 10
-            if ($isClosed) { $right = 34 }
             $r = New-Object System.Drawing.Rectangle(
-                ($e.Bounds.X + 8), $e.Bounds.Y, ($e.Bounds.Width - $right), $e.Bounds.Height)
+                ($e.Bounds.X + 10), $e.Bounds.Y, ($e.Bounds.Width - 14), $e.Bounds.Height)
             [System.Windows.Forms.TextRenderer]::DrawText(
-                $g, $this.Items[$e.Index].ToString(), $JipegFont, $r, $Theme.Text,
+                $e.Graphics, $this.Items[$e.Index].ToString(), $JipegFont, $r, $Theme.Text,
                 ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
                  [System.Windows.Forms.TextFormatFlags]::EndEllipsis -bor
                  [System.Windows.Forms.TextFormatFlags]::NoPrefix))
         }
-        if ($isClosed) {
-            $g.SmoothingMode = 'AntiAlias'
-            $pen = New-Object System.Drawing.Pen($Theme.Muted, 1.6)
-            $pen.StartCap = 'Round'; $pen.EndCap = 'Round'; $pen.LineJoin = 'Round'
-            $cx = $FieldW - 14.0
-            $cy = $e.Bounds.Y + $e.Bounds.Height / 2.0
-            $pts = @(
-                (New-Object System.Drawing.PointF(($cx - 4.0), ($cy - 2.0))),
-                (New-Object System.Drawing.PointF($cx, ($cy + 2.5))),
-                (New-Object System.Drawing.PointF(($cx + 4.0), ($cy - 2.0)))
-            )
-            $g.DrawLines($pen, $pts)
-            $pen.Dispose()
-        }
     })
-    $c.Add_DropDown({ $script:PopupTimer.Start() })
-    $frame.Controls.Add($c)
-    return $c
+    $combo.Add_DropDown({ $script:PopupTimer.Start() })
+    $parent.Controls.Add($combo)
+
+    # measured after the control exists, never assumed
+    $over = [math]::Max(0, $combo.Height - $FieldH)
+    $combo.Top = $y - $over
+
+    $face = New-Object System.Windows.Forms.Button
+    $face.SetBounds($FieldX, ($y - $over), $FieldW, ($FieldH + $over))
+    $face.FlatStyle = 'Flat'
+    $face.FlatAppearance.BorderSize = 0
+    $face.FlatAppearance.MouseOverBackColor = $Theme.Panel
+    $face.FlatAppearance.MouseDownBackColor = $Theme.Panel
+    $face.BackColor = $Theme.Panel
+    $face.Font = $JipegFont
+    $face.Tag = $combo
+    Set-JipegDoubleBuffer $face
+    $face.Add_Paint({
+        $g = $_.Graphics
+        # Clear, not FillRectangle: with antialiasing already on, the fill left
+        # its outermost column only partly covered, and the Mica backdrop came
+        # through it as a faint blue line down the left edge of every field
+        # (#383B40 where the surface should have been flat #2B2B2B). Clear
+        # ignores smoothing and writes the whole surface opaque.
+        $g.Clear($this.BackColor)
+        $g.SmoothingMode = 'AntiAlias'
+        $g.TextRenderingHint = 'ClearTypeGridFit'
+
+        # the field is the bottom $FieldH rows; anything above is the lifted
+        # control, painted over in the card colour
+        $w = $this.Width
+        $h = $FieldH
+        $top = [double]($this.Height - $FieldH)
+        $shape = New-JipegRoundPath 0 $top ($w - 1.0) ($h - 1.0) 5
+        $fill = New-Object System.Drawing.SolidBrush($Theme.Field)
+        $g.FillPath($fill, $shape); $fill.Dispose()
+        $edge = $Theme.CardEdge
+        $width = 1.0
+        if ($this.Focused) { $edge = $Theme.Accent; $width = 1.4 }
+        $pen = New-Object System.Drawing.Pen($edge, $width)
+        $pen.Alignment = 'Inset'
+        $g.DrawPath($pen, $shape); $pen.Dispose(); $shape.Dispose()
+
+        $text = ''
+        if ($this.Tag) { $text = [string]$this.Tag.Text }
+        $tr = New-Object System.Drawing.Rectangle(10, [int]$top, ($w - 40), $h)
+        [System.Windows.Forms.TextRenderer]::DrawText($g, $text, $JipegFont, $tr, $Theme.Text,
+            ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
+             [System.Windows.Forms.TextFormatFlags]::EndEllipsis -bor
+             [System.Windows.Forms.TextFormatFlags]::NoPrefix))
+
+        $pen = New-Object System.Drawing.Pen($Theme.Muted, 1.6)
+        $pen.StartCap = 'Round'; $pen.EndCap = 'Round'; $pen.LineJoin = 'Round'
+        $cx = $w - 16.0
+        $cy = $top + $h / 2.0
+        $g.DrawLines($pen, @(
+            (New-Object System.Drawing.PointF(($cx - 4.0), ($cy - 2.0))),
+            (New-Object System.Drawing.PointF($cx, ($cy + 2.5))),
+            (New-Object System.Drawing.PointF(($cx + 4.0), ($cy - 2.0)))
+        ))
+        $pen.Dispose()
+    })
+    $face.Add_Click({ $this.Tag.DroppedDown = $true })
+    $face.Add_GotFocus({ $this.Invalidate() })
+    $face.Add_LostFocus({ $this.Invalidate() })
+    $parent.Controls.Add($face)
+    $face.BringToFront()
+
+    $combo.Tag = $face
+    $combo.Add_SelectedIndexChanged({ if ($this.Tag) { $this.Tag.Invalidate() } })
+    return $combo
 }
 
 # --------------------------------------------------------------- conversion
 New-Section 'Conversion' 20
-$card1 = New-Card 50 132
+$card1 = New-Card 50 138
 
 [void](New-Label 'JPEG quality' $Pad 16 160 $card1)
 $QualityValues = @(100, 96, 92, 90, 85, 80, 75, 70, 60)
@@ -207,17 +265,18 @@ $cmbQ.SelectedIndex = [array]::IndexOf($QualityValues, $saved)
 
 [void](New-Hint 'Higher keeps more detail and makes bigger files.' $Pad 46 $InnerW $card1)
 
-$chk444 = New-Object System.Windows.Forms.CheckBox
-$chk444.SetBounds($Pad, 74, $InnerW, 22)
-$chk444.Text = 'Keep full colour detail (4:4:4)'
-$chk444.Checked = [bool]$Settings.chroma444
-Set-JipegCheck $chk444 $Theme
-$card1.Controls.Add($chk444)
-[void](New-Hint 'Better for screenshots, text and sharp colour edges. Larger files.' ($Pad + 26) 98 ($InnerW - 26) $card1)
+[void](New-Label 'Colour detail' $Pad 74 160 $card1)
+$ChromaValues = @('auto', 'always', 'never')
+$cmbC = New-Combo 72 $card1
+[void]$cmbC.Items.AddRange(@('Follow the source', 'Always full (4:4:4)', 'Smaller files (4:2:0)'))
+$cmbC.SelectedIndex = [array]::IndexOf($ChromaValues, [string]$Settings.chroma)
+if ($cmbC.SelectedIndex -lt 0) { $cmbC.SelectedIndex = 0 }
+
+[void](New-Hint 'Full colour keeps text and sharp edges clean, and costs some size.' $Pad 104 $InnerW $card1)
 
 # --------------------------------------------------------------- appearance
-New-Section 'Appearance' 202
-$card2 = New-Card 232 132
+New-Section 'Appearance' 208
+$card2 = New-Card 238 132
 
 [void](New-Label 'Theme' $Pad 16 160 $card2)
 $cmbT = New-Combo 14 $card2
@@ -232,10 +291,10 @@ $chkMica.Text = 'Translucent window background (Mica)'
 $chkMica.Checked = [bool]$Settings.mica
 Set-JipegCheck $chkMica $Theme
 $card2.Controls.Add($chkMica)
-[void](New-Hint 'Prettier, but colours shift with the wallpaper behind the window.' ($Pad + 26) 98 ($InnerW - 26) $card2)
+[void](New-Hint 'The Windows 11 material: the background picks up what is behind it.' ($Pad + 26) 98 ($InnerW - 26) $card2)
 
-New-Section 'Updates' 384
-$card4 = New-Card 414 76
+New-Section 'Updates' 390
+$card4 = New-Card 420 76
 $chkAuto = New-Object System.Windows.Forms.CheckBox
 $chkAuto.SetBounds($Pad, 16, $InnerW, 22)
 $chkAuto.Text = 'Install new versions quietly'
@@ -280,8 +339,9 @@ Set-JipegButton $btnUpd $Theme
 $form.Controls.Add($btnUpd)
 Set-JipegRounded $btnUpd 5
 
-$script:NewUrl = $null
+$script:NewTag = $null
 $script:Check  = $null
+$script:Job    = $null
 
 function Show-UpdateResult($rel) {
     if (-not $rel) {
@@ -289,8 +349,8 @@ function Show-UpdateResult($rel) {
     } elseif ((Compare-JipegVersion $rel.Tag $JipegVersion) -gt 0) {
         $lblUpd.Text = "Version $($rel.Tag) is available."
         $lblUpd.ForeColor = $Theme.Text
-        $script:NewUrl = $rel.Url
-        $btnUpd.Text = 'Open download page'
+        $script:NewTag = $rel.Tag
+        $btnUpd.Text = 'Update'
     } else {
         $lblUpd.Text = 'You have the latest version.'
     }
@@ -298,7 +358,7 @@ function Show-UpdateResult($rel) {
 }
 
 function Start-Check {
-    $script:NewUrl = $null
+    $script:NewTag = $null
     $btnUpd.Enabled = $false
     $btnUpd.Text = 'Check for updates'
     $lblUpd.ForeColor = $Theme.Muted
@@ -306,6 +366,28 @@ function Start-Check {
     $script:Check = Start-JipegUpdateCheck
     if (-not $script:Check) { Show-UpdateResult $null; return }
     $poll.Start()
+}
+
+# The Update button installs it here rather than opening a browser. It runs the
+# same updater the quiet daily check uses - same repository, same strictly
+# higher version, same SHA-256 - only with -Force, so it does not wait for
+# tomorrow. It runs in its own hidden process so this window stays alive: it is
+# about to have its own files replaced underneath it, which is safe because
+# PowerShell has already read them.
+function Start-Update {
+    $btnUpd.Enabled = $false
+    $lblUpd.ForeColor = $Theme.Muted
+    $lblUpd.Text = "Downloading Jipeg $script:NewTag..."
+    try {
+        $script:Job = Start-Process -FilePath 'powershell.exe' -PassThru -WindowStyle Hidden -ArgumentList @(
+            '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+            '-File', (Join-Path $Root 'Jipeg-Update.ps1'), '-Force')
+    } catch {
+        $lblUpd.Text = 'Could not start the update.'
+        $btnUpd.Enabled = $true
+        return
+    }
+    $watch.Start()
 }
 
 # The check runs on its own; polling here keeps the window responsive rather
@@ -321,8 +403,38 @@ $poll.Add_Tick({
     Show-UpdateResult $rel
 })
 
+$watch = New-Object System.Windows.Forms.Timer
+$watch.Interval = 400
+$watch.Add_Tick({
+    if (-not $script:Job -or -not $script:Job.HasExited) { return }
+    $watch.Stop()
+    $code = $script:Job.ExitCode
+    $script:Job = $null
+    if ($code -eq 0) {
+        $lblVer.Text = "Jipeg $JipegVersion -> $script:NewTag"
+        $lblUpd.ForeColor = $Theme.Text
+        $lblUpd.Text = "Installed. It takes effect the next time you convert."
+        $btnUpd.Text = 'Up to date'
+        # the updater wrote lastCheck and lastUpdate; keep them, or clicking OK
+        # here would save this window's older copy back over them
+        try {
+            $fresh = Get-JipegSettings
+            $Settings.lastCheck  = $fresh.lastCheck
+            $Settings.lastUpdate = $fresh.lastUpdate
+        } catch { }
+    } elseif ($code -eq 2) {
+        $lblUpd.Text = 'Nothing to install right now.'
+        $btnUpd.Text = 'Check for updates'
+        $btnUpd.Enabled = $true
+    } else {
+        $lblUpd.Text = 'The update did not go through. Try again later.'
+        $btnUpd.Text = 'Update'
+        $btnUpd.Enabled = $true
+    }
+})
+
 $btnUpd.Add_Click({
-    if ($script:NewUrl) { Start-Process $script:NewUrl; return }
+    if ($script:NewTag) { Start-Update; return }
     Start-Check
 })
 
@@ -347,7 +459,7 @@ $form.CancelButton = $btnCancel
 
 $btnOK.Add_Click({
     $Settings.quality       = [int]$QualityValues[$cmbQ.SelectedIndex]
-    $Settings.chroma444     = [bool]$chk444.Checked
+    $Settings.chroma        = [string]$ChromaValues[$cmbC.SelectedIndex]
     $Settings.closeWhenDone = [bool]$chkClose.Checked
     $Settings.mica          = [bool]$chkMica.Checked
     $Settings.autoUpdate    = [bool]$chkAuto.Checked
