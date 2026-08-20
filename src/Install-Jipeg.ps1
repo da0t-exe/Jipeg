@@ -24,33 +24,59 @@ $Exts = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.bmp', '.tif', '.ti
 # --------------------------------------------------------------------- icon
 function New-JipegIcon([string]$outPath) {
     $sizes = @(16, 24, 32, 48, 64, 128, 256)
-    $blue  = [System.Drawing.Color]::FromArgb(255, 74, 123, 232)
+    $plate = [System.Drawing.Color]::FromArgb(255, 74, 123, 232)
+    $ink   = [System.Drawing.Color]::White
     $frames = @()
+
+    # The JPEG mark: a square with its bottom-right corner taken out, and the
+    # piece that was removed set down beside it. The notch is painted back over
+    # the square and allowed to overrun the right and bottom edges, so only its
+    # inner corner is rounded - the detail that makes the cut look deliberate.
+    function Add-RoundRect($graphics, $brush, [single]$x, [single]$y, [single]$w, [single]$h, [single]$radius) {
+        $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+        $d = [math]::Min([double]$radius, [double][math]::Min($w, $h) / 2.0) * 2.0
+        if ($d -le 0.4) {
+            $path.AddRectangle((New-Object System.Drawing.RectangleF($x, $y, $w, $h)))
+        } else {
+            $path.AddArc($x, $y, $d, $d, 180, 90)
+            $path.AddArc($x + $w - $d, $y, $d, $d, 270, 90)
+            $path.AddArc($x + $w - $d, $y + $h - $d, $d, $d, 0, 90)
+            $path.AddArc($x, $y + $h - $d, $d, $d, 90, 90)
+            $path.CloseFigure()
+        }
+        $graphics.FillPath($brush, $path)
+        $path.Dispose()
+    }
+
     foreach ($s in $sizes) {
         $bmp = New-Object System.Drawing.Bitmap($s, $s)
         $g = [System.Drawing.Graphics]::FromImage($bmp)
-        $g.SmoothingMode = 'AntiAlias'; $g.TextRenderingHint = 'AntiAliasGridFit'
-        $r = [math]::Max(2.0, [double]$s * 0.23)
-        $d = $r * 2
-        $gp = New-Object System.Drawing.Drawing2D.GraphicsPath
-        $gp.AddArc(0, 0, $d, $d, 180, 90)
-        $gp.AddArc($s - $d, 0, $d, $d, 270, 90)
-        $gp.AddArc($s - $d, $s - $d, $d, $d, 0, 90)
-        $gp.AddArc(0, $s - $d, $d, $d, 90, 90)
-        $gp.CloseFigure()
-        $br = New-Object System.Drawing.SolidBrush($blue)
-        $g.FillPath($br, $gp); $br.Dispose(); $gp.Dispose()
-        $font = New-Object System.Drawing.Font('Segoe UI', ($s * 0.6), [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
-        $sf = New-Object System.Drawing.StringFormat
-        $sf.Alignment = 'Center'; $sf.LineAlignment = 'Center'
-        $wb = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
-        $g.DrawString('J', $font, $wb, (New-Object System.Drawing.RectangleF(0, ($s * -0.04), $s, $s)), $sf)
-        $wb.Dispose(); $font.Dispose(); $sf.Dispose(); $g.Dispose()
+        $g.SmoothingMode = 'AntiAlias'
+
+        $pb = New-Object System.Drawing.SolidBrush($plate)
+        $ib = New-Object System.Drawing.SolidBrush($ink)
+
+        Add-RoundRect $g $pb 0 0 $s $s ($s * 0.20)                     # the plate
+
+        $side = $s * 0.410
+        $r    = $side * 0.10
+        Add-RoundRect $g $ib ($s * 0.215) ($s * 0.295) $side $side $r  # the square
+
+        $nx = $s * 0.455
+        $ny = $s * 0.535
+        $over = $s * 0.07
+        Add-RoundRect $g $pb $nx $ny (($s * 0.625) - $nx + $over) (($s * 0.705) - $ny + $over) $r
+
+        $piece = $s * 0.145
+        Add-RoundRect $g $ib ($s * 0.645) ($s * 0.550) $piece $piece ($piece * 0.10)
+
+        $pb.Dispose(); $ib.Dispose(); $g.Dispose()
         $ms = New-Object System.IO.MemoryStream
         $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
         $bmp.Dispose()
         $frames += , $ms.ToArray()
     }
+
     $out = New-Object System.IO.MemoryStream
     $bw = New-Object System.IO.BinaryWriter($out)
     $bw.Write([uint16]0); $bw.Write([uint16]1); $bw.Write([uint16]$frames.Count)

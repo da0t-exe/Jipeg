@@ -150,5 +150,7 @@ src/settings.vbs         starts the settings window without a console window
   shipped here as the `cjpegli.exe` binary built by
   **[libjxl](https://github.com/libjxl/libjxl)**. Jipeg is not affiliated with Google or the
   libjxl project and does not modify their code.
+- The icon is drawn from the **JPEG format mark** — a square with its corner taken out and the
+  removed piece set beside it. Jipeg is not affiliated with or endorsed by the JPEG committee.
 - Third-party licences: `bin/LICENSE.*` (BSD-3-Clause, Apache-2.0, zlib and others).
 - Jipeg itself is MIT licensed — see [LICENSE](LICENSE).
