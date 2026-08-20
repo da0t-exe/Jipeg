@@ -1,4 +1,4 @@
-﻿<#
+<#
     Jipeg one-line installer.
 
         irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/install.ps1 | iex
