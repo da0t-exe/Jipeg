@@ -18,7 +18,16 @@ irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/install.ps1 | iex
 ```
 
 It fetches the latest release, checks it against the SHA-256 GitHub publishes for
-that file, and runs the installer.
+that file, and installs it in the console — no setup window. On Windows 11 it asks
+one question, because the answer restarts Explorer:
+
+```
+  Show Jipeg directly in the right-click menu? [Y/n]
+```
+
+Press Enter, or leave it alone: after 15 seconds it takes the default. Run the file
+directly with `-ClassicMenu` or `-NoClassicMenu` to answer up front, or `-Gui` for
+the setup window.
 
 Or by hand:
 

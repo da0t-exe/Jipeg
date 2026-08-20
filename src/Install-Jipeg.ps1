@@ -5,7 +5,7 @@
     - adds a Start menu shortcut for the settings window
   No administrator rights. Nothing is written outside the user profile.
 #>
-param([switch]$Silent)
+param([switch]$Silent, [switch]$ClassicMenu)
 
 $ErrorActionPreference = 'Stop'
 $Here    = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -211,8 +211,7 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
 }
 
 if ($Silent) {
-    Invoke-Install { param($m) Write-Host "  $m" } $false
-    Write-Host "`nJipeg installed in $Dest" -ForegroundColor Green
+    Invoke-Install { param($m) Write-Host "  $m" } ([bool]$ClassicMenu)
     exit 0
 }
 
