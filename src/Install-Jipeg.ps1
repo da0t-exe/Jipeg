@@ -234,7 +234,7 @@ if ($Silent) {
 
 # ------------------------------------------------------------------- window
 $Theme = Get-JipegTheme 'auto'
-$Mica  = Test-JipegMica $Theme
+$Mica  = ((Get-JipegSettings).mica -and (Test-JipegMica $Theme))   # suit le reglage, comme les autres fenetres
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Install Jipeg'

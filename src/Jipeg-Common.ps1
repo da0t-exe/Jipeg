@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.7.0'
+$JipegVersion = '1.8.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -47,7 +47,7 @@ function Get-JipegDefaults {
         quality       = 90          # libjpeg scale, 1..100
         chroma444     = $false      # keep full colour detail (bigger files)
         closeWhenDone = $false      # dismiss the progress window automatically
-        mica          = $true       # translucent Mica window background
+        mica          = $false      # off by default: see the note on Set-JipegMica
         autoUpdate    = $true       # fetch and install newer releases quietly
         lastCheck     = 0           # ticks of the last update check
         lastUpdate    = ''          # what the last quiet update did
@@ -289,8 +289,14 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
             ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
              [System.Windows.Forms.TextFormatFlags]::NoPrefix))
         if ($this.Focused) {
-            $ring = New-Object System.Drawing.Rectangle(0, ($top - 2), ($this.Width - 1), ($side + 4))
-            [System.Windows.Forms.ControlPaint]::DrawFocusRectangle($g, $ring)
+            # ControlPaint's focus rectangle is a hard black dotted box whatever
+            # the theme, which on a dark surface reads as a scattering of black
+            # pixels. A thin rounded outline in the accent colour says the same
+            # thing and belongs to the design.
+            $ring = New-JipegRoundPath 0.5 ($top - 2.5) ($this.Width - 2.0) ($side + 4.0) 5
+            $pen = New-Object System.Drawing.Pen($t.Accent, 1)
+            $g.DrawPath($pen, $ring)
+            $pen.Dispose(); $ring.Dispose()
         }
     })
     $chk.Add_CheckedChanged({ $this.Invalidate() })
@@ -332,6 +338,14 @@ function Test-JipegMica($theme) {
 # DWM keys the glass on black pixels, so the form background must be black and
 # labels transparent. Nothing else in the UI is pure black, so nothing else
 # disappears.
+#
+# The cost, measured rather than assumed: what GDI draws over the extended frame
+# is composited additively onto the backdrop, so every colour lands lighter than
+# it was specified. A card set to #2B2B2B measured #4B4B4B, a field set to
+# #383838 measured #585858 - a flat +0x20 taken from whatever Mica had blurred
+# behind the window. With the backdrop off, the same points measure #2B2B2B and
+# #383838 exactly. So the translucency is real but the palette is no longer
+# yours, and it drifts with the wallpaper. It is off unless asked for.
 function Set-JipegMica($form, $theme) {
     if (-not (Test-JipegMica $theme)) { return $false }
     $type = 2                                    # DWMSBT_MAINWINDOW (Mica)

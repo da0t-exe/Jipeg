@@ -113,7 +113,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(430, 152)
+$form.ClientSize      = New-Object System.Drawing.Size(430, 150)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ShowInTaskbar   = $true
@@ -128,7 +128,7 @@ $form.Add_HandleCreated({
 })
 
 $lblTitle = New-Object System.Windows.Forms.Label
-$lblTitle.SetBounds(16, 20, 398, 24)
+$lblTitle.SetBounds(16, 16, 398, 24)
 $lblTitle.Font = $JipegFontSection
 $lblTitle.ForeColor = $Theme.Text
 $lblTitle.Text = 'Getting ready...'
@@ -136,7 +136,7 @@ Set-JipegLabel $lblTitle $Theme $Mica
 $form.Controls.Add($lblTitle)
 
 $lblFile = New-Object System.Windows.Forms.Label
-$lblFile.SetBounds(16, 48, 398, 18)
+$lblFile.SetBounds(16, 44, 398, 18)
 $lblFile.Font = $JipegFontHint
 $lblFile.ForeColor = $Theme.Muted
 $lblFile.AutoEllipsis = $true
@@ -149,7 +149,7 @@ $form.Controls.Add($lblFile)
 $script:BarShown  = 0.0
 $script:BarTarget = 0.0
 $bar = New-Object System.Windows.Forms.Panel
-$bar.SetBounds(16, 80, 398, 10)
+$bar.SetBounds(16, 76, 398, 10)
 $bar.BackColor = $form.BackColor
 Set-JipegDoubleBuffer $bar
 $bar.Add_Paint({
@@ -170,7 +170,7 @@ $form.Controls.Add($bar)
 
 # The saving is the point of the window, so it gets the largest type on screen.
 $lblPercent = New-Object System.Windows.Forms.Label
-$lblPercent.SetBounds(16, 102, 92, 28)
+$lblPercent.SetBounds(16, 104, 92, 28)
 $lblPercent.Font = $JipegFontBig
 $lblPercent.ForeColor = $Theme.Accent
 Set-JipegLabel $lblPercent $Theme $Mica

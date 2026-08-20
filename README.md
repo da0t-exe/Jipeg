@@ -67,7 +67,7 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 | **JPEG quality** | libjpeg scale. 90 is the default; 78 is light enough for the web, 96 is close to lossless. |
 | **Keep full colour detail (4:4:4)** | Disables chroma subsampling. Worth it for screenshots, text and sharp colour edges; files get larger. Pointless on photographs. |
 | **Theme** | Follow Windows, or force Light or Dark. |
-| **Translucent window background (Mica)** | The Windows 11 Mica material behind the windows. Ignored when the theme is forced to the opposite of the Windows one. |
+| **Translucent window background (Mica)** | The Windows 11 Mica material behind the windows. **Off by default**: the backdrop is composited additively, so every colour lands lighter than it was picked and shifts with the wallpaper — a card set to `#2B2B2B` measures `#4B4B4B` on screen. Prettier, less exact. Ignored when the theme is forced to the opposite of the Windows one. |
 | **Close the window automatically** | Off by default, so the result stays until you dismiss it. |
 | **Install new versions quietly** | Once a day, after a conversion and never during one, Jipeg looks for a newer release and installs it without showing anything. Only from this repository, only a strictly higher version, and only if the archive matches the SHA-256 GitHub publishes for it. Turn it off and nothing is fetched. |
 | **Check for updates** | The settings window also checks when it opens, without blocking. If a newer release exists the button becomes *Open download page*. |
@@ -150,11 +150,19 @@ corners Windows 11 draws itself. What needed doing by hand:
   accessibility keep working. Its background must stay opaque: left transparent, the control's
   own caption shows through underneath the painted one and the text renders twice.
   `NumericUpDown` cannot be darkened at all, which is why quality is a drop-down.
-- **Opaque means painting it yourself.** Over Mica, the background WinForms fills in for a
-  control carries no alpha and the backdrop bleeds through it. A card set to `#2B2B2B`
-  measured `#494B50` on screen. Surfaces are filled with a GDI+ brush, and the labels sitting
-  on them are transparent so the card's own fill shows — otherwise every line of text wears a
-  lighter rectangle.
+- **Mica costs the palette, which is why it is off by default.** What GDI draws over the
+  extended frame is composited *additively* onto the backdrop, so every colour lands lighter
+  than it was picked: a card set to `#2B2B2B` measures `#4B4B4B` on screen, a field set to
+  `#383838` measures `#585858` — a flat `+0x20` taken from whatever Mica blurred behind the
+  window, which means the palette also drifts with the wallpaper. With the backdrop off the
+  same points measure `#2B2B2B` and `#383838` exactly. The setting is still there for anyone
+  who prefers the look.
+- **Surfaces are filled with a GDI+ brush** rather than left to `BackColor`, and the labels on
+  them are transparent so the surface's own fill shows through — otherwise every line of text
+  wears a slightly different rectangle behind it.
+- **Focus is drawn, not borrowed.** `ControlPaint.DrawFocusRectangle` paints a hard black
+  dotted box whatever the theme, which on a dark surface reads as stray pixels. Focus is a thin
+  rounded outline in the accent colour instead.
 - **The drop-down list is a separate system window** of class `ComboLBox`. Windows 11 will
   round it and give it a border, but only once it exists, so it is asked just after the list
   opens.

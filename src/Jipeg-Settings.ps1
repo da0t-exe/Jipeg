@@ -43,7 +43,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg Settings'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size($W, 740)
+$form.ClientSize      = New-Object System.Drawing.Size($W, 760)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
@@ -217,7 +217,7 @@ $card1.Controls.Add($chk444)
 
 # --------------------------------------------------------------- appearance
 New-Section 'Appearance' 202
-$card2 = New-Card 232 112
+$card2 = New-Card 232 132
 
 [void](New-Label 'Theme' $Pad 16 160 $card2)
 $cmbT = New-Combo 14 $card2
@@ -232,9 +232,10 @@ $chkMica.Text = 'Translucent window background (Mica)'
 $chkMica.Checked = [bool]$Settings.mica
 Set-JipegCheck $chkMica $Theme
 $card2.Controls.Add($chkMica)
+[void](New-Hint 'Prettier, but colours shift with the wallpaper behind the window.' ($Pad + 26) 98 ($InnerW - 26) $card2)
 
-New-Section 'Updates' 364
-$card4 = New-Card 394 76
+New-Section 'Updates' 384
+$card4 = New-Card 414 76
 $chkAuto = New-Object System.Windows.Forms.CheckBox
 $chkAuto.SetBounds($Pad, 16, $InnerW, 22)
 $chkAuto.Text = 'Install new versions quietly'
@@ -246,8 +247,8 @@ if ($Settings.lastUpdate) { $autoHint = [string]$Settings.lastUpdate }
 [void](New-Hint $autoHint ($Pad + 26) 42 ($InnerW - 26) $card4)
 
 # ------------------------------------------------------------------ finish
-New-Section 'When a conversion finishes' 496
-$card3 = New-Card 526 76
+New-Section 'When a conversion finishes' 516
+$card3 = New-Card 546 76
 
 $chkClose = New-Object System.Windows.Forms.CheckBox
 $chkClose.SetBounds($Pad, 16, $InnerW, 22)
@@ -259,21 +260,21 @@ $card3.Controls.Add($chkClose)
 
 # ----------------------------------------------------------------- version
 $lblVer = New-Object System.Windows.Forms.Label
-$lblVer.SetBounds($Margin, 626, 260, 22)
+$lblVer.SetBounds($Margin, 642, 260, 22)
 $lblVer.ForeColor = $Theme.Text
 $lblVer.Text = "Jipeg $JipegVersion"
 Set-JipegLabel $lblVer $Theme $Mica
 $form.Controls.Add($lblVer)
 
 $lblUpd = New-Object System.Windows.Forms.Label
-$lblUpd.SetBounds($Margin, 650, 320, 18)
+$lblUpd.SetBounds($Margin, 664, 320, 18)
 $lblUpd.Font = $JipegFontHint
 $lblUpd.ForeColor = $Theme.Muted
 Set-JipegLabel $lblUpd $Theme $Mica
 $form.Controls.Add($lblUpd)
 
 $btnUpd = New-Object System.Windows.Forms.Button
-$btnUpd.SetBounds(($W - $Margin - 160), 628, 160, 32)
+$btnUpd.SetBounds(($W - $Margin - 160), 646, 160, 32)
 $btnUpd.Text = 'Check for updates'
 Set-JipegButton $btnUpd $Theme
 $form.Controls.Add($btnUpd)
@@ -327,7 +328,7 @@ $btnUpd.Add_Click({
 
 # --------------------------------------------------------------- OK/Cancel
 $btnCancel = New-Object System.Windows.Forms.Button
-$btnCancel.SetBounds(($W - $Margin - 100), 688, 100, 32)
+$btnCancel.SetBounds(($W - $Margin - 100), 708, 100, 32)
 $btnCancel.Text = 'Cancel'
 Set-JipegButton $btnCancel $Theme
 $btnCancel.Add_Click({ $form.Close() })
@@ -335,7 +336,7 @@ $form.Controls.Add($btnCancel)
 Set-JipegRounded $btnCancel 5
 
 $btnOK = New-Object System.Windows.Forms.Button
-$btnOK.SetBounds(($W - $Margin - 208), 688, 100, 32)
+$btnOK.SetBounds(($W - $Margin - 208), 708, 100, 32)
 $btnOK.Text = 'OK'
 Set-JipegButton $btnOK $Theme
 $form.Controls.Add($btnOK)
