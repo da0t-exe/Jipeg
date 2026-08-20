@@ -84,8 +84,9 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 ## Worth knowing
 
 - **Re-encoding an already compressed JPEG can make it bigger.** jpegli shines on
-  uncompressed sources (PNG, TIFF) or high-quality JPEGs. When the result grows, the summary
-  says so with a `+`: the number shown is always the real one.
+  uncompressed sources (PNG, TIFF) or high-quality JPEGs. When it would grow a JPEG, Jipeg
+  writes nothing and says so. When a converted PNG grows, the summary shows it with a `+`: the
+  number is always the real one.
 - **Transparency becomes white.** JPEG has no alpha channel, so something has to go behind it.
   `cjpegli` uses black, which turned a logo on a transparent background into a logo on a black
   square; anything carrying alpha is flattened onto white first, the way every other tool does
@@ -95,9 +96,26 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
   and on a two-frame APNG, both answered *"jpegli encoding failed"*. They are decoded by
   Windows now. An animated PNG usually calls itself `.png`, so the file's own header is checked
   for an `acTL` chunk rather than trusting the extension.
-- Metadata (EXIF, ICC profile) is not carried over by `cjpegli`. For a photograph taken on a
-  phone this includes the orientation tag, so a picture that was stored rotated comes back the
-  way it was actually captured.
+- **Nothing is carried over except the picture.** No Exif, no GPS, no camera model, no colour
+  profile, no embedded thumbnail — a JPEG out of Jipeg is pixels and nothing else. That is the
+  single biggest saving on a phone photograph, and it means the file cannot tell anyone where it
+  was taken.
+- **Rotation is applied, not copied.** A phone stores its photographs the way the sensor sees
+  them and adds an Exif tag saying which way up they go. Dropping that tag with the rest of the
+  metadata left the picture lying on its side. The tag is read, the pixels are turned to match,
+  and then it is thrown away with everything else — upright in every viewer, and not one byte
+  heavier.
+- **A JPEG is never replaced by a bigger JPEG.** Re-encoding something already compressed
+  usually costs size rather than saving it. When the result is not smaller than a JPEG source,
+  it is discarded and the original is left alone: the lighter of the two was already on disk.
+  A PNG still converts whatever it weighs, because there was no JPEG there before.
+- **A grey picture is encoded as one channel, not three.** A scanned page, a diagram or a black
+  and white photograph is often stored in RGB with all three channels identical. Encoding those
+  as greyscale takes **8%** off the result, measured, and loses nothing that was there. The
+  check is a subsampled pixel scan that gives up on the first coloured pixel — about two
+  milliseconds on a colour photograph.
+- **The result keeps the original's date**, so a converted folder still sorts by when the
+  pictures were taken rather than by when they went through Jipeg.
 - `cjpegli` encodes 4:4:4 unless told otherwise, so **Colour detail** now names the sampling in
   both directions. Until 1.9.0 it only ever passed the flag to ask for 4:4:4, which is the
   default anyway — the setting produced the same image whichever way it was set.
@@ -121,6 +139,24 @@ installer turned it on — the classic context menu tweak. Converted images are 
 | WebP decoder | `dwebp.exe` from **libwebp 1.5.0**, the WebM project's own Windows build |
 | Its SHA-256 | `ee66951df0f868f0c41f49fcc2d0fc53072912b7357836317ca177cbae5eb343` |
 | UI | PowerShell 5.1 + WinForms, standard Windows controls, light/dark theme followed automatically |
+
+### Why the files are not smaller still
+
+`cjpegli` has three switches that change the size of what it writes, and all three were
+measured on the same 1600x1100 photograph:
+
+| Switch | Size | Verdict |
+|---|---|---|
+| none (what Jipeg uses) | 114 854 B | progressive level 2 and adaptive quantisation, both already the default |
+| `--std_quant` | 178 078 B, **+55%** | the Annex K tables are far worse than jpegli's own |
+| `--noadaptive_quantization` | 116 697 B, **+1.6%** | adaptive quantisation earns its keep |
+| `--xyb` | 87 668 B, **-24%** | rejected, see below |
+
+`--xyb` is the tempting one and it is a trap. It writes the image in a different colour space
+and describes it with a 720-byte ICC profile called `XYB_Per`. A viewer that applies the profile
+gets a good picture — average error 1.65 against the original, next to 0.88 for the normal
+encoding. A viewer that ignores it gets an average error of **34.78**: visibly wrong colours.
+Jipeg promises a plain JPEG that opens anywhere, so it stays off.
 
 The binary is committed so the ZIP is installable as-is. If it is missing, the installer
 downloads the official libjxl v0.11.1 archive from GitHub and **verifies its SHA-256** before

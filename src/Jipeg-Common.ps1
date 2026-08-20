@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.10.2'
+$JipegVersion = '2.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -98,6 +98,97 @@ function Get-JipegSettings {
     if ('auto', 'light', 'dark' -notcontains $s.theme) { $s.theme = 'auto' }
     if ('auto', 'always', 'never' -notcontains $s.chroma) { $s.chroma = 'auto' }
     return $s
+}
+
+# A pixel scan in PowerShell is hundreds of times slower than the same loop in
+# compiled code, so this one is compiled. It walks a subsample and gives up on
+# the first pixel that is not grey - a colour photograph is rejected in about
+# two milliseconds.
+Add-Type -TypeDefinition @'
+using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+namespace Jipeg {
+  public static class Pixels {
+    public static bool IsGrey(Bitmap b, int step, int tol) {
+      if (b.Width < 1 || b.Height < 1) return false;
+      Rectangle r = new Rectangle(0, 0, b.Width, b.Height);
+      BitmapData d = b.LockBits(r, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+      try {
+        int stride = d.Stride;
+        byte[] row = new byte[stride];
+        for (int y = 0; y < b.Height; y += step) {
+          Marshal.Copy(IntPtr.Add(d.Scan0, y * stride), row, 0, stride);
+          for (int x = 0; x < b.Width; x += step) {
+            int i = x * 3;
+            int bl = row[i], g = row[i + 1], rd = row[i + 2];
+            if (Math.Abs(rd - g) > tol || Math.Abs(g - bl) > tol || Math.Abs(rd - bl) > tol)
+              return false;
+          }
+        }
+        return true;
+      } finally { b.UnlockBits(d); }
+    }
+  }
+}
+'@ -ReferencedAssemblies System.Drawing
+
+# The orientation a JPEG asks to be displayed at, from its Exif block. 1 means
+# upright, and so does a file that has no Exif at all or one we cannot make
+# sense of - the safe answer, since acting on a wrong guess would rotate a
+# picture that was already the right way up.
+function Get-JipegOrientation([string]$path) {
+    $ext = [System.IO.Path]::GetExtension($path).ToLower()
+    if ('.jpg', '.jpeg', '.jpe', '.jfif' -notcontains $ext) { return 1 }
+    $fs = $null
+    try {
+        $fs = [System.IO.File]::OpenRead($path)
+        $br = New-Object System.IO.BinaryReader($fs)
+        if ([int]$br.ReadByte() -ne 0xFF -or [int]$br.ReadByte() -ne 0xD8) { return 1 }
+        while ($true) {
+            if ([int]$br.ReadByte() -ne 0xFF) { continue }
+            $m = [int]$br.ReadByte()
+            while ($m -eq 0xFF) { $m = [int]$br.ReadByte() }
+            if ($m -eq 0x01 -or ($m -ge 0xD0 -and $m -le 0xD8)) { continue }
+            if ($m -eq 0xD9 -or $m -eq 0xDA) { return 1 }        # pixel data: no Exif
+            $len = ([int]$br.ReadByte() -shl 8) -bor [int]$br.ReadByte()
+            if ($len -lt 2) { return 1 }
+            if ($m -ne 0xE1) { [void]$br.ReadBytes($len - 2); continue }
+
+            $block = $br.ReadBytes($len - 2)
+            if ($block.Length -lt 14) { return 1 }
+            if ([System.Text.Encoding]::ASCII.GetString($block, 0, 4) -ne 'Exif') { continue }
+            $t = 6                                                # past the Exif marker
+            $little = ([char]$block[$t] -eq 'I')
+            function Get16($a, $o, $le) {
+                if ($le) { return ([int]$a[$o + 1] -shl 8) -bor [int]$a[$o] }
+                return ([int]$a[$o] -shl 8) -bor [int]$a[$o + 1]
+            }
+            function Get32($a, $o, $le) {
+                if ($le) {
+                    return ([int]$a[$o + 3] -shl 24) -bor ([int]$a[$o + 2] -shl 16) -bor
+                           ([int]$a[$o + 1] -shl 8)  -bor  [int]$a[$o]
+                }
+                return ([int]$a[$o] -shl 24) -bor ([int]$a[$o + 1] -shl 16) -bor
+                       ([int]$a[$o + 2] -shl 8)  -bor  [int]$a[$o + 3]
+            }
+            $ifd = $t + (Get32 $block ($t + 4) $little)
+            if ($ifd -lt 0 -or ($ifd + 2) -gt $block.Length) { return 1 }
+            $count = Get16 $block $ifd $little
+            for ($i = 0; $i -lt $count; $i++) {
+                $e = $ifd + 2 + ($i * 12)
+                if (($e + 12) -gt $block.Length) { break }
+                if ((Get16 $block $e $little) -eq 0x0112) {
+                    $v = Get16 $block ($e + 8) $little
+                    if ($v -ge 1 -and $v -le 8) { return $v }
+                    return 1
+                }
+            }
+            return 1
+        }
+    } catch { } finally { if ($fs) { $fs.Dispose() } }
+    return 1
 }
 
 # Whether the source still holds full colour detail, so "follow the source" can
