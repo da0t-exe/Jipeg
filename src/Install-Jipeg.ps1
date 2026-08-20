@@ -196,16 +196,32 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
     Set-StartMenuShortcut $icon
     Set-UninstallEntry $icon
     if ($classicMenu) {
-        & $report 'Restoring the classic context menu'
         $k = 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32'
-        New-Item -Path $k -Force | Out-Null
-        Set-ItemProperty -Path $k -Name '(default)' -Value ''
-        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jipeg' `
-                         -Name 'ClassicMenuSet' -Value 1 -Type DWord
-        & $report 'Restarting Explorer'
-        Get-Process explorer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 800
-        if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process explorer.exe }
+        $already = $false
+        try {
+            if (Test-Path -LiteralPath $k) {
+                $current = (Get-ItemProperty -LiteralPath $k -Name '(default)' -ErrorAction SilentlyContinue).'(default)'
+                $already = ($null -ne $current -and $current -eq '')
+            }
+        } catch { }
+
+        if ($already) {
+            # Nothing to change, so nothing to restart. Reinstalling used to cost
+            # a few seconds of blank taskbar rewriting the same value. The
+            # uninstall marker stays unset on purpose: the setting was not ours,
+            # so removing Jipeg must not take it away.
+            & $report 'Classic context menu already on, leaving Explorer alone'
+        } else {
+            & $report 'Restoring the classic context menu'
+            New-Item -Path $k -Force | Out-Null
+            Set-ItemProperty -Path $k -Name '(default)' -Value ''
+            Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jipeg' `
+                             -Name 'ClassicMenuSet' -Value 1 -Type DWord
+            & $report 'Restarting Explorer'
+            Get-Process explorer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 800
+            if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process explorer.exe }
+        }
     }
     & $report 'Done'
 }
@@ -223,7 +239,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Install Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(470, 272)
+$form.ClientSize      = New-Object System.Drawing.Size(520, 282)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
@@ -239,8 +255,9 @@ $form.Add_HandleCreated({
 })
 
 $lbl1 = New-Object System.Windows.Forms.Label
-$lbl1.SetBounds(16, 16, 438, 44)
+$lbl1.SetBounds(20, 20, 480, 44)
 $lbl1.ForeColor = $Theme.Text
+$lbl1.Font = $JipegFont
 $Quote1 = [char]0x201C
 $Quote2 = [char]0x201D
 $lbl1.Text = 'Jipeg adds {0}{1}{2} to the right-click menu on images and converts them with Google''s jpegli encoder.' -f $Quote1, $Verb, $Quote2
@@ -248,7 +265,8 @@ Set-JipegLabel $lbl1 $Theme $Mica
 $form.Controls.Add($lbl1)
 
 $lbl2 = New-Object System.Windows.Forms.Label
-$lbl2.SetBounds(16, 66, 438, 40)
+$lbl2.SetBounds(20, 72, 480, 40)
+$lbl2.Font = $JipegFontHint
 $lbl2.ForeColor = $Theme.Muted
 $lbl2.Text = "Installs to: $Dest" + [Environment]::NewLine + 'No administrator rights required.'
 Set-JipegLabel $lbl2 $Theme $Mica
@@ -256,7 +274,8 @@ $form.Controls.Add($lbl2)
 
 $IsWin11 = ([Environment]::OSVersion.Version.Build -ge 22000)
 $chk = New-Object System.Windows.Forms.CheckBox
-$chk.SetBounds(16, 114, 438, 24)
+$chk.SetBounds(20, 124, 480, 22)
+$chk.AutoSize = $true   # la bande opaque epouse le texte au lieu de barrer le Mica
 $chk.Checked = $IsWin11
 $chk.Enabled = $IsWin11
 $chk.Text = 'Show the entry directly in the right-click menu'
@@ -265,7 +284,8 @@ if (-not $IsWin11) { $chk.Text = 'Classic context menu - not needed on this Wind
 $form.Controls.Add($chk)
 
 $lblChk = New-Object System.Windows.Forms.Label
-$lblChk.SetBounds(35, 140, 419, 58)
+$lblChk.SetBounds(44, 150, 456, 56)
+$lblChk.Font = $JipegFontHint
 $lblChk.ForeColor = $Theme.Muted
 $lblChk.Text = ('Otherwise Windows 11 hides it under {0}Show more options{1}.' -f $Quote1, $Quote2) +
                [Environment]::NewLine + 'Explorer restarts: the taskbar and any open folders' +
@@ -275,20 +295,21 @@ Set-JipegLabel $lblChk $Theme $Mica
 $form.Controls.Add($lblChk)
 
 $lblState = New-Object System.Windows.Forms.Label
-$lblState.SetBounds(16, 228, 240, 22)
+$lblState.SetBounds(20, 234, 260, 22)
+$lblState.Font = $JipegFontHint
 $lblState.ForeColor = $Theme.Muted
 Set-JipegLabel $lblState $Theme $Mica
 $form.Controls.Add($lblState)
 
 $btnGo = New-Object System.Windows.Forms.Button
-$btnGo.SetBounds(470 - 16 - 96 - 8 - 96, 224, 96, 32)
+$btnGo.SetBounds(520 - 20 - 100 - 8 - 100, 230, 100, 32)
 $btnGo.Text = 'Install'
 Set-JipegButton $btnGo $Theme
 $form.Controls.Add($btnGo)
 Set-JipegRounded $btnGo 5
 
 $btnNo = New-Object System.Windows.Forms.Button
-$btnNo.SetBounds(470 - 16 - 96, 224, 96, 32)
+$btnNo.SetBounds(520 - 20 - 100, 230, 100, 32)
 $btnNo.Text = 'Cancel'
 Set-JipegButton $btnNo $Theme
 $btnNo.Add_Click({ $form.Close() })

@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.5.3'
+$JipegVersion = '1.6.0'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -105,7 +105,8 @@ function Get-JipegTheme([string]$preference) {
             Button  = [System.Drawing.Color]::FromArgb(45, 45, 45)
             Edge    = [System.Drawing.Color]::FromArgb(70, 70, 70)
             Track   = [System.Drawing.Color]::FromArgb(58, 58, 58)
-            Field   = [System.Drawing.Color]::FromArgb(45, 45, 45)
+            Field   = [System.Drawing.Color]::FromArgb(56, 56, 56)   # doit trancher sur la carte
+            CardEdge = [System.Drawing.Color]::FromArgb(58, 58, 58)
             Accent  = Get-JipegAccent $true
         }
     }
@@ -119,15 +120,32 @@ function Get-JipegTheme([string]$preference) {
         Edge    = [System.Drawing.Color]::FromArgb(205, 205, 205)
         Track   = [System.Drawing.Color]::FromArgb(222, 222, 222)
         Field   = [System.Drawing.Color]::FromArgb(255, 255, 255)
+        CardEdge = [System.Drawing.Color]::FromArgb(226, 226, 226)
         Accent  = Get-JipegAccent $false
     }
 }
 
-# The system dialog font at 9 pt is small for body text; 10 pt in the same
-# family keeps the user's typeface and still scales with their DPI setting.
-$JipegFont = New-Object System.Drawing.Font(
-    [System.Drawing.SystemFonts]::MessageBoxFont.FontFamily, 10.0)
-$JipegFontBold = New-Object System.Drawing.Font($JipegFont, [System.Drawing.FontStyle]::Bold)
+# Three sizes rather than one. With a single size the section headings, the
+# control labels and the explanations all shout at the same volume and nothing
+# leads the eye. The family stays the user's own dialog font, so this still
+# follows their typeface and DPI.
+$JipegFamily = [System.Drawing.SystemFonts]::MessageBoxFont.FontFamily
+
+function New-JipegSemibold([single]$size) {
+    # Semibold reads better than Bold at heading sizes, when the family has it.
+    try {
+        $f = New-Object System.Drawing.Font(($JipegFamily.Name + ' Semibold'), $size)
+        if ($f.Name -like '*Semibold*') { return $f }
+        $f.Dispose()
+    } catch { }
+    return New-Object System.Drawing.Font($JipegFamily, $size, [System.Drawing.FontStyle]::Bold)
+}
+
+$JipegFont        = New-Object System.Drawing.Font($JipegFamily, 10.0)   # labels, body
+$JipegFontHint    = New-Object System.Drawing.Font($JipegFamily, 8.75)   # explanations
+$JipegFontSection = New-JipegSemibold 11.25                              # section headings
+$JipegFontBold    = New-JipegSemibold 10.0                               # emphasis in body
+$JipegFontBig     = New-JipegSemibold 15.0                               # the one number that matters
 
 # Windows 11 rounds top-level windows on its own; this only syncs the title bar
 # with the theme the user picked, which may differ from the system one.

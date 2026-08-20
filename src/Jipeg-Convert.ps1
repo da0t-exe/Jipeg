@@ -85,13 +85,12 @@ try {
 } finally { $Mutex.ReleaseMutex() }
 
 if (-not $script:LockFs) { exit }          # a conversion is already running, it will take over
-Start-Sleep -Milliseconds 700              # let the rest of the selection arrive
+
+# No waiting before the window appears. Whatever is in the queue right now goes
+# in; the rest of the selection is picked up by the watcher while the window is
+# already on screen, and the engine holds off for a moment so the count settles.
 foreach ($f in @(Read-Queue)) { if ($Files -notcontains $f) { $Files.Add($f) } }
 
-if ($Files.Count -eq 0) {
-    if ($script:LockFs) { $script:LockFs.Close(); Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue }
-    exit
-}
 if (-not (Test-Path -LiteralPath $Cjpegli)) {
     [void][System.Windows.Forms.MessageBox]::Show(
         "cjpegli.exe was not found at:`n$Cjpegli`n`nRun the Jipeg installer again.",
@@ -114,7 +113,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size(430, 176)
+$form.ClientSize      = New-Object System.Drawing.Size(430, 152)
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ShowInTaskbar   = $true
@@ -129,26 +128,28 @@ $form.Add_HandleCreated({
 })
 
 $lblTitle = New-Object System.Windows.Forms.Label
-$lblTitle.SetBounds(16, 18, 398, 22)
+$lblTitle.SetBounds(16, 20, 398, 24)
+$lblTitle.Font = $JipegFontSection
 $lblTitle.ForeColor = $Theme.Text
-$lblTitle.Font = $JipegFontBold
-$lblTitle.Text = 'Getting ready…'
+$lblTitle.Text = 'Getting ready...'
 Set-JipegLabel $lblTitle $Theme $Mica
 $form.Controls.Add($lblTitle)
 
 $lblFile = New-Object System.Windows.Forms.Label
-$lblFile.SetBounds(16, 43, 398, 20)
+$lblFile.SetBounds(16, 48, 398, 18)
+$lblFile.Font = $JipegFontHint
 $lblFile.ForeColor = $Theme.Muted
 $lblFile.AutoEllipsis = $true
 Set-JipegLabel $lblFile $Theme $Mica
 $form.Controls.Add($lblFile)
 
-# The native ProgressBar animates its fill and cannot be recoloured reliably,
-# so the bar is drawn here: one flat accent colour, rounded, no animation.
-$script:BarValue = 0
-$script:BarMax   = [math]::Max(1, $Files.Count)
+# The native ProgressBar animates its own fill, cannot be recoloured reliably
+# and has a white trough in dark mode, so the bar is drawn here: one flat accent
+# colour, rounded ends, and it glides to each new value instead of jumping.
+$script:BarShown  = 0.0
+$script:BarTarget = 0.0
 $bar = New-Object System.Windows.Forms.Panel
-$bar.SetBounds(16, 73, 398, 10)
+$bar.SetBounds(16, 80, 398, 10)
 $bar.BackColor = $form.BackColor
 Set-JipegDoubleBuffer $bar
 $bar.Add_Paint({
@@ -158,13 +159,7 @@ $bar.Add_Paint({
     $track = New-JipegRoundPath 0 0 $w $h ($h / 2)
     $tb = New-Object System.Drawing.SolidBrush($Theme.Track)
     $g.FillPath($tb, $track); $tb.Dispose(); $track.Dispose()
-    # Plain comparisons on purpose: [math]::Min(1, $frac) would pick the
-    # Min(int, int) overload and round $frac to 0 before comparing.
-    $frac = 0.0
-    if ($script:BarMax -gt 0) { $frac = [double]$script:BarValue / [double]$script:BarMax }
-    if ($frac -lt 0.0) { $frac = 0.0 }
-    if ($frac -gt 1.0) { $frac = 1.0 }
-    $fw = [int][math]::Round([double]$w * $frac)
+    $fw = [int][math]::Round([double]$w * $script:BarShown)
     if ($fw -ge 2) {
         $fill = New-JipegRoundPath 0 0 $fw $h ($h / 2)
         $fb = New-Object System.Drawing.SolidBrush($Theme.Accent)
@@ -173,19 +168,23 @@ $bar.Add_Paint({
 })
 $form.Controls.Add($bar)
 
-function Set-Bar([int]$value) {
-    $script:BarValue = $value
-    $bar.Invalidate()
-}
+# The saving is the point of the window, so it gets the largest type on screen.
+$lblPercent = New-Object System.Windows.Forms.Label
+$lblPercent.SetBounds(16, 102, 92, 28)
+$lblPercent.Font = $JipegFontBig
+$lblPercent.ForeColor = $Theme.Accent
+Set-JipegLabel $lblPercent $Theme $Mica
+$form.Controls.Add($lblPercent)
 
-$lblResult = New-Object System.Windows.Forms.Label
-$lblResult.SetBounds(16, 94, 398, 20)
-$lblResult.ForeColor = $Theme.Text
-Set-JipegLabel $lblResult $Theme $Mica
-$form.Controls.Add($lblResult)
+$lblSizes = New-Object System.Windows.Forms.Label
+$lblSizes.SetBounds(112, 109, 190, 18)
+$lblSizes.Font = $JipegFontHint
+$lblSizes.ForeColor = $Theme.Muted
+Set-JipegLabel $lblSizes $Theme $Mica
+$form.Controls.Add($lblSizes)
 
 $btn = New-Object System.Windows.Forms.Button
-$btn.SetBounds(430 - 16 - 100, 128, 100, 32)
+$btn.SetBounds(430 - 16 - 100, 102, 100, 32)
 $btn.Text = 'Cancel'
 Set-JipegButton $btn $Theme
 $form.Controls.Add($btn)
@@ -200,19 +199,24 @@ $script:TotalIn   = 0
 $script:TotalOut  = 0
 $script:Cancelled = $false
 $script:Finished  = $false
+$script:Started   = $false
 $script:Proc      = $null
 $script:TmpIn     = $null
 $script:TmpOut    = $null
 $script:Current   = $null
 
+function Set-Bar([double]$fraction) {
+    if ($fraction -lt 0) { $fraction = 0.0 }
+    if ($fraction -gt 1) { $fraction = 1.0 }
+    $script:BarTarget = $fraction
+    $glide.Start()
+}
+
 function Set-Status {
     $n = $Files.Count
-    if ($n -eq 1) { $lblTitle.Text = 'Converting to JPEG…' }
-    else          { $lblTitle.Text = "Converting to JPEG… ($($script:Index) of $n)" }
-    # recomputed here rather than cached: the batch can grow at any moment, and
-    # a stale maximum silently pins the bar at 100%
-    $script:BarMax = [math]::Max(1, $n)
-    Set-Bar $script:Index
+    if ($n -eq 1) { $lblTitle.Text = 'Converting to JPEG...' }
+    else          { $lblTitle.Text = "Converting to JPEG... ($($script:Index) of $n)" }
+    if ($n -gt 0) { Set-Bar ($script:Index / [double]$n) } else { Set-Bar 0 }
 }
 
 function Start-Next {
@@ -291,7 +295,8 @@ function Resume-Batch {
     $autoClose.Stop()
     $btn.Text = 'Cancel'
     $form.AcceptButton = $null
-    $lblResult.Text = ''
+    $lblPercent.Text = ''
+    $lblSizes.Text = ''
     Set-Status
     $engine.Start()
 }
@@ -300,21 +305,23 @@ function Complete-Batch {
     if ($script:Finished) { return }
     $script:Finished = $true
     $engine.Stop()
-    $script:BarMax = [math]::Max(1, $Files.Count)
-    Set-Bar $script:BarMax
+    Set-Bar 1
 
     if ($script:Done -gt 0) {
         $pc = 0
         if ($script:TotalIn -gt 0) { $pc = [math]::Round(100 - ($script:TotalOut * 100 / $script:TotalIn)) }
         $sign = [char]0x2212
         if ($pc -lt 0) { $sign = '+'; $pc = [math]::Abs($pc) }
-        $lblResult.Text = '{0} {1} {2}   ({3}{4}%)' -f (Format-JipegSize $script:TotalIn), ([char]0x2192),
-                                                       (Format-JipegSize $script:TotalOut), $sign, $pc
+        $lblPercent.Text = '{0}{1}%' -f $sign, $pc
+        $lblPercent.ForeColor = $Theme.Accent
+        if ($pc -lt 0) { $lblPercent.ForeColor = $Theme.Text }
+        $lblSizes.Text = '{0} {1} {2}' -f (Format-JipegSize $script:TotalIn), ([char]0x2192),
+                                          (Format-JipegSize $script:TotalOut)
     }
     $word = 'images'
     if ($script:Done -eq 1) { $word = 'image' }
     if ($script:Cancelled) {
-        $lblTitle.Text = "Cancelled — $($script:Done) $word converted"
+        $lblTitle.Text = "Cancelled - $($script:Done) $word converted"
     } elseif ($script:Failed -gt 0) {
         $f = 'failures'; if ($script:Failed -eq 1) { $f = 'failure' }
         $lblTitle.Text = "$($script:Done) $word converted, $($script:Failed) $f"
@@ -327,11 +334,25 @@ function Complete-Batch {
     $form.AcceptButton = $btn
     $btn.Focus()
 
-    # Only dismiss itself when the user asked for that and nothing went wrong.
     if ($Settings.closeWhenDone -and -not $script:Cancelled -and $script:Failed -eq 0) {
         $autoClose.Start()
     }
 }
+
+# Eases the drawn value toward the real one so the bar glides between steps
+# instead of snapping. It never invents progress - only real values are targets.
+$glide = New-Object System.Windows.Forms.Timer
+$glide.Interval = 16
+$glide.Add_Tick({
+    $delta = $script:BarTarget - $script:BarShown
+    if ([math]::Abs($delta) -lt 0.002) {
+        $script:BarShown = $script:BarTarget
+        $glide.Stop()
+    } else {
+        $script:BarShown += $delta * 0.22
+    }
+    $bar.Invalidate()
+})
 
 $engine = New-Object System.Windows.Forms.Timer
 $engine.Interval = 50
@@ -343,7 +364,7 @@ $engine.Add_Tick({
 
 # picks up files dropped by instances started after this one
 $watcher = New-Object System.Windows.Forms.Timer
-$watcher.Interval = 600
+$watcher.Interval = 400
 $watcher.Add_Tick({
     try {
         $incoming = @(Read-Queue)
@@ -352,8 +373,20 @@ $watcher.Add_Tick({
             if ($Files -notcontains $f) { $Files.Add($f); $added++ }
         }
         if ($added -eq 0) { return }
-        if ($script:Finished) { Resume-Batch } else { Set-Status }
+        if ($script:Finished) { Resume-Batch }
+        elseif ($script:Started) { Set-Status }
     } catch { }
+})
+
+# Gives the rest of an Explorer selection a moment to land before the first file
+# starts, so the count does not visibly climb while converting.
+$grace = New-Object System.Windows.Forms.Timer
+$grace.Interval = 350
+$grace.Add_Tick({
+    $grace.Stop()
+    if ($Files.Count -eq 0) { $form.Close(); return }
+    $script:Started = $true
+    $engine.Start()
 })
 
 $autoClose = New-Object System.Windows.Forms.Timer
@@ -364,16 +397,16 @@ $btn.Add_Click({
     if ($script:Finished) { $form.Close(); return }
     $script:Cancelled = $true
     $btn.Enabled = $false
-    $lblTitle.Text = 'Cancelling…'
+    $lblTitle.Text = 'Cancelling...'
 })
 
 $form.Add_Shown({
     Show-JipegWindow $form
-    $engine.Start()
     $watcher.Start()
+    $grace.Start()
 })
 $form.Add_FormClosed({
-    $engine.Stop(); $watcher.Stop(); $autoClose.Stop()
+    $engine.Stop(); $watcher.Stop(); $autoClose.Stop(); $glide.Stop(); $grace.Stop()
     try {
         $late = @(Read-Queue) | Where-Object { $Files -notcontains $_ }
         if ($late.Count -gt 0) {

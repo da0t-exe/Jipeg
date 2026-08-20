@@ -116,29 +116,37 @@ window closes it hands those files to a fresh instance instead of losing them.
 
 ### Why it looks the way it does
 
-Every window uses real Windows controls, so it inherits the system font and the rounded corners
-Windows 11 draws itself. Four things needed help:
+Every window uses real Windows controls, so it inherits the system font and the rounded
+corners Windows 11 draws itself. What needed doing by hand:
 
+- **Three type sizes, not one.** Section headings, control labels and explanations used to
+  share a single size, so everything shouted at the same volume and nothing led the eye.
+  Headings are now semibold at 11.25 pt, labels 10 pt, explanations 8.75 pt. All three come
+  from the user's own dialog font, so they still follow their typeface and DPI.
+- **Contrast.** Secondary text sits at roughly 7.8:1 against its background — WCAG AAA —
+  where the usual dimmed grey lands nearer 5:1.
 - **Mica.** The window background is the translucent Mica material, applied through
-  `DWMWA_SYSTEMBACKDROP_TYPE` with the client area extended into the frame. DWM keys the glass
-  on black pixels, so the form background is black and labels are transparent — nothing else in
-  the UI is pure black, so nothing else disappears. Buttons must be `FlatStyle` with their own
-  background, otherwise the themed renderer leaves an opaque halo around them. Mica is only used
-  when the chosen theme matches the Windows theme, because its tint comes from the system
-  setting rather than ours.
-- **The progress bar is drawn, not native.** The stock `ProgressBar` animates its fill, cannot
-  be recoloured reliably, and has a white trough in dark mode. This one is a rounded rectangle
-  in a single flat colour that never animates.
+  `DWMWA_SYSTEMBACKDROP_TYPE` with the client area extended into the frame. DWM keys the
+  glass on black pixels, so the form background is black and labels are transparent. Buttons
+  must be `FlatStyle` with their own background, or the themed renderer leaves an opaque halo
+  around them. Mica is only used when the chosen theme matches the Windows one, because its
+  tint comes from the system setting rather than ours.
+- **The progress bar is drawn, not native.** The stock `ProgressBar` animates its own fill,
+  cannot be recoloured reliably and has a white trough in dark mode. This one is a rounded
+  rectangle in a single flat colour that eases toward each new value instead of snapping to
+  it. It never invents progress: only real values are ever targets.
 - **The colour is yours.** It comes from the Windows accent palette in the registry — a light
   shade on dark backgrounds, a deeper one on light, the same way Windows picks.
+- **Drop-downs.** A `ComboBox` ignores the height you set (it is always `ItemHeight + 6`) and
+  draws a pale system border and a grey arrow button. So the control is made taller and wider
+  than the frame holding it and offset on every side: the border and the arrow fall outside
+  and are clipped away, leaving a clean rounded field, and a chevron is drawn in their place.
+  The list items are owner-drawn so they follow the theme.
 - **Check boxes** have no single style that works in dark mode: `Standard` draws a white box
   when unticked but the correct blue box with a white tick when ticked, and `Flat` does the
-  opposite — dark when unticked, an unreadable light box with a pale tick when ticked. So the
-  style follows the state. `SetWindowTheme` does not help; it breaks the control outright.
-  `NumericUpDown` cannot be darkened at all, which is why quality is a drop-down.
-- **Text sizing and contrast.** The body font is the system dialog typeface at 10 pt rather than
-  the default 9 pt, so it still follows the user's font and DPI. Secondary text sits at roughly
-  7.8:1 against its background — WCAG AAA — where the usual dimmed grey lands nearer 5:1.
+  opposite. So the style follows the state. `SetWindowTheme` does not help; it breaks the
+  control outright. `NumericUpDown` cannot be darkened at all, which is why quality is a
+  drop-down.
 
 ## Layout
 
