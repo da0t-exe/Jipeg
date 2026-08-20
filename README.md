@@ -22,11 +22,12 @@ that file, and installs it in the console — no setup window. On Windows 11 it 
 one question, because the answer restarts Explorer:
 
 ```
-  Show Jipeg directly in the right-click menu? [y/n] (Enter = yes, 15s)
+  Show Jipeg directly in the right-click menu? [y/n] (Enter = yes, 10s)
 ```
 
-Type your answer and confirm with Enter — a single key press does nothing on its
-own. Press Enter alone, or leave it be, and the default applies after 15 seconds.
+The seconds tick down as you watch. Type your answer and confirm with Enter — a
+single key press does nothing on its own, and typing restarts the countdown.
+Press Enter alone, or leave it be, and the default applies after 10 seconds.
 Run the file directly with `-ClassicMenu` or `-NoClassicMenu` to answer up front,
 or `-Gui` for the setup window.
 

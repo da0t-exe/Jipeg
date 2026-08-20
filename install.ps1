@@ -44,41 +44,81 @@ function Read-YesNoTimed([string]$question, [int]$seconds, [bool]$default) {
     if (-not $default) { $defWord = 'no' }
     Write-Host ''
     Write-Host "  $question " -NoNewline -ForegroundColor White
-    Write-Host "[y/n] " -NoNewline -ForegroundColor DarkGray
-    Write-Host "(Enter = $defWord, ${seconds}s) " -NoNewline -ForegroundColor DarkGray
+    Write-Host '[y/n] ' -NoNewline -ForegroundColor DarkGray
+
+    # Remember where the countdown starts so only the tail is redrawn each
+    # second and the coloured question keeps its place. If the cursor cannot be
+    # moved, or the line would wrap, fall back to a plain static prompt.
+    $anchor = $null
+    try {
+        if (-not [Console]::IsOutputRedirected) {
+            $left = [Console]::CursorLeft
+            $top  = [Console]::CursorTop
+            if (($left + 44) -lt [Console]::BufferWidth) {
+                $anchor = @{ Left = $left; Top = $top }
+            }
+        }
+    } catch { $anchor = $null }
+
+    $draw = {
+        param([int]$remaining, [string]$typed)
+        if (-not $anchor) { return }
+        try {
+            [Console]::SetCursorPosition($anchor.Left, $anchor.Top)
+            $tail = "(Enter = $defWord, ${remaining}s) "
+            Write-Host $tail -NoNewline -ForegroundColor DarkGray
+            Write-Host $typed -NoNewline -ForegroundColor White
+            $used = $anchor.Left + $tail.Length + $typed.Length
+            $pad  = [Console]::BufferWidth - $used - 1
+            if ($pad -gt 0) { Write-Host (' ' * $pad) -NoNewline }
+            [Console]::SetCursorPosition($used, $anchor.Top)
+        } catch { }
+    }
+
     try {
         if ([Console]::IsInputRedirected) { throw 'redirected' }
+        if (-not $anchor) { Write-Host "(Enter = $defWord, ${seconds}s) " -NoNewline -ForegroundColor DarkGray }
         $typed = ''
         $deadline = (Get-Date).AddSeconds($seconds)
-        while ((Get-Date) -lt $deadline) {
+        $shown = -1
+        while ($true) {
+            $remaining = [int][math]::Ceiling(($deadline - (Get-Date)).TotalSeconds)
+            if ($remaining -le 0) { break }
+            if ($remaining -ne $shown) { & $draw $remaining $typed; $shown = $remaining }
+
             if (-not [Console]::KeyAvailable) {
-                Start-Sleep -Milliseconds 80
+                Start-Sleep -Milliseconds 60
                 continue
             }
             $key = [Console]::ReadKey($true)
             $deadline = (Get-Date).AddSeconds($seconds)   # typing keeps it alive
+            $shown = -1
+
             if ($key.Key -eq 'Enter') {
                 Write-Host ''
                 $answer = ConvertTo-YesNo $typed $default
                 if ($null -ne $answer) { return $answer }
-                Write-Host '  Type y or n, then Enter. ' -NoNewline -ForegroundColor DarkGray
+                Write-Host '  Type y or n, then Enter.' -ForegroundColor DarkGray
+                Write-Host "  $question " -NoNewline -ForegroundColor White
+                Write-Host '[y/n] ' -NoNewline -ForegroundColor DarkGray
+                try {
+                    if ($anchor) { $anchor = @{ Left = [Console]::CursorLeft; Top = [Console]::CursorTop } }
+                } catch { $anchor = $null }
                 $typed = ''
                 continue
             }
             if ($key.Key -eq 'Backspace') {
-                if ($typed.Length -gt 0) {
-                    $typed = $typed.Substring(0, $typed.Length - 1)
-                    Write-Host "`b `b" -NoNewline
-                }
+                if ($typed.Length -gt 0) { $typed = $typed.Substring(0, $typed.Length - 1) }
+                if (-not $anchor) { Write-Host "`b `b" -NoNewline }
                 continue
             }
             if ($key.KeyChar -and -not [char]::IsControl($key.KeyChar)) {
                 $typed += $key.KeyChar
-                Write-Host $key.KeyChar -NoNewline -ForegroundColor White
+                if (-not $anchor) { Write-Host $key.KeyChar -NoNewline -ForegroundColor White }
             }
         }
         Write-Host ''
-        Write-Host "  No answer after $seconds s - going with $defWord." -ForegroundColor DarkGray
+        Write-Host "  No answer - going with $defWord." -ForegroundColor DarkGray
     } catch {
         Write-Host ''
         Write-Host "  Nothing to read from - going with $defWord." -ForegroundColor DarkGray
@@ -153,7 +193,7 @@ try {
             Say 'Windows 11 hides new right-click entries under "Show more options".' 'DarkGray'
             Say 'Jipeg can restore the classic menu so it appears directly.' 'DarkGray'
             Say 'Explorer restarts for about a second; your open windows stay open.' 'DarkGray'
-            $classic = Read-YesNoTimed 'Show Jipeg directly in the right-click menu?' 15 $true
+            $classic = Read-YesNoTimed 'Show Jipeg directly in the right-click menu?' 10 $true
         }
         $psArgs += '-Silent'
         if ($classic) { $psArgs += '-ClassicMenu' }
