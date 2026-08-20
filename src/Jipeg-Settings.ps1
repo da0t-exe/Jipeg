@@ -38,8 +38,7 @@ $form.Add_HandleCreated({
     Set-JipegChrome $form $Theme
     if ($Mica) { [void](Set-JipegMica $form $Theme) }
 })
-$icoPath = Join-Path $Root 'jipeg.ico'
-if (Test-Path -LiteralPath $icoPath) { try { $form.Icon = New-Object System.Drawing.Icon($icoPath) } catch { } }
+Set-JipegIcon $form $Root
 
 function New-Section([string]$text, [int]$y) {
     $l = New-Object System.Windows.Forms.Label

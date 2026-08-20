@@ -25,33 +25,63 @@ $Work = Join-Path $env:TEMP ('jipeg-setup-{0}' -f [guid]::NewGuid().ToString('N'
 
 function Say([string]$text, [string]$colour = 'Gray') { Write-Host "  $text" -ForegroundColor $colour }
 
+# Kept apart from the key loop so the decision can be exercised on its own.
+# Returns $null when the text is neither yes nor no, so the caller asks again
+# instead of guessing.
+function ConvertTo-YesNo([string]$typed, [bool]$default) {
+    $answer = $typed.Trim().ToLower()
+    if ($answer -eq '') { return $default }
+    if ($answer.StartsWith('y')) { return $true }
+    if ($answer.StartsWith('n')) { return $false }
+    return $null
+}
+
 # A question that answers itself when nobody is at the keyboard, so the same
-# command works in a terminal and inside a script.
+# command works in a terminal and inside a script. The answer is typed and
+# confirmed with Enter - a bare key press is far too easy to trigger by accident.
 function Read-YesNoTimed([string]$question, [int]$seconds, [bool]$default) {
-    $hint = 'Y/n'
-    if (-not $default) { $hint = 'y/N' }
+    $defWord = 'yes'
+    if (-not $default) { $defWord = 'no' }
     Write-Host ''
     Write-Host "  $question " -NoNewline -ForegroundColor White
-    Write-Host "[$hint] " -NoNewline -ForegroundColor DarkGray
+    Write-Host "[y/n] " -NoNewline -ForegroundColor DarkGray
+    Write-Host "(Enter = $defWord, ${seconds}s) " -NoNewline -ForegroundColor DarkGray
     try {
         if ([Console]::IsInputRedirected) { throw 'redirected' }
+        $typed = ''
         $deadline = (Get-Date).AddSeconds($seconds)
         while ((Get-Date) -lt $deadline) {
-            if ([Console]::KeyAvailable) {
-                $key = [Console]::ReadKey($true)
-                if ($key.Key -eq 'Y') { Write-Host 'yes' -ForegroundColor White; return $true }
-                if ($key.Key -eq 'N') { Write-Host 'no'  -ForegroundColor White; return $false }
-                if ($key.Key -eq 'Enter') {
-                    if ($default) { Write-Host 'yes' -ForegroundColor White }
-                    else          { Write-Host 'no'  -ForegroundColor White }
-                    return $default
-                }
+            if (-not [Console]::KeyAvailable) {
+                Start-Sleep -Milliseconds 80
+                continue
             }
-            Start-Sleep -Milliseconds 120
+            $key = [Console]::ReadKey($true)
+            $deadline = (Get-Date).AddSeconds($seconds)   # typing keeps it alive
+            if ($key.Key -eq 'Enter') {
+                Write-Host ''
+                $answer = ConvertTo-YesNo $typed $default
+                if ($null -ne $answer) { return $answer }
+                Write-Host '  Type y or n, then Enter. ' -NoNewline -ForegroundColor DarkGray
+                $typed = ''
+                continue
+            }
+            if ($key.Key -eq 'Backspace') {
+                if ($typed.Length -gt 0) {
+                    $typed = $typed.Substring(0, $typed.Length - 1)
+                    Write-Host "`b `b" -NoNewline
+                }
+                continue
+            }
+            if ($key.KeyChar -and -not [char]::IsControl($key.KeyChar)) {
+                $typed += $key.KeyChar
+                Write-Host $key.KeyChar -NoNewline -ForegroundColor White
+            }
         }
-        Write-Host "no answer after $seconds s, keeping the default" -ForegroundColor DarkGray
+        Write-Host ''
+        Write-Host "  No answer after $seconds s - going with $defWord." -ForegroundColor DarkGray
     } catch {
-        Write-Host 'nothing to read from, keeping the default' -ForegroundColor DarkGray
+        Write-Host ''
+        Write-Host "  Nothing to read from - going with $defWord." -ForegroundColor DarkGray
     }
     return $default
 }

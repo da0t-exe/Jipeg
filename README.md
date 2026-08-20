@@ -22,12 +22,13 @@ that file, and installs it in the console — no setup window. On Windows 11 it 
 one question, because the answer restarts Explorer:
 
 ```
-  Show Jipeg directly in the right-click menu? [Y/n]
+  Show Jipeg directly in the right-click menu? [y/n] (Enter = yes, 15s)
 ```
 
-Press Enter, or leave it alone: after 15 seconds it takes the default. Run the file
-directly with `-ClassicMenu` or `-NoClassicMenu` to answer up front, or `-Gui` for
-the setup window.
+Type your answer and confirm with Enter — a single key press does nothing on its
+own. Press Enter alone, or leave it be, and the default applies after 15 seconds.
+Run the file directly with `-ClassicMenu` or `-NoClassicMenu` to answer up front,
+or `-Gui` for the setup window.
 
 Or by hand:
 

@@ -122,6 +122,7 @@ $form.ForeColor       = $Theme.Text
 $form.Font            = $JipegFont
 if ($Mica) { $form.BackColor = [System.Drawing.Color]::Black } else { $form.BackColor = $Theme.Back }
 Set-JipegDoubleBuffer $form
+Set-JipegIcon $form $Root
 $form.Add_HandleCreated({
     Set-JipegChrome $form $Theme
     if ($Mica) { [void](Set-JipegMica $form $Theme) }

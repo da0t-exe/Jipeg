@@ -229,6 +229,10 @@ $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
 $form.Font            = $JipegFont
 if ($Mica) { $form.BackColor = [System.Drawing.Color]::Black } else { $form.BackColor = $Theme.Back }
+# On a first install the icon does not exist yet, so draw one for this window.
+$tempIcon = Join-Path $env:TEMP ('jipeg-setup-{0}.ico' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
+try { New-JipegIcon $tempIcon; $form.Icon = New-Object System.Drawing.Icon($tempIcon) } catch { }
+
 $form.Add_HandleCreated({
     Set-JipegChrome $form $Theme
     if ($Mica) { [void](Set-JipegMica $form $Theme) }

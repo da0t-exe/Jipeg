@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '1.5.0'
+$JipegVersion = '1.5.1'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -16,10 +16,23 @@ Add-Type -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hwnd, int cmd);
 [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
 [DllImport("uxtheme.dll", CharSet=CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string sub, string id);
+[DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
 '@ -Name 'Win' -Namespace 'Jipeg' | Out-Null
 
 # ------------------------------------------------------------------ settings
-$JipegSettingsPath = Join-Path (Join-Path $env:LOCALAPPDATA 'Jipeg') 'settings.json'
+# Every window here is hosted by powershell.exe, so without an identity of its
+# own Windows files them under PowerShell in the taskbar and shows its icon.
+# Must be set before the process creates any window.
+$JipegAppId = 'Jipeg.ImageConverter'
+try { [void][Jipeg.Win]::SetCurrentProcessExplicitAppUserModelID($JipegAppId) } catch { }
+
+function Set-JipegIcon($form, [string]$root) {
+    $path = Join-Path $root 'jipeg.ico'
+    if (-not (Test-Path -LiteralPath $path)) { return }
+    try { $form.Icon = New-Object System.Drawing.Icon($path) } catch { }
+}
+
+$JipegSettingsPath = Join-Path (Join-Path $env:LOCALAPPDATA 'Jipeg') 'settings.json' 
 
 function Get-JipegDefaults {
     return [pscustomobject]@{
