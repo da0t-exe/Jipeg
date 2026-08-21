@@ -34,6 +34,7 @@ $WebpExt   = @('.webp')
 $WicExt    = @('.heic', '.heif', '.avif', '.jxr', '.wdp', '.hdp')
 $AllExt    = $NativeExt + $GdiExt + $WebpExt + $WicExt
 $Dwebp     = Join-Path $Root 'bin\dwebp.exe'
+$Webpmux   = Join-Path $Root 'bin\webpmux.exe'
 
 # ------------------------------------------------------------------- inputs
 function Expand-Inputs([string[]]$in) {
@@ -266,13 +267,30 @@ function Set-Status {
 # page, a diagram, a black and white photograph exported as RGB. Encoding those
 # as one channel instead of three takes about 8% off the result, measured, and
 # costs nothing in quality because the colour was never there.
-function Test-JipegLooksGrey([string]$path) {
+function Get-JipegTraits([string]$path) {
     $img = $null; $bmp = $null
     try {
         $img = [System.Drawing.Image]::FromFile($path)
         $bmp = New-Object System.Drawing.Bitmap($img)
-        return [Jipeg.Pixels]::IsGrey($bmp, 4, 2)
-    } catch { return $false } finally {
+        $edges = [Jipeg.Pixels]::ChromaEdges($bmp, 4, 40)
+        $hard  = [double]$edges[0]
+        $total = [double]$edges[1]
+        $ratio = $(if ($total -gt 0) { $hard / $total } else { 0.0 })
+        # Measured across the test set: photographs scored exactly zero hard
+        # chroma transitions, a photograph with a line of coloured text over it
+        # 0.10%, a diagram 0.56%, a 64-pixel icon 2.98% and a screenshot 3.48%.
+        # 0.05% sits in the gap with room on both sides. An absolute count was
+        # tried alongside it and dropped: it fired on a perfectly ordinary
+        # photograph and cost 10% of the file for nothing. The bias is still
+        # deliberate - guessing 4:4:4 for a photograph costs about 18% of the
+        # file, guessing 4:2:0 for text costs fringing that cannot be undone.
+        return @{
+            Grey       = [Jipeg.Pixels]::IsGrey($bmp, 4, 2)
+            HardChroma = ($ratio -gt 0.0005)
+        }
+    } catch {
+        return @{ Grey = $false; HardChroma = $true }
+    } finally {
         if ($bmp) { $bmp.Dispose() }
         if ($img) { $img.Dispose() }
     }
@@ -372,9 +390,42 @@ function Test-JipegPngNeedsDecode([string]$path) {
     return $false
 }
 
+function Invoke-JipegTool([string]$exe, [string]$arguments) {
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName               = $exe
+    $psi.Arguments              = $arguments
+    $psi.UseShellExecute        = $false
+    $psi.CreateNoWindow         = $true
+    $psi.RedirectStandardError  = $true
+    $psi.RedirectStandardOutput = $true
+    $p = [System.Diagnostics.Process]::Start($psi)
+    $err = $p.StandardError.ReadToEnd()
+    [void]$p.StandardOutput.ReadToEnd()
+    $p.WaitForExit()
+    $code = $p.ExitCode
+    $p.Dispose()
+    return @{ Code = $code; Error = $err.Trim() }
+}
+
 function ConvertTo-JipegPng-Webp([string]$src, [string]$dst) {
     if (-not (Test-Path -LiteralPath $Dwebp)) {
         throw "WebP needs bin\dwebp.exe. Run the Jipeg installer again."
+    }
+    # dwebp decodes a still WebP and nothing else: handed an animation it fails
+    # outright, which is why every animated WebP used to come back as a failure
+    # with no explanation. webpmux lifts the first frame out as a still one.
+    $still = $null
+    if ((Get-JipegWebpKind $src) -eq 'animated') {
+        if (-not (Test-Path -LiteralPath $Webpmux)) {
+            throw "Animated WebP needs bin\webpmux.exe. Run the Jipeg installer again."
+        }
+        $still = Join-Path $env:TEMP ('jipeg-f1-{0}.webp' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
+        $r = Invoke-JipegTool $Webpmux ('-get frame 1 "{0}" -o "{1}"' -f $src, $still)
+        if ($r.Code -ne 0 -or -not (Test-Path -LiteralPath $still)) {
+            Remove-Item -LiteralPath $still -Force -ErrorAction SilentlyContinue
+            throw ("The animated WebP could not be read: " + $r.Error)
+        }
+        $src = $still
     }
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName               = $Dwebp
@@ -389,6 +440,7 @@ function ConvertTo-JipegPng-Webp([string]$src, [string]$dst) {
     $p.WaitForExit()
     $code = $p.ExitCode
     $p.Dispose()
+    if ($still) { Remove-Item -LiteralPath $still -Force -ErrorAction SilentlyContinue }
     if ($code -ne 0 -or -not (Test-Path -LiteralPath $dst)) {
         throw ("WebP could not be read: " + $err.Trim())
     }
@@ -437,8 +489,14 @@ function Start-Next {
         # needs it if it asks to be shown rotated
         $awkward = ($ext -eq '.png' -and (Test-JipegPngNeedsDecode $src))
         $orient  = Get-JipegOrientation $src
+        # A four-component JPEG is CMYK or YCCK. cjpegli will not touch one, so
+        # Windows decodes it instead - both GDI+ and WIC read them without
+        # complaint, and until now every one of them came back as a bare
+        # failure with "Failed to decode input image" behind it.
+        $frame = Get-JipegJpegFrame $src
+        $cmyk  = ($null -ne $frame -and [int]$frame.Components -ge 4)
         if ($GdiExt -contains $ext -or $WebpExt -contains $ext -or
-            $WicExt -contains $ext -or $awkward -or $orient -ne 1) {
+            $WicExt -contains $ext -or $awkward -or $orient -ne 1 -or $cmyk) {
             # cjpegli reads none of these: decode to PNG first, by whichever
             # route knows the format, and hand it that instead
             $tmpPng = Join-Path $env:TEMP ('jipeg-in-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -457,11 +515,13 @@ function Start-Next {
             $source = $tmpPng; $script:TmpIn = $tmpPng
         }
 
-        # Three channels for a picture that only ever had one is waste. Judged
-        # on whatever is about to be encoded, so a rotated or flattened image is
+        # One decode answers both questions: is the picture grey, and does it
+        # hold the kind of hard colour edges that 4:2:0 would smear. Judged on
+        # whatever is about to be encoded, so a rotated or flattened image is
         # measured on what it became rather than on what it was.
+        $traits = Get-JipegTraits $source
         $script:Grey = $false
-        if (Test-JipegLooksGrey $source) {
+        if ($traits.Grey) {
             $greyPng = Join-Path $env:TEMP ('jipeg-g-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
             try {
                 ConvertTo-JipegGreyPng $source $greyPng
@@ -477,12 +537,26 @@ function Start-Next {
         $script:TmpOut = Join-Path $dir ('.jipeg-{0}.tmp' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
 
         $cmdArgs = '"{0}" "{1}" -q {2}' -f $source, $script:TmpOut, $Settings.quality
-        # 'auto' asks the original - not $source, which may be a temporary PNG and
-        # would always answer yes.
+        # 'auto' used to answer "yes, full colour" for anything that was not a
+        # JPEG, which meant every PNG, every screenshot and every WebP was
+        # encoded 4:4:4 - the most expensive setting there is, measured at 14 to
+        # 23% more than 4:2:0 on the same picture, and pure waste on a
+        # photograph. It now asks two questions instead. Does the content need
+        # it: only pictures with hard colour edges, text and flat colour, do.
+        # And can the source even have it: a JPEG says so in its frame header,
+        # and a lossy WebP is 4:2:0 inside whatever it looks like.
         $full = switch ([string]$Settings.chroma) {
             'always' { $true }
             'never'  { $false }
-            default  { Test-JipegSourceFullChroma $src }
+            default  {
+                $sourceHasIt = $true
+                if ($WebpExt -contains $ext) {
+                    $sourceHasIt = ((Get-JipegWebpKind $src) -ne 'lossy')
+                } elseif ('.jpg', '.jpeg', '.jpe', '.jfif' -contains $ext) {
+                    $sourceHasIt = Test-JipegSourceFullChroma $src
+                }
+                ($traits.HardChroma -and $sourceHasIt)
+            }
         }
         # Both branches say it out loud. cjpegli defaults to 4:4:4, so the old
         # code - which passed the flag only to ask for 4:4:4 - produced the same
@@ -528,12 +602,13 @@ function Complete-Current {
             $inLen  = (Get-Item -LiteralPath $script:Current).Length
             $outLen = (Get-Item -LiteralPath $script:TmpOut).Length
 
-            # Re-encoding a JPEG often makes it bigger, and the bigger file is
-            # of no use to anyone: the source was already a JPEG, so the lighter
-            # of the two is the one that was there to begin with. Only for JPEG
-            # sources - converting a PNG produces a file that did not exist yet,
-            # and that one is wanted whatever it weighs.
-            $pointless = (('.jpg', '.jpeg', '.jpe', '.jfif' -contains $srcExt) -and $outLen -ge $inLen)
+            # A result heavier than the file it came from is of no use to
+            # anyone, whatever the source was. JPEG is simply worse than PNG at
+            # flat colour and text: measured, a screenshot grew 88%, a diagram
+            # 325%, a 64-pixel icon 448%, and a lossy WebP 162%. Those files are
+            # not written at all now - the lighter of the two was already there,
+            # and the point of the exercise was to save space.
+            $pointless = ($outLen -ge $inLen)
             if ($pointless) {
                 Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
                 $script:Kept++
@@ -599,7 +674,7 @@ function Complete-Batch {
         $f = 'failures'; if ($script:Failed -eq 1) { $f = 'failure' }
         $tail = ", $($script:Failed) $f"
     }
-    if ($script:Kept -gt 0) { $tail = $tail + ", $($script:Kept) already smaller" }
+    if ($script:Kept -gt 0) { $tail = $tail + ", $($script:Kept) left alone" }
     if ($script:Cancelled) {
         $lblTitle.Text = "Cancelled - $($script:Done) $word converted$tail"
     } else {
@@ -607,7 +682,7 @@ function Complete-Batch {
     }
     $lblFile.Text = ''
     if ($script:Kept -gt 0 -and $script:Failed -eq 0) {
-        $lblFile.Text = 'Already-smaller JPEGs were left as they were.'
+        $lblFile.Text = 'JPEG would have been bigger, so the originals were kept.'
     }
     if ($script:Failed -gt 0 -and $script:Reason) { $lblFile.Text = $script:Reason }
     $btn.Text = 'OK'

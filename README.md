@@ -65,7 +65,7 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 | Setting | What it does |
 |---|---|
 | **JPEG quality** | libjpeg scale. 90 is the default; 75 is light enough for the web, 96 is close to lossless. |
-| **Colour detail** | *Follow the source* (default) reads what the original actually has and matches it: a lossless source keeps full colour, and a JPEG is re-encoded with the sampling stated in its own frame header. *Always full (4:4:4)* and *Smaller files (4:2:0)* force one or the other. |
+| **Colour detail** | *Follow the source* (default) now asks two questions instead of guessing from the file type. Does the picture need full colour — measured from its hard colour transitions, the thing 4:2:0 smears: photographs score 0.00%, a photograph with a line of text over it 0.10%, a screenshot 3.48%. And can the source even have it — a JPEG says so in its frame header, and a lossy WebP is 4:2:0 inside whatever it looks like. *Always full (4:4:4)* and *Smaller files (4:2:0)* force one or the other. |
 | **Theme** | Follow Windows, or force Light or Dark. |
 | **Translucent window background (Mica)** | The Windows 11 Mica material behind the windows, on by default. It shows only in the space between the cards; the surfaces on top of it are opaque and measure exactly the colours they were given. Ignored when the theme is forced to the opposite of the Windows one. |
 | **Close the window automatically** | Off by default, so the result stays until you dismiss it. |
@@ -78,7 +78,8 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 |---|---|
 | **Read by the encoder itself** | PNG, JPEG, JXL, PPM/PNM/PGM/PAM/PFM |
 | **Decoded first, then encoded** | BMP, TIFF, ICO, EMF, WMF, GIF, APNG — through Windows' own imaging. Animated files keep their first frame. |
-| **WebP** | Decoded by `dwebp.exe`, libwebp's own tool, shipped with Jipeg. Nothing already on a Windows machine reads WebP: `cjpegli` refuses it, GDI+ never knew it, and Windows only decodes it if someone installed the Store extension. |
+| **WebP** | Decoded by `dwebp.exe`, libwebp's own tool, shipped with Jipeg. Nothing already on a Windows machine reads WebP: `cjpegli` refuses it, GDI+ never knew it, and Windows only decodes it if someone installed the Store extension. An **animated** WebP is handed to `webpmux.exe` first, which lifts out the first frame — `dwebp` cannot read an animation and used to fail on one without saying why. |
+| **CMYK JPEG** | Four-component JPEGs, the kind print workflows produce, are decoded by Windows. `cjpegli` answers *"Failed to decode input image"* and stops. |
 | **HEIC, HEIF, AVIF, JPEG XR** | Handed to Windows, which reads them when the matching codec is installed — *HEIF Image Extensions* for HEIC, *AV1 Video Extension* for AVIF, both free. Without it you get the name of the one to install rather than a bare failure. |
 
 ## Worth knowing
@@ -105,10 +106,12 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
   metadata left the picture lying on its side. The tag is read, the pixels are turned to match,
   and then it is thrown away with everything else — upright in every viewer, and not one byte
   heavier.
-- **A JPEG is never replaced by a bigger JPEG.** Re-encoding something already compressed
-  usually costs size rather than saving it. When the result is not smaller than a JPEG source,
-  it is discarded and the original is left alone: the lighter of the two was already on disk.
-  A PNG still converts whatever it weighs, because there was no JPEG there before.
+- **Nothing heavier than what it came from is ever written.** JPEG is very good at
+  photographs and very bad at flat colour and text, and it used to write the result either way.
+  Measured on real files: a screenshot grew **+88%**, a diagram **+325%**, a 64-pixel icon
+  **+448%**, a lossy WebP **+162%**. Those files are not written at all now — the summary says
+  how many were left alone, and the lighter version was already on disk. A photograph still
+  converts, and still loses 85 to 97% of its size.
 - **A grey picture is encoded as one channel, not three.** A scanned page, a diagram or a black
   and white photograph is often stored in RGB with all three channels identical. Encoding those
   as greyscale takes **8%** off the result, measured, and loses nothing that was there. The
@@ -136,8 +139,9 @@ installer turned it on — the classic context menu tweak. Converted images are 
 | Registry keys | `HKCU\Software\Classes\SystemFileAssociations\<ext>\shell\JipegConvert` and `HKCU\Software\Classes\Directory\shell\JipegConvert` |
 | Encoder | `cjpegli.exe` from **libjxl v0.11.1** — the last release to ship that binary (v0.12 dropped it, and `google/jpegli` publishes none) |
 | Binary SHA-256 | `db564007b69b8f038eb4703fc72278c15a992aad9865fa59166735d6fd41b740` |
-| WebP decoder | `dwebp.exe` from **libwebp 1.5.0**, the WebM project's own Windows build |
-| Its SHA-256 | `ee66951df0f868f0c41f49fcc2d0fc53072912b7357836317ca177cbae5eb343` |
+| WebP decoder | `dwebp.exe` and `webpmux.exe` from **libwebp 1.5.0**, the WebM project's own Windows build |
+| `dwebp.exe` SHA-256 | `ee66951df0f868f0c41f49fcc2d0fc53072912b7357836317ca177cbae5eb343` |
+| `webpmux.exe` SHA-256 | `8006d5cfc3a9634e9a18888b9f0aefd5e6212af9a76daa39955593d1f6b2d32c` |
 | UI | PowerShell 5.1 + WinForms, standard Windows controls, light/dark theme followed automatically |
 
 ### Why the files are not smaller still
@@ -263,6 +267,7 @@ Install.bat              runs the installer
 Uninstall.bat            runs the uninstaller
 bin/cjpegli.exe          the jpegli encoder (+ component licences)
 bin/dwebp.exe            libwebp's WebP decoder
+bin/webpmux.exe          pulls the first frame out of an animated WebP
 src/Jipeg-Common.ps1     settings, theming and Win32 helpers
 src/Jipeg-Convert.ps1    the converter and its progress window
 src/Jipeg-Settings.ps1   the settings window

@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '2.0'
+$JipegVersion = '2.1'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -111,6 +111,33 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 namespace Jipeg {
   public static class Pixels {
+    // La proportion de couples de pixels voisins dont la chrominance saute
+    // brutalement - exactement ce que le sous-echantillonnage 4:2:0 detruit.
+    // Mesure : du texte ou un aplat colore depassent 0,5 %, une photographie
+    // reste a 0,00 %, ses variations de couleur etant douces.
+    public static long[] ChromaEdges(Bitmap b, int step, int thr) {
+      if (b.Width < 2 || b.Height < 1) return new long[] { 0, 0 };
+      Rectangle r = new Rectangle(0, 0, b.Width, b.Height);
+      BitmapData d = b.LockBits(r, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+      try {
+        byte[] row = new byte[d.Stride];
+        long hard = 0, total = 0;
+        for (int y = 0; y < b.Height; y += step) {
+          Marshal.Copy(IntPtr.Add(d.Scan0, y * d.Stride), row, 0, d.Stride);
+          for (int x = 1; x < b.Width; x++) {
+            int i = x * 3, j = (x - 1) * 3;
+            double cb1 = -0.169 * row[i+2] - 0.331 * row[i+1] + 0.500 * row[i];
+            double cr1 =  0.500 * row[i+2] - 0.419 * row[i+1] - 0.081 * row[i];
+            double cb0 = -0.169 * row[j+2] - 0.331 * row[j+1] + 0.500 * row[j];
+            double cr0 =  0.500 * row[j+2] - 0.419 * row[j+1] - 0.081 * row[j];
+            total++;
+            if (Math.Abs(cb1 - cb0) + Math.Abs(cr1 - cr0) > thr) hard++;
+          }
+        }
+        return new long[] { hard, total };
+      } finally { b.UnlockBits(d); }
+    }
+
     public static bool IsGrey(Bitmap b, int step, int tol) {
       if (b.Width < 1 || b.Height < 1) return false;
       Rectangle r = new Rectangle(0, 0, b.Width, b.Height);
@@ -133,6 +160,33 @@ namespace Jipeg {
   }
 }
 '@ -ReferencedAssemblies System.Drawing
+
+# What a WebP actually holds, read from its RIFF header: VP8 is lossy and always
+# 4:2:0 inside, VP8L is lossless, and VP8X with an ANIM chunk is an animation -
+# which dwebp cannot decode on its own.
+function Get-JipegWebpKind([string]$path) {
+    try {
+        $fs = [System.IO.File]::OpenRead($path)
+        try {
+            $head = New-Object byte[] 64
+            $n = $fs.Read($head, 0, 64)
+            if ($n -lt 16) { return 'unknown' }
+            $ascii = [System.Text.Encoding]::ASCII
+            if ($ascii.GetString($head, 0, 4) -ne 'RIFF') { return 'unknown' }
+            if ($ascii.GetString($head, 8, 4) -ne 'WEBP') { return 'unknown' }
+            $kind = $ascii.GetString($head, 12, 4)
+            if ($kind -eq 'VP8 ')  { return 'lossy' }
+            if ($kind -eq 'VP8L')  { return 'lossless' }
+            if ($kind -eq 'VP8X') {
+                $rest = $ascii.GetString($head, 0, $n)
+                if ($rest.Contains('ANIM')) { return 'animated' }
+                if ($rest.Contains('VP8L')) { return 'lossless' }
+                return 'lossy'
+            }
+        } finally { $fs.Dispose() }
+    } catch { }
+    return 'unknown'
+}
 
 # The orientation a JPEG asks to be displayed at, from its Exif block. 1 means
 # upright, and so does a file that has no Exif at all or one we cannot make
@@ -198,13 +252,23 @@ function Get-JipegOrientation([string]$path) {
 # a [byte] in PowerShell masks the shift count and quietly returns the wrong
 # number.
 function Test-JipegSourceFullChroma([string]$path) {
+    $frame = Get-JipegJpegFrame $path
+    if ($null -eq $frame) { return $true }
+    return $frame.FullChroma
+}
+
+# How many colour components a JPEG carries, and whether it kept its chroma at
+# full resolution. Four components means CMYK or YCCK, which cjpegli refuses
+# outright - "Failed to decode input image" - so those have to go the long way
+# round through Windows, which reads them.
+function Get-JipegJpegFrame([string]$path) {
     $ext = [System.IO.Path]::GetExtension($path).ToLower()
-    if ('.jpg', '.jpeg', '.jpe', '.jfif' -notcontains $ext) { return $true }
+    if ('.jpg', '.jpeg', '.jpe', '.jfif' -notcontains $ext) { return $null }
     $fs = $null
     try {
         $fs = [System.IO.File]::OpenRead($path)
         $br = New-Object System.IO.BinaryReader($fs)
-        if ([int]$br.ReadByte() -ne 0xFF -or [int]$br.ReadByte() -ne 0xD8) { return $false }
+        if ([int]$br.ReadByte() -ne 0xFF -or [int]$br.ReadByte() -ne 0xD8) { return $null }
         while ($true) {
             if ([int]$br.ReadByte() -ne 0xFF) { continue }   # resync on the next marker
             $m = [int]$br.ReadByte()
@@ -217,13 +281,17 @@ function Test-JipegSourceFullChroma([string]$path) {
             if (-not $isFrame) { [void]$br.ReadBytes($len - 2); continue }
             [void]$br.ReadByte()                             # sample precision
             [void]$br.ReadBytes(4)                           # height, width
-            if ([int]$br.ReadByte() -lt 3) { return $true }  # greyscale: nothing subsampled
+            $n = [int]$br.ReadByte()
+            if ($n -lt 3) { return @{ Components = $n; FullChroma = $true } }  # grey
             [void]$br.ReadByte()                             # component id
             $hv = [int]$br.ReadByte()
-            return ((($hv -shr 4) -eq 1) -and (($hv -band 0x0F) -eq 1))
+            return @{
+                Components = $n
+                FullChroma = ((($hv -shr 4) -eq 1) -and (($hv -band 0x0F) -eq 1))
+            }
         }
     } catch { } finally { if ($fs) { $fs.Dispose() } }
-    return $false      # unreadable header: treat it as an ordinary subsampled photo
+    return $null       # unreadable header
 }
 
 function Save-JipegSettings($s) {

@@ -23,6 +23,7 @@ $Verb   = 'Convert to JPEG (Jipeg)'
 $WebpUrl  = 'https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.5.0-windows-x64.zip'
 $WebpSha  = 'E8FE3BC7EB09774E69261A42BF9FA8A37AB5F3EECAAB199F6420E6F9E822090C'
 $DwebpSha = 'EE66951DF0F868F0C41F49FCC2D0FC53072912B7357836317CA177CBAE5EB343'
+$MuxSha   = '8006D5CFC3A9634E9A18888B9F0AEFD5E6212AF9A76DAA39955593D1F6B2D32C'
 
 $Exts = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.bmp', '.tif', '.tiff',
           '.jxl', '.ppm', '.pnm', '.pgm', '.pam', '.pfm',
@@ -137,14 +138,21 @@ function Get-Cjpegli([scriptblock]$report) {
     Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
 }
 
+# dwebp decodes a still WebP; webpmux lifts the first frame out of an animated
+# one, which dwebp cannot read at all. Both come from the same archive.
 function Get-Dwebp([scriptblock]$report) {
-    $target = Join-Path $Dest 'bin\dwebp.exe'
-    $local  = Join-Path $Project 'bin\dwebp.exe'
-    if (Test-Path -LiteralPath $local) {
-        & $report 'Copying dwebp.exe'
-        Copy-Item -LiteralPath $local -Destination $target -Force
-        return
+    $wanted = @{ 'dwebp.exe' = $DwebpSha; 'webpmux.exe' = $MuxSha }
+    $missing = @()
+    foreach ($name in $wanted.Keys) {
+        $local = Join-Path $Project "bin\$name"
+        if (Test-Path -LiteralPath $local) {
+            & $report "Copying $name"
+            Copy-Item -LiteralPath $local -Destination (Join-Path $Dest "bin\$name") -Force
+        } else {
+            $missing += $name
+        }
     }
+    if ($missing.Count -eq 0) { return }
     & $report 'Downloading libwebp 1.5.0 (~4 MB)'
     $zip = Join-Path $env:TEMP 'jipeg-libwebp.zip'
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
@@ -156,20 +164,23 @@ function Get-Dwebp([scriptblock]$report) {
         Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
         throw 'The downloaded libwebp archive does not match the expected checksum.'
     }
-    & $report 'Extracting dwebp.exe'
+    & $report 'Extracting the WebP tools'
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $arch = [System.IO.Compression.ZipFile]::OpenRead($zip)
     try {
-        $entry = $arch.Entries | Where-Object { $_.Name -eq 'dwebp.exe' } | Select-Object -First 1
-        if (-not $entry) { throw 'dwebp.exe is missing from the archive.' }
-        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+        foreach ($name in $missing) {
+            $entry = $arch.Entries | Where-Object { $_.Name -eq $name } | Select-Object -First 1
+            if (-not $entry) { throw "$name is missing from the archive." }
+            $target = Join-Path $Dest "bin\$name"
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+            # the archive was checked, and so is every file taken out of it
+            if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ne $wanted[$name]) {
+                Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
+                throw "The extracted $name does not match the expected checksum."
+            }
+        }
     } finally { $arch.Dispose() }
     Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
-    # the archive was checked, and so is the one file taken out of it
-    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ne $DwebpSha) {
-        Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
-        throw 'The extracted dwebp.exe does not match the expected checksum.'
-    }
 }
 
 function Set-ContextMenu([string]$icon) {
