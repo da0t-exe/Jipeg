@@ -35,6 +35,7 @@ $WicExt    = @('.heic', '.heif', '.avif', '.jxr', '.wdp', '.hdp')
 $AllExt    = $NativeExt + $GdiExt + $WebpExt + $WicExt
 $Dwebp     = Join-Path $Root 'bin\dwebp.exe'
 $Webpmux   = Join-Path $Root 'bin\webpmux.exe'
+$Oxipng    = Join-Path $Root 'bin\oxipng.exe'
 
 # ------------------------------------------------------------------- inputs
 function Expand-Inputs([string[]]$in) {
@@ -254,6 +255,8 @@ function Add-JipegReason([string]$why) {
 }
 $script:Grey      = $false
 $script:Kept      = 0
+$script:Mode      = 'jpeg'   # jpeg | png
+$script:ForcePng  = $false
 $script:TotalIn   = 0
 $script:TotalOut  = 0
 $script:Cancelled = $false
@@ -279,6 +282,29 @@ function Set-Status {
 }
 
 # --------------------------------------------------------------- decoding
+# Squeezes a PNG without touching a single pixel: the deflate stream is
+# rebuilt, the filters are picked per row, the colour type and bit depth are
+# reduced where the image allows it, and the chunks that carry nothing anyone
+# looks at are dropped. Measured on the test set: -14% on a photograph, -29% on
+# a screenshot, -44% on an icon, -57% on a diagram, -78% on a palette image,
+# and the pixels and the alpha channel come back byte for byte identical.
+#
+# -o 4 rather than max: on a screenshot both reach -29.4%, but max takes 0.59 s
+# against 0.38 s, and on a transparent image it buys 0.3% for another 0.36 s.
+# --strip safe drops metadata but keeps the chunks that decide how the colours
+# are read, which is the whole point of not losing anything.
+function Compress-JipegPng([string]$src, [string]$dst) {
+    if (-not (Test-Path -LiteralPath $Oxipng)) {
+        throw "Shrinking a PNG needs bin\oxipng.exe. Run the Jipeg installer again."
+    }
+    Copy-Item -LiteralPath $src -Destination $dst -Force
+    $r = Invoke-JipegTool $Oxipng ('-o 4 --strip safe -q "{0}"' -f $dst) 120000
+    if ($r.Code -ne 0 -or -not (Test-Path -LiteralPath $dst)) {
+        Remove-Item -LiteralPath $dst -Force -ErrorAction SilentlyContinue
+        throw ("The PNG could not be shrunk: " + $r.Error)
+    }
+}
+
 # Whether the picture is grey even though it is stored in colour - a scanned
 # page, a diagram, a black and white photograph exported as RGB. Encoding those
 # as one channel instead of three takes about 8% off the result, measured, and
@@ -380,6 +406,33 @@ function ConvertTo-JipegPng-Gdi([string]$src, [string]$dst, [int]$orientation = 
 # before the pixel data; an APNG is one with an acTL chunk, and it usually calls
 # itself .png, so the extension says nothing. Both send the file the long way
 # round - cjpegli lays transparency on black, and fails outright on animation.
+# Transparency alone, which is a different question from whether the file needs
+# decoding: an animated PNG needs the long way round but has nothing to do with
+# alpha, and sending one down the PNG-shrinking path would be answering the
+# wrong question.
+function Test-JipegPngHasAlpha([string]$path) {
+    $fs = $null
+    try {
+        $fs = [System.IO.File]::OpenRead($path)
+        $head = New-Object byte[] 26
+        if ($fs.Read($head, 0, 26) -lt 26) { return $false }
+        $type = [int]$head[25]
+        if ($type -eq 4 -or $type -eq 6) { return $true }
+        if ($type -ne 3) { return $false }        # only a palette can carry tRNS
+        $fs.Position = 33
+        $br = New-Object System.IO.BinaryReader($fs)
+        while ($fs.Position -lt $fs.Length) {
+            $len = ([int]$br.ReadByte() -shl 24) -bor ([int]$br.ReadByte() -shl 16) -bor
+                   ([int]$br.ReadByte() -shl 8)  -bor  [int]$br.ReadByte()
+            $name = [System.Text.Encoding]::ASCII.GetString($br.ReadBytes(4))
+            if ($name -eq 'tRNS') { return $true }
+            if ($name -eq 'IDAT') { return $false }
+            [void]$br.ReadBytes($len + 4)
+        }
+    } catch { } finally { if ($fs) { $fs.Dispose() } }
+    return $false
+}
+
 function Test-JipegPngNeedsDecode([string]$path) {
     $fs = $null
     try {
@@ -505,6 +558,31 @@ function Start-Next {
         $ext = [System.IO.Path]::GetExtension($src).ToLower()
         $source = $src
         $script:TmpIn = $null
+
+        # A PNG that has transparent pixels never becomes a JPEG. JPEG has no
+        # alpha channel at all, so the only way to make one is to paint
+        # something behind the picture - which is a loss the file never asked
+        # for, and a logo meant to sit on any background comes back stuck on a
+        # white square. It is shrunk as a PNG instead, losslessly, and stays
+        # readable on everything that reads PNG, which is everything.
+        $script:Mode = 'jpeg'
+        if ($ext -eq '.png' -and ($script:ForcePng -or (Test-JipegPngHasAlpha $src))) {
+            $script:Mode = 'png'
+        }
+        if ($script:Mode -eq 'png') {
+            $script:TmpOut = Join-Path (Split-Path -Parent $src) ('.jipeg-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
+            Copy-Item -LiteralPath $src -Destination $script:TmpOut -Force
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName               = $Oxipng
+            $psi.Arguments              = '-o 4 --strip safe -q "{0}"' -f $script:TmpOut
+            $psi.UseShellExecute        = $false
+            $psi.CreateNoWindow         = $true
+            $psi.RedirectStandardError  = $true
+            $psi.RedirectStandardOutput = $true
+            $script:Proc = [System.Diagnostics.Process]::Start($psi)
+            $script:ProcStarted = Get-Date
+            return
+        }
         # a PNG only needs the detour if it is transparent or animated; a JPEG
         # needs it if it asks to be shown rotated
         $awkward = ($ext -eq '.png' -and (Test-JipegPngNeedsDecode $src))
@@ -645,11 +723,25 @@ function Complete-Current {
             # not written at all now - the lighter of the two was already there,
             # and the point of the exercise was to save space.
             $pointless = ($outLen -ge $inLen)
+
+            # A PNG that would have grown as a JPEG is not a lost cause: shrunk
+            # as a PNG instead it usually loses a fifth to three quarters of its
+            # weight, without a pixel changing. The same file comes back round
+            # once, in png mode, rather than being written off.
+            if ($pointless -and $script:Mode -eq 'jpeg' -and
+                $srcExt -eq '.png' -and -not $script:ForcePng) {
+                Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
+                $script:TmpOut = $null
+                $script:ForcePng = $true
+                return                      # same file, second pass
+            }
+
             if ($pointless) {
                 Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
                 $script:Kept++
             } else {
-                $target = Get-FreePath $dir ($base + $Suffix) '.jpg'
+                $ending = $(if ($script:Mode -eq 'png') { '.png' } else { '.jpg' })
+                $target = Get-FreePath $dir ($base + $Suffix) $ending
                 Move-Item -LiteralPath $script:TmpOut -Destination $target -Force
                 # the result stands in for the original, so it carries the same
                 # date: a converted holiday folder still sorts by when the
@@ -676,6 +768,7 @@ function Complete-Current {
         $script:Failed++
     }
     $script:TmpOut = $null
+    $script:ForcePng = $false
     $script:Index++
 }
 

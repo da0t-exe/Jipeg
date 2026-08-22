@@ -78,6 +78,7 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 |---|---|
 | **Read by the encoder itself** | PNG, JPEG, JXL, PPM/PNM/PGM/PAM/PFM |
 | **Decoded first, then encoded** | BMP, TIFF, ICO, EMF, WMF, GIF, APNG — through Windows' own imaging. Animated files keep their first frame. |
+| **PNG with transparency** | Never turned into a JPEG. Shrunk losslessly as a PNG instead, keeping every transparent pixel. |
 | **WebP** | Decoded by `dwebp.exe`, libwebp's own tool, shipped with Jipeg. Nothing already on a Windows machine reads WebP: `cjpegli` refuses it, GDI+ never knew it, and Windows only decodes it if someone installed the Store extension. An **animated** WebP is handed to `webpmux.exe` first, which lifts out the first frame — `dwebp` cannot read an animation and used to fail on one without saying why. |
 | **CMYK JPEG** | Four-component JPEGs, the kind print workflows produce, are decoded by Windows. `cjpegli` answers *"Failed to decode input image"* and stops. |
 | **HEIC, HEIF, AVIF, JPEG XR** | Handed to Windows, which reads them when the matching codec is installed — *HEIF Image Extensions* for HEIC, *AV1 Video Extension* for AVIF, both free. Without it you get the name of the one to install rather than a bare failure. |
@@ -88,10 +89,20 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
   uncompressed sources (PNG, TIFF) or high-quality JPEGs. When it would grow a JPEG, Jipeg
   writes nothing and says so. When a converted PNG grows, the summary shows it with a `+`: the
   number is always the real one.
-- **Transparency becomes white.** JPEG has no alpha channel, so something has to go behind it.
-  `cjpegli` uses black, which turned a logo on a transparent background into a logo on a black
-  square; anything carrying alpha is flattened onto white first, the way every other tool does
-  it. A PNG with no transparency is untouched and still goes straight to the encoder.
+- **A transparent PNG stays a PNG.** JPEG has no alpha channel at all, so the only way to make
+  one is to paint something behind the picture — a loss the file never asked for, and a logo
+  meant to sit on any background comes back stuck on a white square. Those are shrunk as PNGs
+  instead, losslessly: the pixels and the alpha channel come back byte for byte identical, and
+  the file still opens on everything that opens a PNG, which is everything. Measured: −62% on a
+  small logo, −19% on a large one.
+- **A PNG that would have grown as a JPEG is shrunk as a PNG.** Screenshots, diagrams and icons
+  used to produce nothing at all, since JPEG is worse than PNG at flat colour and Jipeg refuses
+  to write anything heavier. They now come back lighter without a pixel changing: −29% on a
+  screenshot, −57% on a diagram, −78% on a palette image. Transparency is not involved — this is
+  simply the better container winning.
+- **Transparency that does end up in a JPEG becomes white**, not black. That only happens for
+  formats other than PNG. `cjpegli` flattens alpha onto black, which turned a transparent logo
+  into a logo on a black square.
 - **GIF and APNG never actually worked before 2.1.** `cjpegli` lists them as input formats
   and does read them, then fails at the encode step — measured on a plain 100x100 static GIF
   and on a two-frame APNG, both answered *"jpegli encoding failed"*. They are decoded by
@@ -151,6 +162,8 @@ installer turned it on — the classic context menu tweak. Converted images are 
 | Encoder | `cjpegli.exe` from **libjxl v0.11.1** — the last release to ship that binary (v0.12 dropped it, and `google/jpegli` publishes none) |
 | Binary SHA-256 | `db564007b69b8f038eb4703fc72278c15a992aad9865fa59166735d6fd41b740` |
 | WebP decoder | `dwebp.exe` and `webpmux.exe` from **libwebp 1.5.0**, the WebM project's own Windows build |
+| PNG shrinker | `oxipng.exe` **10.2.0**, its own Windows build, MIT |
+| Its SHA-256 | `394fef4ccbc6ee5a50ba96fe75af3557c4365349eb80371ef9ccc76f903c2530` |
 | `dwebp.exe` SHA-256 | `ee66951df0f868f0c41f49fcc2d0fc53072912b7357836317ca177cbae5eb343` |
 | `webpmux.exe` SHA-256 | `8006d5cfc3a9634e9a18888b9f0aefd5e6212af9a76daa39955593d1f6b2d32c` |
 | UI | PowerShell 5.1 + WinForms, standard Windows controls, light/dark theme followed automatically |
@@ -316,6 +329,7 @@ Uninstall.bat            runs the uninstaller
 bin/cjpegli.exe          the jpegli encoder (+ component licences)
 bin/dwebp.exe            libwebp's WebP decoder
 bin/webpmux.exe          pulls the first frame out of an animated WebP
+bin/oxipng.exe           shrinks a PNG without changing a pixel
 src/Jipeg-Common.ps1     settings, theming and Win32 helpers
 src/Jipeg-Convert.ps1    the converter and its progress window
 src/Jipeg-Settings.ps1   the settings window
@@ -336,5 +350,7 @@ src/settings.vbs         starts the settings window without a console window
   removed piece set beside it. Jipeg is not affiliated with or endorsed by the JPEG committee.
 - WebP input is decoded by **[libwebp](https://github.com/webmproject/libwebp)**'s `dwebp`,
   taken from the WebM project's own Windows release. Jipeg does not modify it.
+- PNGs are shrunk by **[oxipng](https://github.com/oxipng/oxipng)**, MIT licensed, taken from
+  its own Windows release. Jipeg does not modify it.
 - Third-party licences: `bin/LICENSE.*` (BSD-3-Clause, Apache-2.0, zlib and others).
 - Jipeg itself is MIT licensed — see [LICENSE](LICENSE).

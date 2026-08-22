@@ -25,6 +25,11 @@ $WebpSha  = 'E8FE3BC7EB09774E69261A42BF9FA8A37AB5F3EECAAB199F6420E6F9E822090C'
 $DwebpSha = 'EE66951DF0F868F0C41F49FCC2D0FC53072912B7357836317CA177CBAE5EB343'
 $MuxSha   = '8006D5CFC3A9634E9A18888B9F0AEFD5E6212AF9A76DAA39955593D1F6B2D32C'
 
+# oxipng shrinks a PNG without changing a pixel. Its own Windows build, MIT.
+$OxiUrl    = 'https://github.com/oxipng/oxipng/releases/download/v10.2.0/oxipng-10.2.0-x86_64-pc-windows-msvc.zip'
+$OxiZipSha = 'A5AD52C9C288DC99C2EAE90DCAD73DEE64E39BF3F5AA5303C0FB55AC9C5F069B'
+$OxiSha    = '394FEF4CCBC6EE5A50BA96FE75AF3557C4365349EB80371EF9CCC76F903C2530'
+
 $Exts = @('.png', '.apng', '.jpg', '.jpeg', '.jpe', '.gif', '.bmp', '.tif', '.tiff',
           '.jxl', '.ppm', '.pnm', '.pgm', '.pam', '.pfm',
           # decoded by the bundled dwebp.exe
@@ -183,6 +188,39 @@ function Get-Dwebp([scriptblock]$report) {
     Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
 }
 
+function Get-Oxipng([scriptblock]$report) {
+    $target = Join-Path $Dest 'bin\oxipng.exe'
+    $local  = Join-Path $Project 'bin\oxipng.exe'
+    if (Test-Path -LiteralPath $local) {
+        & $report 'Copying oxipng.exe'
+        Copy-Item -LiteralPath $local -Destination $target -Force
+        return
+    }
+    & $report 'Downloading oxipng 10.2.0 (~0.5 MB)'
+    $zip = Join-Path $env:TEMP 'jipeg-oxipng.zip'
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+    $wc = New-Object System.Net.WebClient
+    $wc.DownloadFile($OxiUrl, $zip)
+    $wc.Dispose()
+    & $report 'Verifying SHA-256'
+    if ((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash -ne $OxiZipSha) {
+        Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+        throw 'The downloaded oxipng archive does not match the expected checksum.'
+    }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $arch = [System.IO.Compression.ZipFile]::OpenRead($zip)
+    try {
+        $entry = $arch.Entries | Where-Object { $_.Name -eq 'oxipng.exe' } | Select-Object -First 1
+        if (-not $entry) { throw 'oxipng.exe is missing from the archive.' }
+        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+    } finally { $arch.Dispose() }
+    Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ne $OxiSha) {
+        Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
+        throw 'The extracted oxipng.exe does not match the expected checksum.'
+    }
+}
+
 function Set-ContextMenu([string]$icon) {
     $cmd = 'wscript.exe "{0}" "%1"' -f (Join-Path $Dest 'launch.vbs')
     foreach ($e in $Exts) {
@@ -235,6 +273,7 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
     New-Item -ItemType Directory -Path (Join-Path $Dest 'bin') -Force | Out-Null
     Get-Cjpegli $report
     Get-Dwebp $report
+    Get-Oxipng $report
     & $report 'Installing Jipeg'
     foreach ($f in @('Jipeg-Common.ps1', 'Jipeg-Convert.ps1', 'Jipeg-Settings.ps1',
                      'Jipeg-Update.ps1', 'Uninstall-Jipeg.ps1',
