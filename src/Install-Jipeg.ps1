@@ -249,6 +249,7 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
     & $report 'Drawing the icon'
     $icon = Join-Path $Dest 'jipeg.ico'
     New-JipegIcon $icon
+    try { Write-JipegLog ('install  version {0}, classic menu {1}' -f $JipegVersion, $classicMenu) } catch { }
     & $report 'Adding the context menu entry'
     Set-ContextMenu $icon
     Set-StartMenuShortcut $icon

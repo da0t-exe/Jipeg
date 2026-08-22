@@ -124,6 +124,17 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
   default anyway — the setting produced the same image whichever way it was set.
 - Files are encoded one at a time; the window stays responsive throughout.
 
+## When something goes wrong
+
+Jipeg keeps a log at `%LOCALAPPDATA%\Jipeg\jipeg.log`. One line per event: what
+the machine was (Windows build, display scaling, theme, the settings in force), every
+file that failed and why, and a summary of every batch. It is capped at 128 KB and
+trimmed back to its last 200 lines, so it never grows without watching.
+
+It exists for one situation, which has already happened: somebody else runs Jipeg,
+something goes wrong, and there is otherwise nothing at all to look at. If you are
+reporting a problem, send that file.
+
 ## Uninstall
 
 **`Uninstall.bat`**, or *Settings → Installed apps → Jipeg*.
@@ -249,6 +260,12 @@ corners Windows 11 draws itself. What needed doing by hand:
   background instead, which lands **5 levels** from what the material renders. Invisible in
   practice, but not free: only a shape drawn by the window itself, rather than by a control
   sitting on it, can be true glass at the corners.
+- **Nothing waits forever.** The encoder gets two minutes per file — a 1400x950 photograph
+  takes about a third of a second — and is killed past that, with the file counted as a failure
+  that says so. The WebP tools get thirty seconds. They run on the window's own thread, so one
+  that never returned would have frozen the whole window: no repainting, no Cancel button. The
+  wait comes before reading their output on purpose, since reading a pipe to the end blocks just
+  as hard and the two together can deadlock.
 - **Display scaling.** The process used to be DPI-unaware, so on a laptop at 150% Windows took
   the whole window, rendered at 96 DPI, and stretched it — every one of those byte-identical
   corners went through a bitmap resize. It now asks for per-monitor awareness and draws at the

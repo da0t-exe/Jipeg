@@ -29,6 +29,9 @@ function Save-Trace([string]$text) {
         if ($text) { $s.lastUpdate = $text }
         Save-JipegSettings $s
     } catch { }
+    # the settings file keeps the last word only; the log keeps all of them,
+    # which is what tells you whether an update has been failing for a week
+    if ($text) { try { Write-JipegLog ('update   ' + $text) } catch { } }
 }
 
 try {

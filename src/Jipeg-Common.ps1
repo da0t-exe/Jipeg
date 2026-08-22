@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '2.2'
+$JipegVersion = '2.3'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -120,6 +120,53 @@ function Get-JipegDefaults {
         lastCheck     = 0           # ticks of the last update check
         lastUpdate    = ''          # what the last quiet update did
     }
+}
+
+$JipegLogPath = Join-Path (Split-Path -Parent $JipegSettingsPath) 'jipeg.log'
+
+# One line per event, appended. It exists for one situation: somebody else runs
+# Jipeg, something goes wrong, and there is otherwise nothing at all to look at -
+# which is exactly what happened when a report came back saying "the files got
+# bigger" and the only way to find out why was to rebuild the case from scratch.
+#
+# Capped at 128 KB, trimmed back to its last 200 lines, so it can never grow
+# without bound on a machine nobody is watching. A line lost to two instances
+# writing at once does not matter enough to lock anything.
+function Write-JipegLog([string]$what) {
+    try {
+        $dir = Split-Path -Parent $JipegLogPath
+        if (-not (Test-Path -LiteralPath $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
+        if (Test-Path -LiteralPath $JipegLogPath) {
+            if ((Get-Item -LiteralPath $JipegLogPath).Length -gt 131072) {
+                $keep = Get-Content -LiteralPath $JipegLogPath -Tail 200
+                Set-Content -LiteralPath $JipegLogPath -Value $keep -Encoding UTF8
+            }
+        }
+        Add-Content -LiteralPath $JipegLogPath -Encoding UTF8 -Value (
+            '{0}  {1,-6}  {2}' -f (Get-Date).ToString('yyyy-MM-dd HH:mm:ss'), $JipegVersion, $what)
+    } catch { }
+}
+
+# Written once at the start of a batch. Everything here is something I have had
+# to ask for by hand at least once: which Windows, which scaling, which theme,
+# and what the settings were actually set to.
+function Write-JipegContext([hashtable]$extra) {
+    try {
+        $os = [Environment]::OSVersion.Version
+        $s = Get-JipegSettings
+        $bits = @(
+            ('windows {0}.{1}.{2}' -f $os.Major, $os.Minor, $os.Build)
+            ('scale {0:N2}' -f $JipegScale)
+            ('theme ' + $s.theme)
+            ('quality ' + $s.quality)
+            ('chroma ' + $s.chroma)
+            ('mica ' + $s.mica)
+        )
+        if ($extra) { foreach ($k in $extra.Keys) { $bits += ('{0} {1}' -f $k, $extra[$k]) } }
+        Write-JipegLog ('context  ' + ($bits -join ', '))
+    } catch { }
 }
 
 # Settings survive an upgrade: unknown keys from a newer build are ignored,

@@ -239,6 +239,19 @@ $script:Index     = 0
 $script:Done      = 0
 $script:Failed    = 0
 $script:Reason    = ''
+$script:Reasons   = New-Object System.Collections.Generic.List[string]
+$script:ProcStarted = Get-Date
+
+# Every distinct reason is kept, not just the first: a batch can fail for two
+# different causes at once - one file with no HEIC codec, one corrupt - and
+# showing only the earlier of them sent the other into thin air. All of them go
+# to the log; the window shows the first and counts the rest.
+function Add-JipegReason([string]$why) {
+    if (-not $why) { return }
+    if (-not $script:Reasons.Contains($why)) { $script:Reasons.Add($why) }
+    if (-not $script:Reason) { $script:Reason = $why }
+    Write-JipegLog ('failed   ' + $why)
+}
 $script:Grey      = $false
 $script:Kept      = 0
 $script:TotalIn   = 0
@@ -393,7 +406,13 @@ function Test-JipegPngNeedsDecode([string]$path) {
     return $false
 }
 
-function Invoke-JipegTool([string]$exe, [string]$arguments) {
+# These run on the window's own thread, so an external tool that never returns
+# would freeze the whole window - no repainting, no Cancel button, nothing. The
+# wait is bounded and the process killed if it overruns. The wait comes before
+# the reads on purpose: reading a pipe to the end blocks just as hard, and if
+# the child ever filled its output buffer the two would deadlock. Thirty seconds
+# is far beyond what these need - decoding was measured at 25 milliseconds.
+function Invoke-JipegTool([string]$exe, [string]$arguments, [int]$timeoutMs = 30000) {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName               = $exe
     $psi.Arguments              = $arguments
@@ -402,11 +421,20 @@ function Invoke-JipegTool([string]$exe, [string]$arguments) {
     $psi.RedirectStandardError  = $true
     $psi.RedirectStandardOutput = $true
     $p = [System.Diagnostics.Process]::Start($psi)
-    $err = $p.StandardError.ReadToEnd()
-    [void]$p.StandardOutput.ReadToEnd()
-    $p.WaitForExit()
-    $code = $p.ExitCode
+    $timedOut = $false
+    if (-not $p.WaitForExit($timeoutMs)) {
+        $timedOut = $true
+        try { $p.Kill() } catch { }
+        try { [void]$p.WaitForExit(2000) } catch { }
+    }
+    $err = ''
+    try { $err = $p.StandardError.ReadToEnd(); [void]$p.StandardOutput.ReadToEnd() } catch { }
+    $code = 1
+    try { $code = $p.ExitCode } catch { }
     $p.Dispose()
+    if ($timedOut) {
+        return @{ Code = 1; Error = ('gave up after {0} seconds' -f ($timeoutMs / 1000)) }
+    }
     return @{ Code = $code; Error = $err.Trim() }
 }
 
@@ -430,22 +458,10 @@ function ConvertTo-JipegPng-Webp([string]$src, [string]$dst) {
         }
         $src = $still
     }
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName               = $Dwebp
-    $psi.Arguments              = '"{0}" -o "{1}"' -f $src, $dst
-    $psi.UseShellExecute        = $false
-    $psi.CreateNoWindow         = $true
-    $psi.RedirectStandardError  = $true
-    $psi.RedirectStandardOutput = $true
-    $p = [System.Diagnostics.Process]::Start($psi)
-    $err = $p.StandardError.ReadToEnd()
-    [void]$p.StandardOutput.ReadToEnd()
-    $p.WaitForExit()
-    $code = $p.ExitCode
-    $p.Dispose()
+    $r = Invoke-JipegTool $Dwebp ('"{0}" -o "{1}"' -f $src, $dst)
     if ($still) { Remove-Item -LiteralPath $still -Force -ErrorAction SilentlyContinue }
-    if ($code -ne 0 -or -not (Test-Path -LiteralPath $dst)) {
-        throw ("WebP could not be read: " + $err.Trim())
+    if ($r.Code -ne 0 -or -not (Test-Path -LiteralPath $dst)) {
+        throw ("WebP could not be read: " + $r.Error)
     }
 }
 
@@ -578,8 +594,9 @@ function Start-Next {
         $psi.RedirectStandardError  = $true
         $psi.RedirectStandardOutput = $true
         $script:Proc = [System.Diagnostics.Process]::Start($psi)
+        $script:ProcStarted = Get-Date
     } catch {
-        if (-not $script:Reason) { $script:Reason = $_.Exception.Message }
+        Add-JipegReason ('{0}: {1}' -f [System.IO.Path]::GetFileName($src), $_.Exception.Message)
         $script:Failed++
         $script:Index++
         $script:Proc = $null
@@ -589,8 +606,12 @@ function Start-Next {
 
 function Complete-Current {
     $code = 999
+    $err = ''
     try { $code = $script:Proc.ExitCode } catch { }
-    try { [void]$script:Proc.StandardError.ReadToEnd(); [void]$script:Proc.StandardOutput.ReadToEnd() } catch { }
+    # kept rather than discarded: when the encoder refuses a file it says why,
+    # and that sentence was being thrown away - a batch could report two
+    # failures and offer one explanation between them
+    try { $err = $script:Proc.StandardError.ReadToEnd(); [void]$script:Proc.StandardOutput.ReadToEnd() } catch { }
     try { $script:Proc.Dispose() } catch { }
     $script:Proc = $null
     if ($script:TmpIn) {
@@ -631,9 +652,15 @@ function Complete-Current {
                 $script:TotalOut += $outLen
                 $script:Done++
             }
-        } catch { $script:Failed++ }
+        } catch {
+            Add-JipegReason ('{0}: {1}' -f [System.IO.Path]::GetFileName($script:Current), $_.Exception.Message)
+            $script:Failed++
+        }
     } else {
         Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
+        $why = ($err -split "`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
+        if (-not $why) { $why = "the encoder refused it (exit $code)" }
+        Add-JipegReason ('{0}: {1}' -f [System.IO.Path]::GetFileName($script:Current), $why.Trim())
         $script:Failed++
     }
     $script:TmpOut = $null
@@ -683,11 +710,19 @@ function Complete-Batch {
     } else {
         $lblTitle.Text = "$($script:Done) $word converted$tail"
     }
+    Write-JipegLog ('batch    {0} converted, {1} failed, {2} left alone, {3} -> {4}' -f
+        $script:Done, $script:Failed, $script:Kept,
+        (Format-JipegSize $script:TotalIn), (Format-JipegSize $script:TotalOut))
     $lblFile.Text = ''
     if ($script:Kept -gt 0 -and $script:Failed -eq 0) {
         $lblFile.Text = 'JPEG would have been bigger, so the originals were kept.'
     }
-    if ($script:Failed -gt 0 -and $script:Reason) { $lblFile.Text = $script:Reason }
+    if ($script:Failed -gt 0 -and $script:Reason) {
+        $lblFile.Text = $script:Reason
+        if ($script:Reasons.Count -gt 1) {
+            $lblFile.Text = '{0}  (+{1} more in the log)' -f $script:Reason, ($script:Reasons.Count - 1)
+        }
+    }
     $btn.Text = 'OK'
     $btn.Enabled = $true
     $form.AcceptButton = $btn
@@ -713,10 +748,21 @@ $glide.Add_Tick({
     $bar.Invalidate()
 })
 
+Write-JipegContext @{ files = $Files.Count }
+
 $engine = New-Object System.Windows.Forms.Timer
 $engine.Interval = 50
 $engine.Add_Tick({
-    if ($script:Proc -and -not $script:Proc.HasExited) { return }
+    if ($script:Proc -and -not $script:Proc.HasExited) {
+        # An encoder that never returns used to leave the bar frozen for good,
+        # with nothing on screen to say why. Two minutes is far past anything
+        # real - a 1400x950 photograph takes about a third of a second.
+        if (((Get-Date) - $script:ProcStarted).TotalSeconds -lt 120) { return }
+        Add-JipegReason ('{0}: the encoder took too long and was stopped.' -f
+                         [System.IO.Path]::GetFileName($script:Current))
+        try { $script:Proc.Kill() } catch { }
+        try { [void]$script:Proc.WaitForExit(2000) } catch { }
+    }
     if ($script:Proc) { Complete-Current }
     Start-Next
 })
