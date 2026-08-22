@@ -157,15 +157,33 @@ installer turned it on — the classic context menu tweak. Converted images are 
 
 ### Why the files are not smaller still
 
-`cjpegli` has three switches that change the size of what it writes, and all three were
-measured on the same 1600x1100 photograph:
+Every switch `cjpegli` has that changes the size of what it writes has been measured, along
+with the two things that can be done to the file afterwards.
 
-| Switch | Size | Verdict |
+| Switch | Effect | Verdict |
 |---|---|---|
-| none (what Jipeg uses) | 114 854 B | progressive level 2 and adaptive quantisation, both already the default |
-| `--std_quant` | 178 078 B, **+55%** | the Annex K tables are far worse than jpegli's own |
-| `--noadaptive_quantization` | 116 697 B, **+1.6%** | adaptive quantisation earns its keep |
-| `--xyb` | 87 668 B, **-24%** | rejected, see below |
+| `-p 1` / `-p 0` instead of the default `-p 2` | **-1 to -7%** | **taken.** See below — it is free |
+| `--std_quant` | +55% | the Annex K tables are far worse than jpegli's own |
+| `--noadaptive_quantization` | +1.6% | adaptive quantisation earns its keep |
+| `--xyb` | -24% | rejected, see below |
+| `--target_size` | hits a size exactly | up to 20x slower, and it targets bytes rather than quality |
+| stripping the headers | nothing to strip | `cjpegli` writes no JFIF, no APP14, no comment. What is left is the quantisation and Huffman tables and the frame header: 0.65% of the file, all of it required |
+
+**The progressive level is a free 1 to 7%.** It decides how the scan data is laid out in the
+file and changes nothing whatever about the picture: decoded, `-p 0`, `-p 1` and `-p 2` give
+bit-identical pixels, and `ssimulacra2` returns the same score to eight decimal places. Yet the
+default of 2 was never the smallest of the three on anything measured. `-p 1` wins on ordinary
+pictures; below roughly 20 000 pixels `-p 0` takes over, by 6.8% on a 64-pixel icon. The
+crossover sits between 120 and 200 pixels wide on both a photograph and a screenshot, so it is
+not a property of the content. Across the whole test set this took **1.9%** off every file, and
+every one of them decodes to the same pixels as before.
+
+**All four chroma modes were measured**, not just the two Jipeg uses, with `ssimulacra2` and
+`butteraugli` rather than by eye. On a photograph with a line of coloured text over it: 4:4:4
+scored 86.5 at 84 502 B, 4:4:0 scored 83.6 at 68 485 B, 4:2:2 scored 81.2 at 70 726 B, 4:2:0
+scored 80.4 at 69 275 B. **4:2:2 is dominated everywhere** — bigger than 4:4:0 and worse than it
+too — so it is never worth choosing. On a plain photograph 4:2:0 keeps the best quality of the
+subsampled three, which is what Jipeg picks.
 
 `--xyb` is the tempting one and it is a trap. It writes the image in a different colour space
 and describes it with a 720-byte ICC profile called `XYB_Per`. A viewer that applies the profile

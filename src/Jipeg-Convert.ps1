@@ -301,11 +301,12 @@ function Get-JipegTraits([string]$path) {
         # deliberate - guessing 4:4:4 for a photograph costs about 18% of the
         # file, guessing 4:2:0 for text costs fringing that cannot be undone.
         return @{
+            Pixels     = ([double]$bmp.Width * [double]$bmp.Height)
             Grey       = [Jipeg.Pixels]::IsGrey($bmp, 4, 2)
             HardChroma = ($ratio -gt 0.0005)
         }
     } catch {
-        return @{ Grey = $false; HardChroma = $true }
+        return @{ Pixels = 0.0; Grey = $false; HardChroma = $true }
     } finally {
         if ($bmp) { $bmp.Dispose() }
         if ($img) { $img.Dispose() }
@@ -580,6 +581,17 @@ function Start-Next {
         # Both branches say it out loud. cjpegli defaults to 4:4:4, so the old
         # code - which passed the flag only to ask for 4:4:4 - produced the same
         # image either way, and the setting did nothing in either position.
+        # How the scan data is laid out in the file. It changes nothing about the
+        # picture - decoded, -p 0, -p 1 and -p 2 give bit-identical pixels, and
+        # ssimulacra2 returns the same score to eight decimal places - but it
+        # changes the size, and the default of 2 was never the smallest of the
+        # three on anything measured. 1 wins on ordinary pictures by 1 to 2%;
+        # below roughly 20 000 pixels 0 takes over, by 7% on a 64-pixel icon.
+        # The crossover sat between 120 and 200 pixels wide on both a photograph
+        # and a screenshot, so it is not a property of the content.
+        $prog = $(if ($traits.Pixels -gt 0 -and $traits.Pixels -lt 20000) { 0 } else { 1 })
+        $cmdArgs = $cmdArgs + (' -p {0}' -f $prog)
+
         # a single-channel image has no chroma to sample
         if (-not $script:Grey) {
             if ($full) { $cmdArgs = $cmdArgs + ' --chroma_subsampling=444' }
