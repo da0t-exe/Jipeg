@@ -3,7 +3,7 @@
   Dot-sourced by Jipeg-Convert.ps1 and Jipeg-Settings.ps1.
 #>
 
-$JipegVersion = '2.1'
+$JipegVersion = '2.2'
 $JipegRepo    = 'da0t-exe/Jipeg'
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
@@ -19,6 +19,8 @@ Add-Type -MemberDefinition @'
 [DllImport("shell32.dll", CharSet=CharSet.Unicode)] public static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
 [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string name);
 [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr w, IntPtr l);
+[DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr ctx);
+[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
 '@ -Name 'Win' -Namespace 'Jipeg' | Out-Null
 
 # ------------------------------------------------------------------ settings
@@ -32,6 +34,71 @@ function Set-JipegIcon($form, [string]$root) {
     $path = Join-Path $root 'jipeg.ico'
     if (-not (Test-Path -LiteralPath $path)) { return }
     try { $form.Icon = New-Object System.Drawing.Icon($path) } catch { }
+}
+
+# Declared before any window exists, which is why it sits above everything else
+# in the file every script loads first. Left undeclared, the process is
+# DPI-unaware and Windows takes the whole window, rendered at 96 DPI, and
+# stretches it: on a laptop at 150% every one of those byte-identical corners
+# goes through a bitmap resize. Asking for per-monitor awareness means the
+# window is drawn at the screen's real resolution instead.
+try {
+    if (-not [Jipeg.Win]::SetProcessDpiAwarenessContext([IntPtr](-4))) {   # PER_MONITOR_AWARE_V2
+        [void][Jipeg.Win]::SetProcessDPIAware()                            # older builds
+    }
+} catch { }
+
+# One factor decides everything: the size of the fonts, the position of every
+# control and the radius of every corner. It is settled here, before a single
+# font or window exists, because deciding it later was a bug - the fonts ended
+# up built at one scale and the layout shrunk to another, and at 150% the text
+# overflowed its box and the drop-down below wrote over the line above it.
+#
+# It starts as what Windows asks for, then is capped by what the screen can hold:
+# the settings window is 760 points tall, which is 1140 at 150%, more than a
+# 1080p laptop has room for, and OK and Cancel fell off the bottom. Slightly
+# smaller than Windows asked and entirely visible beats exactly right and cut off.
+$JipegDesignHeight = 760
+$JipegRealDpi = 1.0
+try {
+    $g = [System.Drawing.Graphics]::FromHwnd([IntPtr]::Zero)
+    $JipegRealDpi = [double]$g.DpiX / 96.0
+    $g.Dispose()
+} catch { }
+
+# JIPEG_SCALE pretends the screen has that scaling, so the layout can be checked
+# at 125, 150 and 200% on an ordinary display. There is no other way to test it.
+$JipegAsked = $JipegRealDpi
+if ($env:JIPEG_SCALE) {
+    $forced = 0.0
+    if ([double]::TryParse($env:JIPEG_SCALE, [ref]$forced) -and $forced -ge 0.5 -and $forced -le 4.0) {
+        $JipegAsked = $forced
+    }
+}
+$JipegScale = $JipegAsked
+try {
+    $room = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height - 48
+    $wanted = $JipegDesignHeight * $JipegAsked
+    if ($wanted -gt $room -and $room -gt 200) { $JipegScale = $JipegAsked * ($room / $wanted) }
+} catch { }
+
+# A font size is in points, so on a real high-DPI screen it already comes out
+# larger on its own - that is what points are for. What is left to apply is the
+# difference between what the screen gives and what was settled above.
+$JipegFontMul = $(if ($JipegRealDpi -gt 0) { $JipegScale / $JipegRealDpi } else { 1.0 })
+
+function Get-JipegScaled([double]$px) { return [int][math]::Round($px * $JipegScale) }
+
+# Applied once, after a window is built and before it is shown. WinForms is told
+# not to scale anything itself, so the numbers written in the layout stay design
+# units until they pass through here. Scale does not touch fonts - those were
+# built at the right size already - so bounds and text land on the same factor.
+function Set-JipegScaleForm($form) {
+    if ([math]::Abs($JipegScale - 1.0) -lt 0.001) { return }
+    try {
+        $f = [single]$JipegScale
+        $form.Scale((New-Object System.Drawing.SizeF($f, $f)))
+    } catch { }
 }
 
 $JipegSettingsPath = Join-Path (Join-Path $env:LOCALAPPDATA 'Jipeg') 'settings.json' 
@@ -380,11 +447,11 @@ function New-JipegSemibold([single]$size) {
     return New-Object System.Drawing.Font($JipegFamily, $size, [System.Drawing.FontStyle]::Bold)
 }
 
-$JipegFont        = New-Object System.Drawing.Font($JipegFamily, 10.0)   # labels, body
-$JipegFontHint    = New-Object System.Drawing.Font($JipegFamily, 8.75)   # explanations
-$JipegFontSection = New-JipegSemibold 11.25                              # section headings
-$JipegFontBold    = New-JipegSemibold 10.0                               # emphasis in body
-$JipegFontBig     = New-JipegSemibold 15.0                               # the one number that matters
+$JipegFont        = New-Object System.Drawing.Font($JipegFamily, (10.0  * $JipegFontMul))  # labels, body
+$JipegFontHint    = New-Object System.Drawing.Font($JipegFamily, (8.75  * $JipegFontMul))  # explanations
+$JipegFontSection = New-JipegSemibold (11.25 * $JipegFontMul)            # section headings
+$JipegFontBold    = New-JipegSemibold (10.0  * $JipegFontMul)            # emphasis in body
+$JipegFontBig     = New-JipegSemibold (15.0  * $JipegFontMul)            # the one number that matters
 
 # Windows 11 rounds top-level windows on its own; this only syncs the title bar
 # with the theme the user picked, which may differ from the system one.
@@ -537,7 +604,7 @@ function Set-JipegButton($b, $theme, $backdrop = $null) {
         $bg.Clear($this.BackColor)
         $bg.SmoothingMode = 'AntiAlias'
 
-        $p = New-JipegRoundPath 0 0 ($this.Width - 1) ($this.Height - 1) 5
+        $p = New-JipegRoundPath 0 0 ($this.Width - 1) ($this.Height - 1) (Get-JipegScaled 5)
         $fill = New-Object System.Drawing.SolidBrush($face)
         $bg.FillPath($fill, $p); $fill.Dispose()
         $pen = New-Object System.Drawing.Pen($t.Edge, 1)
@@ -545,7 +612,7 @@ function Set-JipegButton($b, $theme, $backdrop = $null) {
         $bg.DrawPath($pen, $p); $pen.Dispose()
 
         if ($this.Focused -and (Test-JipegFocusCue $this)) {
-            $ring = New-JipegRoundPath 1.0 1.0 ($this.Width - 3.0) ($this.Height - 3.0) 4
+            $ring = New-JipegRoundPath 1.0 1.0 ($this.Width - 3.0) ($this.Height - 3.0) (Get-JipegScaled 4)
             $rp = New-Object System.Drawing.Pen($t.Accent, 1.4)
             $rp.Alignment = 'Inset'
             $bg.DrawPath($rp, $ring); $rp.Dispose(); $ring.Dispose()
@@ -594,7 +661,7 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
     # not cut a band across the Mica background.
     $chk.Font = $JipegFont
     $measured = [System.Windows.Forms.TextRenderer]::MeasureText($chk.Text, $JipegFont)
-    $chk.Width = 26 + $measured.Width + 8
+    $chk.Width = (Get-JipegScaled 26) + $measured.Width + (Get-JipegScaled 8)
 
     $chk.Add_Paint({
         $t = $this.Tag
@@ -609,13 +676,13 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
         # The box goes through a buffer of its own size so its four corners come
         # out identical; the tick is drawn afterwards, on the control, because a
         # check mark is not symmetric and mirroring would fold it in half.
-        $side = 18
+        $side = Get-JipegScaled 18
         $top  = [int][math]::Floor(($this.Height - $side) / 2.0)
         $buf = New-Object System.Drawing.Bitmap($side, $side)
         $bg = [System.Drawing.Graphics]::FromImage($buf)
         $bg.Clear($this.BackColor)
         $bg.SmoothingMode = 'AntiAlias'
-        $box = New-JipegRoundPath 0 0 ($side - 1.0) ($side - 1.0) 4
+        $box = New-JipegRoundPath 0 0 ($side - 1.0) ($side - 1.0) (Get-JipegScaled 4)
         if ($this.Checked) {
             $fill = New-Object System.Drawing.SolidBrush($t.Accent)
             $bg.FillPath($fill, $box); $fill.Dispose()
@@ -642,7 +709,8 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
             $g.DrawLines($pen, $tick); $pen.Dispose()
         }
 
-        $r = New-Object System.Drawing.Rectangle(26, 0, ($this.Width - 26), $this.Height)
+        $off = Get-JipegScaled 26
+        $r = New-Object System.Drawing.Rectangle($off, 0, ($this.Width - $off), $this.Height)
         [System.Windows.Forms.TextRenderer]::DrawText($g, $this.Text, $this.Font, $r, $this.ForeColor,
             ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
              [System.Windows.Forms.TextFormatFlags]::NoPrefix))
@@ -653,7 +721,7 @@ function Set-JipegCheck($chk, $theme, $back = $null) {
         # all. Drawn on plain focus, it appeared the moment the box was clicked:
         # a blue outline 236 pixels wide that no native control would have drawn.
         if ($this.Focused -and (Test-JipegFocusCue $this)) {
-            $ring = New-JipegRoundPath 0 ($top - 3.0) ($this.Width - 1.0) ($side + 6.0) 5
+            $ring = New-JipegRoundPath 0 ($top - 3.0) ($this.Width - 1.0) ($side + 6.0) (Get-JipegScaled 5)
             $pen = New-Object System.Drawing.Pen($t.Accent, 1)
             $pen.Alignment = 'Inset'
             $g.DrawPath($pen, $ring)

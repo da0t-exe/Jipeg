@@ -249,6 +249,19 @@ corners Windows 11 draws itself. What needed doing by hand:
   background instead, which lands **5 levels** from what the material renders. Invisible in
   practice, but not free: only a shape drawn by the window itself, rather than by a control
   sitting on it, can be true glass at the corners.
+- **Display scaling.** The process used to be DPI-unaware, so on a laptop at 150% Windows took
+  the whole window, rendered at 96 DPI, and stretched it — every one of those byte-identical
+  corners went through a bitmap resize. It now asks for per-monitor awareness and draws at the
+  screen's real resolution. One factor settles the size of the fonts, the position of every
+  control and the radius of every corner, and it is settled before a single font exists:
+  deciding it later was a bug in itself, with the fonts built at one scale and the layout shrunk
+  to another, so at 150% the text overflowed its box and the drop-down below wrote over the line
+  above it. The factor is also capped by what the screen can hold — the settings window is 760
+  points tall, which is 1140 at 150%, more than a 1080p laptop has room for, and OK and Cancel
+  fell off the bottom. A `ComboBox` needs re-aligning afterwards: its height does not grow by the
+  layout's factor, because its font grows too, and at 150% it stood 21 pixels above its field
+  instead of 6. Set `JIPEG_SCALE=1.5` to see any of this on an ordinary display — there is no
+  other way to test it.
 - **Focus is drawn, not borrowed — and only when Windows would draw it.**
   `ControlPaint.DrawFocusRectangle` paints a hard black dotted box whatever the theme, which on
   a dark surface reads as stray pixels. Focus is a thin rounded outline in the accent colour

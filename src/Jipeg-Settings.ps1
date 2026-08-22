@@ -50,6 +50,12 @@ $form.Text            = 'Jipeg Settings'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
 $form.ClientSize      = New-Object System.Drawing.Size($W, 760)
+# Everything below is written in the units the window was designed in; WinForms
+# multiplies them by the screen's scaling for us, so long as the process is
+# DPI-aware, which Jipeg-Common arranges before any window exists.
+# WinForms is told to keep its hands off: everything below is in design units
+# and Set-JipegScaleForm applies the one factor just before the window is shown.
+$form.AutoScaleMode   = 'None'
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
@@ -92,7 +98,7 @@ function New-Card([int]$y, [int]$h) {
         $bg = [System.Drawing.Graphics]::FromImage($buf)
         $bg.Clear($Backdrop)
         $bg.SmoothingMode = 'AntiAlias'
-        $p = New-JipegRoundPath 0 0 ($this.Width - 1) ($this.Height - 1) 8
+        $p = New-JipegRoundPath 0 0 ($this.Width - 1) ($this.Height - 1) (Get-JipegScaled 8)
         # Filled here rather than left to BackColor: over Mica, the background
         # WinForms paints comes out with no alpha and the backdrop shows through,
         # so the card was translucent - measured at #494B50 instead of #2B2B2B.
@@ -158,6 +164,22 @@ $script:PopupTimer.Add_Tick({
 # difference so its bottom edge - where Windows hangs the list - lands exactly on
 # the bottom of the painted field.
 $FieldH = 26
+$script:ComboRows = New-Object System.Collections.Generic.List[object]
+
+# Re-run once the window has been scaled. The field is drawn $FieldH tall and
+# the real control is taller; the control is lifted so its bottom edge - where
+# Windows hangs the list - lands on the bottom of the painted field, and the
+# face is stretched to cover whatever is left showing.
+function Update-JipegComboRows {
+    $fieldH = Get-JipegScaled $FieldH
+    foreach ($row in $script:ComboRows) {
+        if (-not $row.Face) { continue }
+        $bottom = [int][math]::Round($row.Y * $JipegScale) + $fieldH
+        $top = $bottom - $row.Combo.Height
+        $row.Combo.Top = $top
+        $row.Face.SetBounds($row.Face.Left, $top, $row.Face.Width, ($bottom - $top))
+    }
+}
 
 function New-Combo([int]$y, $parent) {
     $combo = New-Object System.Windows.Forms.ComboBox
@@ -169,7 +191,7 @@ function New-Combo([int]$y, $parent) {
     $combo.ForeColor = $Theme.Text
     $combo.DropDownWidth = $FieldW
     $combo.DrawMode = 'OwnerDrawFixed'
-    $combo.ItemHeight = 26
+    $combo.ItemHeight = Get-JipegScaled 26
     $combo.Add_DrawItem({
         $e = $_
         $back = $Theme.Field
@@ -179,7 +201,8 @@ function New-Combo([int]$y, $parent) {
         $b.Dispose()
         if ($e.Index -ge 0) {
             $r = New-Object System.Drawing.Rectangle(
-                ($e.Bounds.X + 10), $e.Bounds.Y, ($e.Bounds.Width - 14), $e.Bounds.Height)
+                ($e.Bounds.X + (Get-JipegScaled 10)), $e.Bounds.Y,
+                ($e.Bounds.Width - (Get-JipegScaled 14)), $e.Bounds.Height)
             [System.Windows.Forms.TextRenderer]::DrawText(
                 $e.Graphics, $this.Items[$e.Index].ToString(), $JipegFont, $r, $Theme.Text,
                 ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
@@ -190,9 +213,13 @@ function New-Combo([int]$y, $parent) {
     $combo.Add_DropDown({ $script:PopupTimer.Start() })
     $parent.Controls.Add($combo)
 
-    # measured after the control exists, never assumed
+    # measured after the control exists, never assumed - and measured again once
+    # the window has been scaled, because the control's height does not grow by
+    # the same factor as the layout: its font grows too, so at 150% it stood 21
+    # pixels above the field instead of 6 and its face wrote over the line above
     $over = [math]::Max(0, $combo.Height - $FieldH)
     $combo.Top = $y - $over
+    $script:ComboRows.Add([pscustomobject]@{ Combo = $combo; Face = $null; Y = $y })
 
     $face = New-Object System.Windows.Forms.Button
     $face.SetBounds($FieldX, ($y - $over), $FieldW, ($FieldH + $over))
@@ -220,13 +247,13 @@ function New-Combo([int]$y, $parent) {
         # it is placed - mirroring the face itself would move the shape, which
         # does not sit in the middle of it.
         $w = $this.Width
-        $h = $FieldH
-        $top = [int]($this.Height - $FieldH)
+        $h = Get-JipegScaled $FieldH
+        $top = [int]($this.Height - $h)
         $buf = New-Object System.Drawing.Bitmap($w, $h)
         $bg = [System.Drawing.Graphics]::FromImage($buf)
         $bg.Clear($this.BackColor)
         $bg.SmoothingMode = 'AntiAlias'
-        $shape = New-JipegRoundPath 0 0 ($w - 1.0) ($h - 1.0) 5
+        $shape = New-JipegRoundPath 0 0 ($w - 1.0) ($h - 1.0) (Get-JipegScaled 5)
         $fill = New-Object System.Drawing.SolidBrush($Theme.Field)
         $bg.FillPath($fill, $shape); $fill.Dispose()
         $edge = $Theme.CardEdge
@@ -242,20 +269,24 @@ function New-Combo([int]$y, $parent) {
 
         $text = ''
         if ($this.Tag) { $text = [string]$this.Tag.Text }
-        $tr = New-Object System.Drawing.Rectangle(10, [int]$top, ($w - 40), $h)
+        $tr = New-Object System.Drawing.Rectangle((Get-JipegScaled 10), [int]$top,
+                                                  ($w - (Get-JipegScaled 40)), $h)
         [System.Windows.Forms.TextRenderer]::DrawText($g, $text, $JipegFont, $tr, $Theme.Text,
             ([System.Windows.Forms.TextFormatFlags]::VerticalCenter -bor
              [System.Windows.Forms.TextFormatFlags]::EndEllipsis -bor
              [System.Windows.Forms.TextFormatFlags]::NoPrefix))
 
-        $pen = New-Object System.Drawing.Pen($Theme.Muted, 1.6)
+        $pen = New-Object System.Drawing.Pen($Theme.Muted, ([single](1.6 * $JipegScale)))
         $pen.StartCap = 'Round'; $pen.EndCap = 'Round'; $pen.LineJoin = 'Round'
-        $cx = $w - 16.0
+        $cx = $w - (16.0 * $JipegScale)
         $cy = $top + $h / 2.0
+        $a  = 4.0 * $JipegScale
+        $b  = 2.0 * $JipegScale
+        $c  = 2.5 * $JipegScale
         $g.DrawLines($pen, @(
-            (New-Object System.Drawing.PointF(($cx - 4.0), ($cy - 2.0))),
-            (New-Object System.Drawing.PointF($cx, ($cy + 2.5))),
-            (New-Object System.Drawing.PointF(($cx + 4.0), ($cy - 2.0)))
+            (New-Object System.Drawing.PointF(($cx - $a), ($cy - $b))),
+            (New-Object System.Drawing.PointF($cx, ($cy + $c))),
+            (New-Object System.Drawing.PointF(($cx + $a), ($cy - $b)))
         ))
         $pen.Dispose()
     })
@@ -267,6 +298,7 @@ function New-Combo([int]$y, $parent) {
 
     $combo.Tag = $face
     $combo.Add_SelectedIndexChanged({ if ($this.Tag) { $this.Tag.Invalidate() } })
+    $script:ComboRows[$script:ComboRows.Count - 1].Face = $face
     return $combo
 }
 
@@ -498,4 +530,6 @@ $form.Add_Shown({
     $form.ActiveControl = $btnOK   # no control opens pre-highlighted
     Start-Check                    # look for a newer release straight away
 })
+Set-JipegScaleForm $form
+Update-JipegComboRows
 [System.Windows.Forms.Application]::Run($form)

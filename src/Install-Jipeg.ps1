@@ -301,6 +301,9 @@ $form.Text            = 'Install Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
 $form.ClientSize      = New-Object System.Drawing.Size(520, 282)
+# WinForms is told to keep its hands off: everything below is in design units
+# and Set-JipegScaleForm applies the one factor just before the window is shown.
+$form.AutoScaleMode   = 'None'
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ForeColor       = $Theme.Text
@@ -403,4 +406,5 @@ $btnGo.Add_Click({
 })
 
 $form.Add_Shown({ Show-JipegWindow $form })
+Set-JipegScaleForm $form
 [System.Windows.Forms.Application]::Run($form)

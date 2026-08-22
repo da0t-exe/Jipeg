@@ -133,6 +133,9 @@ $form.Text            = 'Jipeg'
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
 $form.ClientSize      = New-Object System.Drawing.Size(430, 150)
+# WinForms is told to keep its hands off: everything below is in design units
+# and Set-JipegScaleForm applies the one factor just before the window is shown.
+$form.AutoScaleMode   = 'None'
 $form.MaximizeBox     = $false
 $form.MinimizeBox     = $false
 $form.ShowInTaskbar   = $true
@@ -799,4 +802,5 @@ $form.Add_FormClosed({
     } catch { }
 })
 
+Set-JipegScaleForm $form
 [System.Windows.Forms.Application]::Run($form)
