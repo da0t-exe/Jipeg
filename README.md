@@ -92,7 +92,7 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
   `cjpegli` uses black, which turned a logo on a transparent background into a logo on a black
   square; anything carrying alpha is flattened onto white first, the way every other tool does
   it. A PNG with no transparency is untouched and still goes straight to the encoder.
-- **GIF and APNG never actually worked before 1.10.1.** `cjpegli` lists them as input formats
+- **GIF and APNG never actually worked before 2.1.** `cjpegli` lists them as input formats
   and does read them, then fails at the encode step — measured on a plain 100x100 static GIF
   and on a two-frame APNG, both answered *"jpegli encoding failed"*. They are decoded by
   Windows now. An animated PNG usually calls itself `.png`, so the file's own header is checked
