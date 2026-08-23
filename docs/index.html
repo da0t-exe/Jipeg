@@ -3,27 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jipeg — right-click, lighter image</title>
-<meta name="description" content="Convert an image to JPEG from the Windows right-click menu, with Google's jpegli encoder. Smaller files, nothing added to them, and never a heavier one.">
+<title>Jipeg</title>
+<meta name="description" content="Right-click an image on Windows, get a lighter one. Encoded with Google's jpegli.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6.4' fill='%234A7BE8'/%3E%3Cpath d='M6.9 9.4h13.1v13.1H6.9z' fill='%23fff'/%3E%3Cpath d='M15.4 17.6h6.7v6.6h-6.7z' fill='%234A7BE8'/%3E%3Crect x='20.6' y='17.6' width='4.7' height='4.7' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#0a0a0a; --panel:#111113; --edge:#1e1e22;
   --ink:#f0f0f0; --dim:#a0a0a0; --mute:#6d6d73;
-  --accent:#4A7BE8; --accent-soft:rgba(74,123,232,.12);
+  --accent:#4A7BE8; --accent-soft:rgba(74,123,232,.10);
   --ok:#4ade80;
   --mono:ui-monospace,SFMono-Regular,Monaco,Consolas,"Liberation Mono",Menlo,monospace;
-  --r:10px;
 }
 @media (prefers-color-scheme:light){
   :root{ --bg:#fbfbfc; --panel:#fff; --edge:#e6e6ea; --ink:#15151a; --dim:#55555f; --mute:#8a8a94;
-         --accent:#2f5fd0; --accent-soft:rgba(47,95,208,.09); --ok:#1a9d52; }
+         --accent:#2f5fd0; --accent-soft:rgba(47,95,208,.08); --ok:#1a9d52; }
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{
   background:var(--bg);color:var(--ink);font-family:var(--mono);
-  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  font-size:14.5px;line-height:1.72;-webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;overflow-x:hidden;
 }
 ::selection{background:var(--accent);color:#fff}
@@ -32,125 +31,94 @@ body{
 ::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--mute)}
 a{color:inherit}
-.wrap{max-width:860px;margin:0 auto;padding:0 24px}
+p{margin:0 0 16px}
+.wrap{max-width:720px;margin:0 auto;padding:0 24px}
 
-/* ---------- header ---------- */
+/* header */
 header{
-  position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
-  background:color-mix(in srgb,var(--bg) 82%,transparent);
+  position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:color-mix(in srgb,var(--bg) 78%,transparent);
   border-bottom:1px solid var(--edge);
 }
-.bar{display:flex;align-items:center;gap:14px;height:56px}
+.bar{display:flex;align-items:center;gap:12px;height:56px}
 .mark{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em}
 .mark svg{display:block;border-radius:5px}
-.chip{
-  font-size:11px;color:var(--dim);border:1px solid var(--edge);
-  padding:2px 8px;border-radius:999px;letter-spacing:.04em;
+.chip{font-size:11px;color:var(--dim);border:1px solid var(--edge);padding:2px 8px;border-radius:999px}
+.right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:12.5px;color:var(--dim)}
+.right a{text-decoration:none;transition:color .2s}
+.right a:hover{color:var(--ink)}
+select{
+  font-family:var(--mono);font-size:12px;color:var(--dim);background:transparent;
+  border:1px solid var(--edge);border-radius:999px;padding:3px 8px;cursor:pointer;
+  transition:color .2s,border-color .2s;
 }
-.bar nav{margin-left:auto;display:flex;gap:20px;font-size:13px;color:var(--dim)}
-.bar nav a{text-decoration:none;transition:color .2s}
-.bar nav a:hover{color:var(--ink)}
-@media(max-width:640px){ .bar nav a.hide-sm{display:none} }
+select:hover{color:var(--ink);border-color:var(--mute)}
+select option{background:var(--bg);color:var(--ink)}
 
-/* ---------- hero ---------- */
-.hero{padding:88px 0 64px}
-.status{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--dim);margin-bottom:26px}
+/* hero */
+.hero{padding:80px 0 56px}
+.status{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--dim);margin-bottom:24px}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2.4s cubic-bezier(.4,0,.6,1) infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-h1{
-  font-size:clamp(2rem,6.2vw,3.4rem);line-height:1.08;font-weight:700;
-  letter-spacing:-.035em;margin-bottom:20px;
-}
+h1{font-size:clamp(1.6rem,4.6vw,2.4rem);line-height:1.22;font-weight:700;letter-spacing:-.03em;margin-bottom:20px}
 h1 .scr{color:var(--accent)}
-.lede{color:var(--dim);max-width:56ch;font-size:clamp(.95rem,2.1vw,1.05rem)}
+.lede{color:var(--dim);max-width:60ch}
 .lede b{color:var(--ink);font-weight:600}
 
-/* ---------- install box ---------- */
-.cmd{
-  margin-top:34px;border:1px solid var(--edge);border-radius:var(--r);
-  background:var(--panel);overflow:hidden;
-}
-.cmd-top{
-  display:flex;align-items:center;gap:8px;padding:9px 14px;
-  border-bottom:1px solid var(--edge);font-size:11px;color:var(--mute);
-}
+/* command */
+.cmd{margin-top:30px;border:1px solid var(--edge);border-radius:10px;background:var(--panel);overflow:hidden}
+.cmd-top{display:flex;align-items:center;gap:7px;padding:9px 14px;border-bottom:1px solid var(--edge);font-size:11px;color:var(--mute)}
 .led{width:9px;height:9px;border-radius:50%;background:var(--edge)}
-.cmd-body{display:flex;align-items:center;gap:12px;padding:15px 16px;overflow-x:auto}
+.cmd-body{display:flex;align-items:center;gap:12px;padding:14px 16px;overflow-x:auto}
 .cmd-body code{font-size:13px;white-space:nowrap}
 .cmd-body .p{color:var(--accent);user-select:none}
-.copy{
-  margin-left:auto;flex:none;border:1px solid var(--edge);background:transparent;
-  color:var(--dim);font-family:var(--mono);font-size:11px;padding:5px 11px;
-  border-radius:6px;cursor:pointer;transition:all .2s;
-}
+.copy{margin-left:auto;flex:none;border:1px solid var(--edge);background:transparent;color:var(--dim);
+      font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:6px;cursor:pointer;transition:all .2s}
 .copy:hover{color:var(--ink);border-color:var(--mute)}
-.copy.done{color:var(--ok);border-color:var(--ok)}
-.sub{margin-top:11px;font-size:12px;color:var(--mute)}
-.sub a{color:var(--dim)}
+.after{margin-top:11px;font-size:12px;color:var(--mute)}
 
-/* ---------- sections ---------- */
-section{padding:56px 0;border-top:1px solid var(--edge)}
-.h{display:flex;align-items:center;gap:12px;margin-bottom:30px}
+/* sections */
+section{padding:52px 0;border-top:1px solid var(--edge)}
+.h{display:flex;align-items:center;gap:11px;margin-bottom:26px}
 .h span{width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.h h2{font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.h h2{font-size:13px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
 
-/* ---------- stats ---------- */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--edge);border:1px solid var(--edge);border-radius:var(--r);overflow:hidden}
-.stat{background:var(--bg);padding:22px 18px}
-.stat b{display:block;font-size:clamp(1.5rem,4vw,2rem);letter-spacing:-.03em;line-height:1.1}
-.stat.acc b{color:var(--accent)}
-.stat small{display:block;color:var(--mute);font-size:11.5px;margin-top:7px;line-height:1.5}
+/* table */
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:400;color:var(--mute);font-size:11px;letter-spacing:.05em;
+   text-transform:uppercase;padding:0 0 10px;border-bottom:1px solid var(--edge);white-space:nowrap}
+th.n,td.n{text-align:right;font-variant-numeric:tabular-nums}
+td{padding:10px 0;border-bottom:1px solid var(--edge);color:var(--dim);white-space:nowrap}
+td:first-child{color:var(--ink)}
+td.g{color:var(--accent)}
 
-/* ---------- cards ---------- */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-.card{border:1px solid var(--edge);border-radius:var(--r);padding:20px;background:var(--panel);transition:border-color .25s,transform .25s}
-.card:hover{border-color:var(--mute);transform:translateY(-2px)}
-.card h3{font-size:14px;margin-bottom:8px;font-weight:600}
-.card p{font-size:13px;color:var(--dim);line-height:1.6}
-
-/* ---------- table ---------- */
-.tbl{border:1px solid var(--edge);border-radius:var(--r);overflow:hidden;overflow-x:auto}
-.tbl table{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{text-align:left;padding:11px 16px;color:var(--mute);font-weight:500;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;background:var(--panel);white-space:nowrap}
-.tbl td{padding:11px 16px;border-top:1px solid var(--edge);color:var(--dim);white-space:nowrap}
-.tbl td:first-child{color:var(--ink)}
-.tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
-.gain{color:var(--accent)}
-.tbl tr:hover td{background:var(--accent-soft)}
-
-/* ---------- list ---------- */
-.notes{display:flex;flex-direction:column;gap:2px}
-.note{border-left:2px solid var(--edge);padding:14px 0 14px 20px;transition:border-color .25s,padding .25s}
+/* the list, borrowed from the reference's project list */
+.notes{display:flex;flex-direction:column}
+.note{border-left:2px solid var(--edge);padding:14px 0 14px 20px;transition:border-color .3s,padding .3s}
 .note:hover{border-color:var(--accent);padding-left:26px}
-.note h4{font-size:13.5px;font-weight:600;margin-bottom:5px}
-.note p{font-size:12.5px;color:var(--dim);line-height:1.65}
+.note h3{font-size:13.5px;font-weight:600;margin-bottom:5px}
+.note p{font-size:12.5px;color:var(--dim);line-height:1.7;margin:0}
 .note code{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:11.5px}
 
-/* ---------- formats ---------- */
-.fmt{display:flex;flex-wrap:wrap;gap:7px}
-.fmt span{border:1px solid var(--edge);border-radius:6px;padding:5px 10px;font-size:11.5px;color:var(--dim)}
-.fmt span.on{border-color:var(--accent);color:var(--accent)}
-
-/* ---------- shots ---------- */
-.shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-@media(max-width:640px){.shots{grid-template-columns:1fr}}
-.shots figure{border:1px solid var(--edge);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+/* shots */
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.shots{grid-template-columns:1fr}}
+.shots figure{border:1px solid var(--edge);border-radius:10px;overflow:hidden;background:var(--panel)}
 .shots img{display:block;width:100%;height:auto}
-.shots figcaption{font-size:11.5px;color:var(--mute);padding:9px 13px;border-top:1px solid var(--edge)}
+.shots figcaption{font-size:11px;color:var(--mute);padding:9px 13px;border-top:1px solid var(--edge)}
 
-/* ---------- cta / footer ---------- */
-.cta{display:flex;flex-wrap:wrap;gap:10px}
-.btn{
-  display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-size:13px;
-  padding:10px 17px;border-radius:8px;border:1px solid var(--edge);color:var(--ink);
-  transition:all .2s;
-}
+.warn{border:1px solid var(--edge);border-left:2px solid var(--accent);border-radius:0 10px 10px 0;
+      padding:15px 18px;font-size:12.5px;color:var(--dim);background:var(--panel)}
+.warn b{color:var(--ink)}
+.links{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;text-decoration:none;font-size:13px;padding:9px 16px;
+     border-radius:8px;border:1px solid var(--edge);color:var(--ink);transition:all .2s}
 .btn:hover{border-color:var(--mute);transform:translateY(-1px)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{filter:brightness(1.1)}
-footer{border-top:1px solid var(--edge);padding:34px 0 48px;font-size:12px;color:var(--mute)}
+.btn.primary:hover{filter:brightness(1.08)}
+footer{border-top:1px solid var(--edge);padding:30px 0 46px;font-size:11.5px;color:var(--mute);line-height:1.85}
 footer a{color:var(--dim)}
-.warn{border:1px solid var(--edge);border-left:2px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:15px 18px;font-size:12.5px;color:var(--dim);background:var(--panel)}
 </style>
 </head>
 <body>
@@ -166,185 +134,384 @@ footer a{color:var(--dim)}
       </svg>
       jipeg
     </span>
-    <span class="chip">v3.0</span>
-    <nav>
-      <a href="#numbers" class="hide-sm">numbers</a>
-      <a href="#what" class="hide-sm">what</a>
-      <a href="#how" class="hide-sm">how</a>
+    <span class="chip">3.0</span>
+    <span class="right">
+      <select id="lang" aria-label="Language"></select>
       <a href="https://github.com/da0t-exe/Jipeg">github</a>
-    </nav>
+    </span>
   </div>
 </header>
 
 <main class="wrap">
 
   <div class="hero">
-    <div class="status"><span class="dot"></span> Windows 10 and 11 &middot; no administrator rights</div>
-    <h1>Right-click.<br>Lighter image.<br><span class="scr" id="scramble">Nothing else.</span></h1>
-    <p class="lede">
-      Jipeg adds one entry to the Windows right-click menu and encodes with
-      Google's <b>jpegli</b>. Smaller files, <b>no metadata carried over</b>, and
-      it will never hand you back something heavier than what you gave it.
-    </p>
+    <div class="status"><span class="dot"></span><span data-t="status">Windows 10 and 11, no administrator rights</span></div>
+    <h1><span data-t="h1a">Right-click an image.</span><br><span class="scr" id="scramble" data-t="h1b">It comes back lighter.</span></h1>
+    <p class="lede" data-t="lede">One entry in the right-click menu, encoding with Google's <b>jpegli</b>.
+    It never gives back a file heavier than the one you handed it, and it carries nothing over:
+    no Exif, no GPS, no colour profile.</p>
 
     <div class="cmd">
       <div class="cmd-top"><span class="led"></span><span class="led"></span><span class="led"></span>&nbsp;PowerShell</div>
       <div class="cmd-body">
         <span class="p">&gt;</span>
         <code id="cmd">irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/install.ps1 | iex</code>
-        <button class="copy" id="copy">copy</button>
+        <button class="copy" id="copy" data-t="copy">copy</button>
       </div>
     </div>
-    <p class="sub">
-      Checked against the SHA-256 GitHub publishes for the release &middot;
-      removed just as simply with <a href="https://github.com/da0t-exe/Jipeg#uninstall">uninstall.ps1</a>
-    </p>
+    <p class="after" data-t="after">Checked against the SHA-256 GitHub publishes for the release.
+    It comes off the same way, with uninstall.ps1.</p>
   </div>
 
-  <section id="numbers">
-    <div class="h"><span></span><h2>Measured, not claimed</h2></div>
-    <div class="stats">
-      <div class="stat acc"><b>&minus;90%</b><small>a photograph, at the default quality</small></div>
-      <div class="stat acc"><b>&minus;62%</b><small>a transparent logo, with nothing lost at all</small></div>
-      <div class="stat"><b>0</b><small>bytes of metadata in what comes out</small></div>
-      <div class="stat"><b>0.3s</b><small>for a 1400&times;950 photograph</small></div>
-    </div>
-    <div style="height:16px"></div>
+  <section>
+    <div class="h"><span></span><h2 data-t="s1">On real files</h2></div>
     <div class="tbl">
       <table>
-        <thead><tr><th>what you give it</th><th class="n">before</th><th class="n">after</th><th class="n">change</th></tr></thead>
+        <thead><tr>
+          <th data-t="th1">what you give it</th>
+          <th class="n" data-t="th2">before</th>
+          <th class="n" data-t="th3">after</th>
+          <th class="n"></th>
+        </tr></thead>
         <tbody>
-          <tr><td>photograph (PNG)</td><td class="n">630 KB</td><td class="n">66 KB</td><td class="n gain">&minus;90%</td></tr>
-          <tr><td>scan of a document</td><td class="n">10 KB</td><td class="n">3 KB</td><td class="n gain">&minus;68%</td></tr>
-          <tr><td>transparent logo</td><td class="n">1.1 KB</td><td class="n">0.4 KB</td><td class="n gain">&minus;62%</td></tr>
-          <tr><td>diagram, flat colour</td><td class="n">3.9 KB</td><td class="n">1.7 KB</td><td class="n gain">&minus;57%</td></tr>
-          <tr><td>screenshot</td><td class="n">36 KB</td><td class="n">26 KB</td><td class="n gain">&minus;29%</td></tr>
-          <tr><td>a JPEG already small</td><td class="n">40 KB</td><td class="n">&mdash;</td><td class="n">left alone</td></tr>
+          <tr><td data-t="r1">a photograph</td><td class="n">630 KB</td><td class="n">66 KB</td><td class="n g">&minus;90%</td></tr>
+          <tr><td data-t="r2">a scanned document</td><td class="n">10 KB</td><td class="n">3 KB</td><td class="n g">&minus;68%</td></tr>
+          <tr><td data-t="r3">a transparent logo</td><td class="n">1.1 KB</td><td class="n">0.4 KB</td><td class="n g">&minus;62%</td></tr>
+          <tr><td data-t="r4">a diagram</td><td class="n">3.9 KB</td><td class="n">1.7 KB</td><td class="n g">&minus;57%</td></tr>
+          <tr><td data-t="r5">a screenshot</td><td class="n">36 KB</td><td class="n">26 KB</td><td class="n g">&minus;29%</td></tr>
+          <tr><td data-t="r6">a JPEG already small</td><td class="n">40 KB</td><td class="n">&mdash;</td><td class="n" data-t="r6b">untouched</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <section id="what">
-    <div class="h"><span></span><h2>What it does that others do not</h2></div>
-    <div class="cards">
-      <div class="card">
-        <h3>Never heavier</h3>
-        <p>JPEG is bad at flat colour and text. When the result would weigh more than the original, nothing is written and it says so — the lighter file was already on your disk.</p>
-      </div>
-      <div class="card">
-        <h3>Transparency survives</h3>
-        <p>A PNG with transparent pixels is never flattened onto white. It is shrunk as a PNG instead, losslessly: pixels and alpha come back byte for byte identical.</p>
-      </div>
-      <div class="card">
-        <h3>Nothing tags along</h3>
-        <p>No Exif, no GPS, no camera model, no colour profile, no thumbnail. The rotation a phone asks for is applied to the pixels, then thrown away with the rest.</p>
-      </div>
-      <div class="card">
-        <h3>Colour by content</h3>
-        <p>Chroma subsampling is chosen by measuring the picture's hard colour transitions — the thing 4:2:0 destroys. Photographs score zero, a screenshot 3.5%.</p>
-      </div>
-    </div>
-  </section>
-
   <section>
-    <div class="h"><span></span><h2>It looks like Windows, because it is Windows</h2></div>
-    <div class="shots">
-      <figure><img src="preview.png" alt="The Jipeg progress window at the end of a conversion" loading="lazy"><figcaption>the whole interface, while converting</figcaption></figure>
-      <figure><img src="settings.png" alt="The Jipeg settings window" loading="lazy"><figcaption>six settings, and no more</figcaption></figure>
-    </div>
-  </section>
-
-  <section>
-    <div class="h"><span></span><h2>Formats</h2></div>
-    <div class="fmt">
-      <span class="on">PNG</span><span class="on">JPEG</span><span class="on">WebP</span><span class="on">GIF</span>
-      <span class="on">APNG</span><span class="on">BMP</span><span class="on">TIFF</span><span class="on">ICO</span>
-      <span class="on">JXL</span><span class="on">PPM</span><span class="on">PNM</span><span class="on">PGM</span>
-      <span class="on">PAM</span><span class="on">PFM</span><span class="on">EMF</span><span class="on">WMF</span>
-      <span>HEIC</span><span>HEIF</span><span>AVIF</span><span>JPEG&nbsp;XR</span>
-    </div>
-    <p class="sub">Blue is read out of the box. The last four need the free Microsoft Store codec — Jipeg names the one to install rather than failing quietly.</p>
-  </section>
-
-  <section id="how">
-    <div class="h"><span></span><h2>Under the hood</h2></div>
+    <div class="h"><span></span><h2 data-t="s2">Three things it will not do</h2></div>
     <div class="notes">
       <div class="note">
-        <h4>The smallest JPEG jpegli can write</h4>
-        <p>Every switch was measured. <code>--xyb</code> is 24% smaller and rejected: a viewer that ignores its colour profile renders an average error of 34.78 against 0.88. The progressive level, which changes no pixel at all, sat at a default that was never the smallest of the three — worth 1 to 7%.</p>
+        <h3 data-t="n1h">Give you back something heavier</h3>
+        <p data-t="n1p">JPEG is very good at photographs and very bad at flat colour and text.
+        A screenshot grew 88% here, an icon 448%. Those are not written at all — the lighter
+        file was already on your disk.</p>
       </div>
       <div class="note">
-        <h4>Corners identical to the byte</h4>
-        <p>GDI+ rasterises the right and bottom of a shape differently from the left and top. Every rounded shape is drawn once and its top-left quarter mirrored over the other three, so all four corners measure <b>0</b> difference.</p>
+        <h3 data-t="n2h">Flatten transparency onto white</h3>
+        <p data-t="n2p">JPEG has no alpha channel, so a PNG with transparent pixels is shrunk
+        as a PNG instead, losslessly: pixels and alpha come back byte for byte identical.</p>
       </div>
       <div class="note">
-        <h4>Drawn at your screen's real resolution</h4>
-        <p>The window asks Windows for per-monitor DPI awareness rather than being stretched up from 96 DPI, and one factor sets the fonts, every control and every radius — capped by what the screen can actually hold.</p>
-      </div>
-      <div class="note">
-        <h4>When something goes wrong, there is something to read</h4>
-        <p>A log holds the machine, the settings in force, every failure with its reason and a summary of every batch. Nothing waits for ever: the encoder gets two minutes, the WebP tools thirty seconds.</p>
+        <h3 data-t="n3h">Keep what came with the file</h3>
+        <p data-t="n3p">The rotation a phone asks for is applied to the pixels and then thrown
+        away with everything else, so the picture is upright everywhere and cannot say where
+        it was taken.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="h"><span></span><h2>Linux and macOS</h2></div>
-    <div class="warn">
-      <b>Experimental, and never run by its author.</b> The same right-click entry for
-      GNOME&nbsp;Files, KDE&nbsp;Dolphin, XFCE&nbsp;Thunar and the macOS Finder lives in
-      <code>platform/</code>. It was written on Windows: the shell parses and the property
-      lists are valid XML, and that is the whole of what has been checked.
+    <div class="h"><span></span><h2 data-t="s3">The whole interface</h2></div>
+    <div class="shots">
+      <figure><img src="preview.png" alt="" loading="lazy"><figcaption data-t="cap1">converting</figcaption></figure>
+      <figure><img src="settings.png" alt="" loading="lazy"><figcaption data-t="cap2">every setting there is</figcaption></figure>
     </div>
   </section>
 
   <section>
-    <div class="h"><span></span><h2>Get it</h2></div>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/da0t-exe/Jipeg/releases/latest">Download the latest release</a>
-      <a class="btn" href="https://github.com/da0t-exe/Jipeg">Source on GitHub</a>
-      <a class="btn" href="https://github.com/da0t-exe/Jipeg#settings">Read the manual</a>
+    <div class="h"><span></span><h2 data-t="s4">Linux and macOS</h2></div>
+    <div class="warn" data-t="unix"><b>Experimental, and never run by its author.</b> There is a
+    port for GNOME Files, KDE Dolphin, XFCE Thunar and the macOS Finder. It was written on
+    Windows: the shell parses and the property lists are valid, and that is all that has been
+    checked.</div>
+  </section>
+
+  <section>
+    <div class="h"><span></span><h2 data-t="s5">Get it</h2></div>
+    <div class="links">
+      <a class="btn primary" href="https://github.com/da0t-exe/Jipeg/releases/latest" data-t="l1">Download</a>
+      <a class="btn" href="https://github.com/da0t-exe/Jipeg" data-t="l2">Source</a>
+      <a class="btn" href="https://github.com/da0t-exe/Jipeg#settings" data-t="l3">Manual</a>
     </div>
   </section>
 
 </main>
 
 <footer>
-  <div class="wrap">
-    Encoding by <a href="https://github.com/google/jpegli">jpegli</a>, built by
-    <a href="https://github.com/libjxl/libjxl">libjxl</a>. PNGs shrunk by
-    <a href="https://github.com/oxipng/oxipng">oxipng</a>, WebP read by
-    <a href="https://github.com/webmproject/libwebp">libwebp</a>.
-    Jipeg is MIT licensed and is not affiliated with Google or the JPEG committee.
-  </div>
+  <div class="wrap" data-t="foot">Encoding by <a href="https://github.com/google/jpegli">jpegli</a>,
+  built by <a href="https://github.com/libjxl/libjxl">libjxl</a>. PNGs shrunk by
+  <a href="https://github.com/oxipng/oxipng">oxipng</a>, WebP read by
+  <a href="https://github.com/webmproject/libwebp">libwebp</a>. MIT licensed, and not
+  affiliated with Google or the JPEG committee.</div>
 </footer>
 
 <script>
+var T = {
+  en: {},
+  fr: {
+    status:"Windows 10 et 11, sans droits administrateur",
+    h1a:"Clic droit sur une image.", h1b:"Elle ressort plus légère.",
+    lede:"Une entrée dans le menu contextuel, l'encodage confié à <b>jpegli</b> de Google. Il ne rend jamais un fichier plus lourd que celui qu'on lui donne, et il ne reprend rien au passage : ni Exif, ni GPS, ni profil de couleur.",
+    copy:"copier",
+    after:"Vérifié contre l'empreinte SHA-256 que GitHub publie pour la release. Il se retire de la même façon, avec uninstall.ps1.",
+    s1:"Sur de vrais fichiers", s2:"Trois choses qu'il refuse de faire", s3:"Toute l'interface",
+    s4:"Linux et macOS", s5:"L'installer",
+    th1:"ce qu'on lui donne", th2:"avant", th3:"après",
+    r1:"une photo", r2:"un document scanné", r3:"un logo transparent",
+    r4:"un schéma", r5:"une capture d'écran", r6:"un JPEG déjà léger", r6b:"laissé tel quel",
+    n1h:"Vous rendre plus lourd",
+    n1p:"Le JPEG est excellent sur les photos et mauvais sur les aplats et le texte. Une capture d'écran a gonflé de 88 % ici, une icône de 448 %. Ces fichiers ne sont pas écrits du tout : le plus léger des deux était déjà sur votre disque.",
+    n2h:"Aplatir la transparence sur du blanc",
+    n2p:"Le JPEG n'a pas de canal alpha, donc un PNG à pixels transparents est compressé en PNG, sans perte : les pixels et l'alpha ressortent identiques octet pour octet.",
+    n3h:"Garder ce qui accompagnait le fichier",
+    n3p:"La rotation demandée par un téléphone est appliquée aux pixels puis jetée avec le reste : l'image est droite partout et ne peut plus dire où elle a été prise.",
+    cap1:"pendant la conversion", cap2:"tous les réglages, sans exception",
+    unix:"<b>Expérimental, et jamais exécuté par son auteur.</b> Il existe un portage pour GNOME Files, KDE Dolphin, XFCE Thunar et le Finder de macOS. Il a été écrit sous Windows : le shell est syntaxiquement valide et les property lists aussi, c'est tout ce qui a été vérifié.",
+    l1:"Télécharger", l2:"Code source", l3:"Manuel",
+    foot:"Encodage par <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilé par <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG compressés par <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP lus par <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Sous licence MIT, sans lien avec Google ni avec le comité JPEG."
+  },
+  es: {
+    status:"Windows 10 y 11, sin permisos de administrador",
+    h1a:"Clic derecho en una imagen.", h1b:"Vuelve más ligera.",
+    lede:"Una entrada en el menú contextual y la codificación a cargo de <b>jpegli</b>, de Google. Nunca devuelve un archivo más pesado que el que recibió, y no arrastra nada consigo: ni Exif, ni GPS, ni perfil de color.",
+    copy:"copiar",
+    after:"Comprobado con el SHA-256 que GitHub publica para la versión. Se quita igual de fácil, con uninstall.ps1.",
+    s1:"Con archivos reales", s2:"Tres cosas que no hará", s3:"Toda la interfaz",
+    s4:"Linux y macOS", s5:"Instalarlo",
+    th1:"lo que le das", th2:"antes", th3:"después",
+    r1:"una fotografía", r2:"un documento escaneado", r3:"un logotipo transparente",
+    r4:"un diagrama", r5:"una captura de pantalla", r6:"un JPEG ya pequeño", r6b:"intacto",
+    n1h:"Devolverte algo más pesado",
+    n1p:"JPEG es muy bueno con fotografías y muy malo con colores planos y texto. Aquí una captura creció un 88 % y un icono un 448 %. Esos archivos no se escriben: el más ligero ya estaba en tu disco.",
+    n2h:"Aplanar la transparencia sobre blanco",
+    n2p:"JPEG no tiene canal alfa, así que un PNG con píxeles transparentes se comprime como PNG, sin pérdida: los píxeles y el alfa vuelven idénticos byte a byte.",
+    n3h:"Conservar lo que venía con el archivo",
+    n3p:"La rotación que pide un teléfono se aplica a los píxeles y luego se descarta con todo lo demás: la imagen queda derecha en todas partes y ya no puede decir dónde se tomó.",
+    cap1:"durante la conversión", cap2:"todos los ajustes que hay",
+    unix:"<b>Experimental, y su autor nunca lo ha ejecutado.</b> Hay una adaptación para GNOME Files, KDE Dolphin, XFCE Thunar y el Finder de macOS. Se escribió en Windows: el shell y las listas de propiedades son válidos, y eso es todo lo comprobado.",
+    l1:"Descargar", l2:"Código", l3:"Manual",
+    foot:"Codificación de <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilado por <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG comprimidos por <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP leídos por <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licencia MIT, sin relación con Google ni con el comité JPEG."
+  },
+  de: {
+    status:"Windows 10 und 11, ohne Administratorrechte",
+    h1a:"Rechtsklick auf ein Bild.", h1b:"Es kommt leichter zurück.",
+    lede:"Ein Eintrag im Kontextmenü, kodiert wird mit Googles <b>jpegli</b>. Es gibt nie eine Datei zurück, die schwerer ist als die übergebene, und es nimmt nichts mit: kein Exif, kein GPS, kein Farbprofil.",
+    copy:"kopieren",
+    after:"Geprüft gegen den SHA-256, den GitHub für die Version veröffentlicht. Ebenso einfach wieder entfernt, mit uninstall.ps1.",
+    s1:"An echten Dateien", s2:"Drei Dinge, die es nicht tut", s3:"Die ganze Oberfläche",
+    s4:"Linux und macOS", s5:"Holen",
+    th1:"was man ihm gibt", th2:"vorher", th3:"nachher",
+    r1:"ein Foto", r2:"ein gescanntes Dokument", r3:"ein transparentes Logo",
+    r4:"eine Grafik", r5:"ein Bildschirmfoto", r6:"ein bereits kleines JPEG", r6b:"unberührt",
+    n1h:"Etwas Schwereres zurückgeben",
+    n1p:"JPEG ist sehr gut bei Fotos und sehr schlecht bei Flächen und Text. Ein Bildschirmfoto wuchs hier um 88 %, ein Symbol um 448 %. Diese Dateien werden gar nicht erst geschrieben — die leichtere lag ohnehin schon auf der Platte.",
+    n2h:"Transparenz auf Weiß plattdrücken",
+    n2p:"JPEG hat keinen Alphakanal, deshalb wird ein PNG mit transparenten Pixeln als PNG verkleinert, verlustfrei: Pixel und Alpha kommen Byte für Byte identisch zurück.",
+    n3h:"Behalten, was an der Datei hing",
+    n3p:"Die Drehung, die ein Telefon verlangt, wird auf die Pixel angewandt und dann mit allem anderen verworfen: Das Bild steht überall richtig und kann nicht mehr verraten, wo es aufgenommen wurde.",
+    cap1:"während der Umwandlung", cap2:"sämtliche Einstellungen",
+    unix:"<b>Experimentell, und vom Autor nie ausgeführt.</b> Es gibt eine Portierung für GNOME Files, KDE Dolphin, XFCE Thunar und den macOS Finder. Sie entstand unter Windows: die Shell und die Property-Lists sind gültig, mehr wurde nicht geprüft.",
+    l1:"Herunterladen", l2:"Quelltext", l3:"Handbuch",
+    foot:"Kodierung durch <a href=\"https://github.com/google/jpegli\">jpegli</a>, gebaut von <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNGs verkleinert von <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP gelesen von <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. MIT-Lizenz, ohne Verbindung zu Google oder zum JPEG-Komitee."
+  },
+  pt: {
+    status:"Windows 10 e 11, sem direitos de administrador",
+    h1a:"Clique direito numa imagem.", h1b:"Ela volta mais leve.",
+    lede:"Uma entrada no menu de contexto, com a codificação a cargo do <b>jpegli</b>, da Google. Nunca devolve um ficheiro mais pesado do que aquele que recebeu, e não leva nada consigo: nem Exif, nem GPS, nem perfil de cor.",
+    copy:"copiar",
+    after:"Verificado com o SHA-256 que o GitHub publica para a versão. Sai da mesma forma, com uninstall.ps1.",
+    s1:"Em ficheiros reais", s2:"Três coisas que não faz", s3:"Toda a interface",
+    s4:"Linux e macOS", s5:"Obter",
+    th1:"o que lhe dás", th2:"antes", th3:"depois",
+    r1:"uma fotografia", r2:"um documento digitalizado", r3:"um logótipo transparente",
+    r4:"um diagrama", r5:"uma captura de ecrã", r6:"um JPEG já pequeno", r6b:"intocado",
+    n1h:"Devolver algo mais pesado",
+    n1p:"O JPEG é muito bom em fotografias e muito mau em cores planas e texto. Aqui uma captura cresceu 88 % e um ícone 448 %. Esses ficheiros não chegam a ser escritos: o mais leve já estava no disco.",
+    n2h:"Achatar a transparência sobre branco",
+    n2p:"O JPEG não tem canal alfa, por isso um PNG com píxeis transparentes é comprimido como PNG, sem perdas: os píxeis e o alfa voltam idênticos byte a byte.",
+    n3h:"Guardar o que vinha com o ficheiro",
+    n3p:"A rotação que um telemóvel pede é aplicada aos píxeis e depois descartada com o resto: a imagem fica direita em todo o lado e já não pode dizer onde foi tirada.",
+    cap1:"durante a conversão", cap2:"todas as definições que existem",
+    unix:"<b>Experimental, e nunca executado pelo autor.</b> Existe uma adaptação para o GNOME Files, KDE Dolphin, XFCE Thunar e o Finder do macOS. Foi escrita no Windows: a shell e as property lists são válidas, e é tudo o que foi verificado.",
+    l1:"Transferir", l2:"Código", l3:"Manual",
+    foot:"Codificação por <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilado pelo <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG comprimidos pelo <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP lidos pelo <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licença MIT, sem ligação à Google nem ao comité JPEG."
+  },
+  it: {
+    status:"Windows 10 e 11, senza diritti di amministratore",
+    h1a:"Clic destro su un'immagine.", h1b:"Torna più leggera.",
+    lede:"Una voce nel menu contestuale e la codifica affidata a <b>jpegli</b>, di Google. Non restituisce mai un file più pesante di quello ricevuto, e non si porta dietro nulla: né Exif, né GPS, né profilo colore.",
+    copy:"copia",
+    after:"Verificato con lo SHA-256 che GitHub pubblica per la versione. Si toglie allo stesso modo, con uninstall.ps1.",
+    s1:"Su file veri", s2:"Tre cose che non fa", s3:"Tutta l'interfaccia",
+    s4:"Linux e macOS", s5:"Scaricarlo",
+    th1:"cosa gli dai", th2:"prima", th3:"dopo",
+    r1:"una fotografia", r2:"un documento scansionato", r3:"un logo trasparente",
+    r4:"uno schema", r5:"una schermata", r6:"un JPEG già piccolo", r6b:"intatto",
+    n1h:"Restituirti qualcosa di più pesante",
+    n1p:"Il JPEG è ottimo con le fotografie e pessimo con i colori piatti e il testo. Qui una schermata è cresciuta dell'88 % e un'icona del 448 %. Quei file non vengono nemmeno scritti: il più leggero era già sul disco.",
+    n2h:"Appiattire la trasparenza sul bianco",
+    n2p:"Il JPEG non ha canale alfa, quindi un PNG con pixel trasparenti viene compresso come PNG, senza perdite: pixel e alfa tornano identici byte per byte.",
+    n3h:"Conservare ciò che accompagnava il file",
+    n3p:"La rotazione richiesta da un telefono viene applicata ai pixel e poi buttata via con tutto il resto: l'immagine è dritta ovunque e non può più dire dove è stata scattata.",
+    cap1:"durante la conversione", cap2:"tutte le impostazioni che ci sono",
+    unix:"<b>Sperimentale, e mai eseguito dal suo autore.</b> Esiste un port per GNOME Files, KDE Dolphin, XFCE Thunar e il Finder di macOS. È stato scritto su Windows: la shell e le property list sono valide, ed è tutto ciò che è stato verificato.",
+    l1:"Scarica", l2:"Codice", l3:"Manuale",
+    foot:"Codifica di <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilato da <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG compressi da <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP letti da <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licenza MIT, senza legami con Google né con il comitato JPEG."
+  },
+  pl: {
+    status:"Windows 10 i 11, bez uprawnień administratora",
+    h1a:"Kliknij obraz prawym przyciskiem.", h1b:"Wraca lżejszy.",
+    lede:"Jedna pozycja w menu kontekstowym, kodowanie po stronie <b>jpegli</b> od Google. Nigdy nie oddaje pliku cięższego niż otrzymany i niczego ze sobą nie zabiera: żadnego Exif, GPS ani profilu kolorów.",
+    copy:"kopiuj",
+    after:"Sprawdzone sumą SHA-256, którą GitHub publikuje dla wydania. Usuwa się tak samo prosto, przez uninstall.ps1.",
+    s1:"Na prawdziwych plikach", s2:"Trzy rzeczy, których nie zrobi", s3:"Cały interfejs",
+    s4:"Linux i macOS", s5:"Pobierz",
+    th1:"co mu dajesz", th2:"przed", th3:"po",
+    r1:"fotografia", r2:"zeskanowany dokument", r3:"przezroczyste logo",
+    r4:"diagram", r5:"zrzut ekranu", r6:"JPEG i tak już mały", r6b:"nietknięty",
+    n1h:"Odda ci coś cięższego",
+    n1p:"JPEG jest bardzo dobry w fotografii i bardzo zły w płaskich barwach i tekście. Zrzut ekranu urósł tu o 88 %, ikona o 448 %. Takie pliki w ogóle nie powstają — lżejszy już był na dysku.",
+    n2h:"Spłaszczy przezroczystość na biel",
+    n2p:"JPEG nie ma kanału alfa, więc PNG z przezroczystymi pikselami jest zmniejszany jako PNG, bezstratnie: piksele i alfa wracają identyczne co do bajtu.",
+    n3h:"Zachowa to, co przyszło z plikiem",
+    n3p:"Obrót, o który prosi telefon, zostaje nałożony na piksele i wyrzucony razem z resztą: obraz stoi prosto wszędzie i nie potrafi już powiedzieć, gdzie powstał.",
+    cap1:"w trakcie konwersji", cap2:"wszystkie ustawienia, jakie są",
+    unix:"<b>Eksperymentalne i nigdy nie uruchomione przez autora.</b> Istnieje port dla GNOME Files, KDE Dolphin, XFCE Thunar i Findera na macOS. Powstał na Windows: powłoka i property listy są poprawne, i tylko tyle zostało sprawdzone.",
+    l1:"Pobierz", l2:"Kod", l3:"Podręcznik",
+    foot:"Kodowanie przez <a href=\"https://github.com/google/jpegli\">jpegli</a>, zbudowane przez <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG zmniejsza <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP czyta <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licencja MIT, bez związku z Google ani komitetem JPEG."
+  },
+  ru: {
+    status:"Windows 10 и 11, без прав администратора",
+    h1a:"Правый клик по картинке.", h1b:"Она возвращается легче.",
+    lede:"Один пункт в контекстном меню, кодирование берёт на себя <b>jpegli</b> от Google. Он никогда не возвращает файл тяжелее полученного и ничего с собой не тащит: ни Exif, ни GPS, ни цветового профиля.",
+    copy:"копировать",
+    after:"Проверено по SHA-256, который GitHub публикует для релиза. Удаляется так же просто, через uninstall.ps1.",
+    s1:"На настоящих файлах", s2:"Три вещи, которых он не сделает", s3:"Весь интерфейс",
+    s4:"Linux и macOS", s5:"Установить",
+    th1:"что вы ему даёте", th2:"было", th3:"стало",
+    r1:"фотография", r2:"отсканированный документ", r3:"логотип с прозрачностью",
+    r4:"схема", r5:"снимок экрана", r6:"уже маленький JPEG", r6b:"не тронут",
+    n1h:"Вернёт вам что-то тяжелее",
+    n1p:"JPEG прекрасен на фотографиях и плох на плоских заливках и тексте. Снимок экрана вырос здесь на 88 %, значок — на 448 %. Такие файлы просто не создаются: более лёгкий и так лежал у вас на диске.",
+    n2h:"Положит прозрачность на белое",
+    n2p:"В JPEG нет альфа-канала, поэтому PNG с прозрачными пикселями сжимается как PNG, без потерь: пиксели и альфа возвращаются побайтово теми же.",
+    n3h:"Сохранит то, что пришло вместе с файлом",
+    n3p:"Поворот, о котором просит телефон, применяется к пикселям и выбрасывается вместе со всем остальным: снимок стоит правильно везде и больше не может сказать, где он сделан.",
+    cap1:"во время преобразования", cap2:"все настройки, какие есть",
+    unix:"<b>Экспериментально, автор ни разу это не запускал.</b> Есть порт для GNOME Files, KDE Dolphin, XFCE Thunar и Finder на macOS. Он написан под Windows: оболочка и property-списки корректны, и это всё, что проверено.",
+    l1:"Скачать", l2:"Исходники", l3:"Руководство",
+    foot:"Кодирование — <a href=\"https://github.com/google/jpegli\">jpegli</a>, сборка <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG сжимает <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP читает <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Лицензия MIT, без отношения к Google и комитету JPEG."
+  },
+  ja: {
+    status:"Windows 10 と 11、管理者権限は不要",
+    h1a:"画像を右クリック。", h1b:"軽くなって返ってきます。",
+    lede:"右クリックメニューに項目がひとつ。符号化は Google の <b>jpegli</b> が担当します。渡したものより重いファイルを返すことはなく、余計なものも持ち出しません。Exif も GPS もカラープロファイルもありません。",
+    copy:"コピー",
+    after:"GitHub がリリースごとに公開する SHA-256 と照合しています。uninstall.ps1 で同じように外せます。",
+    s1:"実際のファイルで", s2:"やらないこと 3 つ", s3:"画面はこれで全部",
+    s4:"Linux と macOS", s5:"入手する",
+    th1:"渡すもの", th2:"変換前", th3:"変換後",
+    r1:"写真", r2:"スキャンした書類", r3:"透過つきのロゴ",
+    r4:"図版", r5:"スクリーンショット", r6:"すでに小さい JPEG", r6b:"そのまま",
+    n1h:"より重いものを返す",
+    n1p:"JPEG は写真にはとても強く、べた塗りや文字にはとても弱い形式です。ここではスクリーンショットが 88 %、アイコンが 448 % 膨らみました。そうしたファイルはそもそも書き出しません。軽いほうは最初から手元にあります。",
+    n2h:"透過を白で塗りつぶす",
+    n2p:"JPEG にアルファチャンネルはないので、透過を含む PNG は PNG のまま可逆で小さくします。画素もアルファもバイト単位で元のままです。",
+    n3h:"ファイルに付いてきたものを残す",
+    n3p:"スマートフォンが要求する回転は画素に適用したうえで、ほかのすべてと一緒に捨てます。どこで見ても正しい向きで、撮影場所を語ることもありません。",
+    cap1:"変換中", cap2:"設定はこれで全部",
+    unix:"<b>実験的で、作者自身が一度も実行していません。</b> GNOME Files、KDE Dolphin、XFCE Thunar、macOS の Finder 向けの移植があります。Windows 上で書かれ、シェルとプロパティリストが構文として正しいこと、確認できているのはそれだけです。",
+    l1:"ダウンロード", l2:"ソース", l3:"説明書",
+    foot:"符号化は <a href=\"https://github.com/google/jpegli\">jpegli</a>、ビルドは <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>。PNG の圧縮は <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>、WebP の読み込みは <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>。MIT ライセンス。Google とも JPEG 委員会とも関係はありません。"
+  },
+  zh: {
+    status:"Windows 10 与 11，无需管理员权限",
+    h1a:"右键点一张图。", h1b:"它会变得更小。",
+    lede:"右键菜单里只多一项，编码交给 Google 的 <b>jpegli</b>。它绝不会还给你一个比原来更大的文件，也不会带走任何东西：没有 Exif，没有 GPS，没有色彩配置文件。",
+    copy:"复制",
+    after:"已用 GitHub 为该版本发布的 SHA-256 校验。用 uninstall.ps1 同样干净地卸载。",
+    s1:"在真实文件上", s2:"它不做的三件事", s3:"界面就这些",
+    s4:"Linux 与 macOS", s5:"获取",
+    th1:"交给它的东西", th2:"之前", th3:"之后",
+    r1:"一张照片", r2:"一份扫描件", r3:"一个透明标志",
+    r4:"一张示意图", r5:"一张截图", r6:"本来就很小的 JPEG", r6b:"原样保留",
+    n1h:"还给你更大的文件",
+    n1p:"JPEG 擅长照片，却拙于纯色和文字。这里一张截图涨了 88 %，一个图标涨了 448 %。这些文件根本不会写出来——更小的那个本来就在你硬盘上。",
+    n2h:"把透明压成白底",
+    n2p:"JPEG 没有 alpha 通道，所以带透明像素的 PNG 会以 PNG 的形式无损压缩：像素和 alpha 逐字节保持原样。",
+    n3h:"留下随文件一起来的东西",
+    n3p:"手机要求的旋转会作用到像素上，然后和其余信息一起丢弃：图片在哪儿看都是正的，也再说不出它是在哪里拍的。",
+    cap1:"转换过程中", cap2:"全部设置就这些",
+    unix:"<b>实验性质，作者从未运行过。</b> 有一个面向 GNOME Files、KDE Dolphin、XFCE Thunar 和 macOS Finder 的移植版。它写于 Windows：shell 与属性列表语法有效，已核实的仅此而已。",
+    l1:"下载", l2:"源码", l3:"手册",
+    foot:"编码由 <a href=\"https://github.com/google/jpegli\">jpegli</a> 完成，<a href=\"https://github.com/libjxl/libjxl\">libjxl</a> 构建。PNG 由 <a href=\"https://github.com/oxipng/oxipng\">oxipng</a> 压缩，WebP 由 <a href=\"https://github.com/webmproject/libwebp\">libwebp</a> 读取。MIT 许可，与 Google 及 JPEG 委员会无关。"
+  }
+};
+
+var NAMES = { en:"English", fr:"Français", es:"Español", de:"Deutsch", pt:"Português",
+              it:"Italiano", pl:"Polski", ru:"Русский", ja:"日本語", zh:"中文" };
+
+// The English copy is the markup itself, read out of the page rather than
+// repeated in the table above - one place for it to be wrong instead of two.
 (function () {
-  // The headline settles into place one character at a time, the rest of it
-  // still noise. The same trick the reference used, kept short.
+  var d = {}, n = document.querySelectorAll('[data-t]');
+  for (var i = 0; i < n.length; i++) d[n[i].getAttribute('data-t')] = n[i].innerHTML;
+  T.en = d;
+})();
+
+function apply(code) {
+  var d = T[code] || T.en, n = document.querySelectorAll('[data-t]');
+  for (var i = 0; i < n.length; i++) {
+    var k = n[i].getAttribute('data-t');
+    if (d[k]) n[i].innerHTML = d[k];
+  }
+  document.documentElement.lang = code;
+  try { localStorage.setItem('jipeg-lang', code); } catch (e) {}
+  scramble();
+}
+
+// What the browser asks for, then English. A stored choice always wins.
+function pick() {
+  try { var s = localStorage.getItem('jipeg-lang'); if (s && T[s]) return s; } catch (e) {}
+  var want = navigator.languages || [navigator.language || 'en'];
+  for (var i = 0; i < want.length; i++) {
+    var c = String(want[i]).slice(0, 2).toLowerCase();
+    if (T[c]) return c;
+  }
+  return 'en';
+}
+
+var timer = null;
+function scramble() {
   var el = document.getElementById('scramble');
   if (!el) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (timer) clearInterval(timer);
   var text = el.textContent, chars = '-_~`!@#$%^&*()+=[]{}|;:,.<>?', shown = 0;
-  var t = setInterval(function () {
+  timer = setInterval(function () {
     shown++;
-    if (shown >= text.length) { el.textContent = text; clearInterval(t); return; }
+    if (shown >= text.length) { el.textContent = text; clearInterval(timer); timer = null; return; }
     var noise = '';
     for (var i = shown; i < text.length; i++) {
-      noise += text.charAt(i) === ' ' ? ' ' : chars.charAt(Math.floor(Math.random() * chars.length));
+      var c = text.charAt(i);
+      noise += (c === ' ') ? ' ' : chars.charAt(Math.floor(Math.random() * chars.length));
     }
     el.textContent = text.slice(0, shown) + noise;
-  }, 45);
-})();
+  }, 42);
+}
+
+var sel = document.getElementById('lang');
+for (var code in NAMES) {
+  var o = document.createElement('option');
+  o.value = code; o.textContent = NAMES[code];
+  sel.appendChild(o);
+}
+var start = pick();
+sel.value = start;
+if (start !== 'en') { apply(start); } else { scramble(); }
+sel.addEventListener('change', function () { apply(this.value); });
 
 document.getElementById('copy').addEventListener('click', function () {
-  var b = this, txt = document.getElementById('cmd').textContent;
-  var done = function () {
-    b.textContent = 'copied'; b.classList.add('done');
-    setTimeout(function () { b.textContent = 'copy'; b.classList.remove('done'); }, 1600);
-  };
+  var b = this, txt = document.getElementById('cmd').textContent, was = b.textContent;
+  var done = function () { b.textContent = '✓'; setTimeout(function () { b.textContent = was; }, 1500); };
   if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt).then(done, done); return; }
   var a = document.createElement('textarea');
   a.value = txt; a.style.position = 'fixed'; a.style.opacity = '0';
