@@ -47,16 +47,24 @@ and `dwebp` reads WebP.
 
 ## Installing
 
+One line, on either system — it works out which one it landed on:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/da0t-exe/Jipeg/main/platform/install.sh | bash
+```
+
+And to take it back out:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/da0t-exe/Jipeg/main/platform/uninstall.sh | bash
+```
+
+Everything goes into your home folder and nothing needs root. From a clone, the
+per-system scripts do the same thing directly:
+
 ```bash
 ./install-linux.sh      # GNOME Files, KDE Dolphin, XFCE Thunar
 ./install-macos.sh      # Finder Quick Action
-```
-
-Both install into your home folder only and need no root. To remove:
-
-```bash
-./uninstall-linux.sh
-./uninstall-macos.sh
 ```
 
 There is also a plain command, if the right-click entry does not appear:

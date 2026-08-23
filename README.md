@@ -136,7 +136,11 @@ This is most of what separates Jipeg from any other converter.
 
 There is an experimental port in [`platform/`](platform/) — the same right-click
 entry for GNOME Files, KDE Dolphin, XFCE Thunar and the macOS Finder, following
-the same rules.
+the same rules. One line on either system:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/da0t-exe/Jipeg/main/platform/install.sh | bash
+```
 
 **It has never been run by its author**, who works on Windows: the shell parses
 and the property lists are valid XML, and that is the whole of what has been

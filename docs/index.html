@@ -66,7 +66,16 @@ h1 .scr{color:var(--accent)}
 .lede b{color:var(--ink);font-weight:600}
 
 /* command */
-.cmd{margin-top:30px;border:1px solid var(--edge);border-radius:10px;background:var(--panel);overflow:hidden}
+.tabs{display:flex;gap:2px;margin:30px 0 -1px}
+.tab{
+  font-family:var(--mono);font-size:11.5px;color:var(--mute);background:transparent;
+  border:1px solid var(--edge);border-bottom:0;border-radius:8px 8px 0 0;
+  padding:6px 13px;cursor:pointer;transition:color .2s,background .2s;
+}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);background:var(--panel)}
+.cmd{border:1px solid var(--edge);border-radius:0 10px 10px 10px;background:var(--panel);overflow:hidden}
+.after code{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:11px}
 .cmd-top{display:flex;align-items:center;gap:7px;padding:9px 14px;border-bottom:1px solid var(--edge);font-size:11px;color:var(--mute)}
 .led{width:9px;height:9px;border-radius:50%;background:var(--edge)}
 .cmd-body{display:flex;align-items:center;gap:12px;padding:14px 16px;overflow-x:auto}
@@ -151,16 +160,27 @@ footer a{color:var(--dim)}
     It never gives back a file heavier than the one you handed it, and it carries nothing over:
     no Exif, no GPS, no colour profile.</p>
 
+    <div class="tabs">
+      <button class="tab on" data-os="win">Windows</button>
+      <button class="tab" data-os="lin">Linux</button>
+      <button class="tab" data-os="mac">macOS</button>
+    </div>
     <div class="cmd">
-      <div class="cmd-top"><span class="led"></span><span class="led"></span><span class="led"></span>&nbsp;PowerShell</div>
+      <div class="cmd-top"><span class="led"></span><span class="led"></span><span class="led"></span>&nbsp;<span id="shell">PowerShell</span></div>
       <div class="cmd-body">
         <span class="p">&gt;</span>
         <code id="cmd">irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/install.ps1 | iex</code>
         <button class="copy" id="copy" data-t="copy">copy</button>
       </div>
     </div>
-    <p class="after" data-t="after">Checked against the SHA-256 GitHub publishes for the release.
-    It comes off the same way, with uninstall.ps1.</p>
+    <p class="after">
+      <span data-os="win" data-t="after">Checked against the SHA-256 GitHub publishes for the release.
+      It comes off the same way, with uninstall.ps1.</span>
+      <span data-os="lin" data-t="afterLin" hidden>Needs cjpegli, and uses oxipng and dwebp when they are
+      there: <code>apt install libjxl-tools oxipng webp</code>. Experimental, and never run by its author.</span>
+      <span data-os="mac" data-t="afterMac" hidden>Needs cjpegli, and uses oxipng and dwebp when they are
+      there: <code>brew install jpeg-xl oxipng webp</code>. Experimental, and never run by its author.</span>
+    </p>
   </div>
 
   <section>
@@ -252,6 +272,8 @@ var T = {
     lede:"Une entrée dans le menu contextuel, l'encodage confié à <b>jpegli</b> de Google. Il ne rend jamais un fichier plus lourd que celui qu'on lui donne, et il ne reprend rien au passage : ni Exif, ni GPS, ni profil de couleur.",
     copy:"copier",
     after:"Vérifié contre l'empreinte SHA-256 que GitHub publie pour la release. Il se retire de la même façon, avec uninstall.ps1.",
+    afterLin:"Nécessite cjpegli, et utilise oxipng et dwebp s'ils sont là : <code>apt install libjxl-tools oxipng webp</code>. Expérimental, et jamais exécuté par son auteur.",
+    afterMac:"Nécessite cjpegli, et utilise oxipng et dwebp s'ils sont là : <code>brew install jpeg-xl oxipng webp</code>. Expérimental, et jamais exécuté par son auteur.",
     s1:"Sur de vrais fichiers", s2:"Trois choses qu'il refuse de faire", s3:"Toute l'interface",
     s4:"Linux et macOS", s5:"L'installer",
     th1:"ce qu'on lui donne", th2:"avant", th3:"après",
@@ -274,6 +296,8 @@ var T = {
     lede:"Una entrada en el menú contextual y la codificación a cargo de <b>jpegli</b>, de Google. Nunca devuelve un archivo más pesado que el que recibió, y no arrastra nada consigo: ni Exif, ni GPS, ni perfil de color.",
     copy:"copiar",
     after:"Comprobado con el SHA-256 que GitHub publica para la versión. Se quita igual de fácil, con uninstall.ps1.",
+    afterLin:"Necesita cjpegli, y usa oxipng y dwebp si están: <code>apt install libjxl-tools oxipng webp</code>. Experimental, y su autor nunca lo ha ejecutado.",
+    afterMac:"Necesita cjpegli, y usa oxipng y dwebp si están: <code>brew install jpeg-xl oxipng webp</code>. Experimental, y su autor nunca lo ha ejecutado.",
     s1:"Con archivos reales", s2:"Tres cosas que no hará", s3:"Toda la interfaz",
     s4:"Linux y macOS", s5:"Instalarlo",
     th1:"lo que le das", th2:"antes", th3:"después",
@@ -296,6 +320,8 @@ var T = {
     lede:"Ein Eintrag im Kontextmenü, kodiert wird mit Googles <b>jpegli</b>. Es gibt nie eine Datei zurück, die schwerer ist als die übergebene, und es nimmt nichts mit: kein Exif, kein GPS, kein Farbprofil.",
     copy:"kopieren",
     after:"Geprüft gegen den SHA-256, den GitHub für die Version veröffentlicht. Ebenso einfach wieder entfernt, mit uninstall.ps1.",
+    afterLin:"Braucht cjpegli und nutzt oxipng und dwebp, wenn sie da sind: <code>apt install libjxl-tools oxipng webp</code>. Experimentell, und vom Autor nie ausgeführt.",
+    afterMac:"Braucht cjpegli und nutzt oxipng und dwebp, wenn sie da sind: <code>brew install jpeg-xl oxipng webp</code>. Experimentell, und vom Autor nie ausgeführt.",
     s1:"An echten Dateien", s2:"Drei Dinge, die es nicht tut", s3:"Die ganze Oberfläche",
     s4:"Linux und macOS", s5:"Holen",
     th1:"was man ihm gibt", th2:"vorher", th3:"nachher",
@@ -318,6 +344,8 @@ var T = {
     lede:"Uma entrada no menu de contexto, com a codificação a cargo do <b>jpegli</b>, da Google. Nunca devolve um ficheiro mais pesado do que aquele que recebeu, e não leva nada consigo: nem Exif, nem GPS, nem perfil de cor.",
     copy:"copiar",
     after:"Verificado com o SHA-256 que o GitHub publica para a versão. Sai da mesma forma, com uninstall.ps1.",
+    afterLin:"Precisa do cjpegli e usa o oxipng e o dwebp quando existem: <code>apt install libjxl-tools oxipng webp</code>. Experimental, e nunca executado pelo autor.",
+    afterMac:"Precisa do cjpegli e usa o oxipng e o dwebp quando existem: <code>brew install jpeg-xl oxipng webp</code>. Experimental, e nunca executado pelo autor.",
     s1:"Em ficheiros reais", s2:"Três coisas que não faz", s3:"Toda a interface",
     s4:"Linux e macOS", s5:"Obter",
     th1:"o que lhe dás", th2:"antes", th3:"depois",
@@ -340,6 +368,8 @@ var T = {
     lede:"Una voce nel menu contestuale e la codifica affidata a <b>jpegli</b>, di Google. Non restituisce mai un file più pesante di quello ricevuto, e non si porta dietro nulla: né Exif, né GPS, né profilo colore.",
     copy:"copia",
     after:"Verificato con lo SHA-256 che GitHub pubblica per la versione. Si toglie allo stesso modo, con uninstall.ps1.",
+    afterLin:"Richiede cjpegli e usa oxipng e dwebp quando ci sono: <code>apt install libjxl-tools oxipng webp</code>. Sperimentale, e mai eseguito dal suo autore.",
+    afterMac:"Richiede cjpegli e usa oxipng e dwebp quando ci sono: <code>brew install jpeg-xl oxipng webp</code>. Sperimentale, e mai eseguito dal suo autore.",
     s1:"Su file veri", s2:"Tre cose che non fa", s3:"Tutta l'interfaccia",
     s4:"Linux e macOS", s5:"Scaricarlo",
     th1:"cosa gli dai", th2:"prima", th3:"dopo",
@@ -362,6 +392,8 @@ var T = {
     lede:"Jedna pozycja w menu kontekstowym, kodowanie po stronie <b>jpegli</b> od Google. Nigdy nie oddaje pliku cięższego niż otrzymany i niczego ze sobą nie zabiera: żadnego Exif, GPS ani profilu kolorów.",
     copy:"kopiuj",
     after:"Sprawdzone sumą SHA-256, którą GitHub publikuje dla wydania. Usuwa się tak samo prosto, przez uninstall.ps1.",
+    afterLin:"Wymaga cjpegli, korzysta z oxipng i dwebp, jeśli są: <code>apt install libjxl-tools oxipng webp</code>. Eksperymentalne i nigdy nie uruchomione przez autora.",
+    afterMac:"Wymaga cjpegli, korzysta z oxipng i dwebp, jeśli są: <code>brew install jpeg-xl oxipng webp</code>. Eksperymentalne i nigdy nie uruchomione przez autora.",
     s1:"Na prawdziwych plikach", s2:"Trzy rzeczy, których nie zrobi", s3:"Cały interfejs",
     s4:"Linux i macOS", s5:"Pobierz",
     th1:"co mu dajesz", th2:"przed", th3:"po",
@@ -384,6 +416,8 @@ var T = {
     lede:"Один пункт в контекстном меню, кодирование берёт на себя <b>jpegli</b> от Google. Он никогда не возвращает файл тяжелее полученного и ничего с собой не тащит: ни Exif, ни GPS, ни цветового профиля.",
     copy:"копировать",
     after:"Проверено по SHA-256, который GitHub публикует для релиза. Удаляется так же просто, через uninstall.ps1.",
+    afterLin:"Нужен cjpegli, а oxipng и dwebp используются, если есть: <code>apt install libjxl-tools oxipng webp</code>. Экспериментально, автор это не запускал.",
+    afterMac:"Нужен cjpegli, а oxipng и dwebp используются, если есть: <code>brew install jpeg-xl oxipng webp</code>. Экспериментально, автор это не запускал.",
     s1:"На настоящих файлах", s2:"Три вещи, которых он не сделает", s3:"Весь интерфейс",
     s4:"Linux и macOS", s5:"Установить",
     th1:"что вы ему даёте", th2:"было", th3:"стало",
@@ -406,6 +440,8 @@ var T = {
     lede:"右クリックメニューに項目がひとつ。符号化は Google の <b>jpegli</b> が担当します。渡したものより重いファイルを返すことはなく、余計なものも持ち出しません。Exif も GPS もカラープロファイルもありません。",
     copy:"コピー",
     after:"GitHub がリリースごとに公開する SHA-256 と照合しています。uninstall.ps1 で同じように外せます。",
+    afterLin:"cjpegli が必要で、oxipng と dwebp があれば使います：<code>apt install libjxl-tools oxipng webp</code>。実験的で、作者は一度も実行していません。",
+    afterMac:"cjpegli が必要で、oxipng と dwebp があれば使います：<code>brew install jpeg-xl oxipng webp</code>。実験的で、作者は一度も実行していません。",
     s1:"実際のファイルで", s2:"やらないこと 3 つ", s3:"画面はこれで全部",
     s4:"Linux と macOS", s5:"入手する",
     th1:"渡すもの", th2:"変換前", th3:"変換後",
@@ -428,6 +464,8 @@ var T = {
     lede:"右键菜单里只多一项，编码交给 Google 的 <b>jpegli</b>。它绝不会还给你一个比原来更大的文件，也不会带走任何东西：没有 Exif，没有 GPS，没有色彩配置文件。",
     copy:"复制",
     after:"已用 GitHub 为该版本发布的 SHA-256 校验。用 uninstall.ps1 同样干净地卸载。",
+    afterLin:"需要 cjpegli，若装有 oxipng 与 dwebp 也会用上：<code>apt install libjxl-tools oxipng webp</code>。实验性质，作者从未运行过。",
+    afterMac:"需要 cjpegli，若装有 oxipng 与 dwebp 也会用上：<code>brew install jpeg-xl oxipng webp</code>。实验性质，作者从未运行过。",
     s1:"在真实文件上", s2:"它不做的三件事", s3:"界面就这些",
     s4:"Linux 与 macOS", s5:"获取",
     th1:"交给它的东西", th2:"之前", th3:"之后",
@@ -497,6 +535,44 @@ function scramble() {
     el.textContent = text.slice(0, shown) + noise;
   }, 42);
 }
+
+// One command per system. Linux and macOS share it, because the script works
+// out which of the two it landed on; only the note underneath differs, since
+// the package manager does not.
+var OS = {
+  win: { shell:'PowerShell',
+         cmd:'irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/install.ps1 | iex' },
+  lin: { shell:'bash',
+         cmd:'curl -fsSL https://raw.githubusercontent.com/da0t-exe/Jipeg/main/platform/install.sh | bash' },
+  mac: { shell:'bash',
+         cmd:'curl -fsSL https://raw.githubusercontent.com/da0t-exe/Jipeg/main/platform/install.sh | bash' }
+};
+
+function showOS(key) {
+  var o = OS[key] || OS.win;
+  document.getElementById('shell').textContent = o.shell;
+  document.getElementById('cmd').textContent = o.cmd;
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('on', tabs[i].getAttribute('data-os') === key);
+  }
+  var notes = document.querySelectorAll('.after [data-os]');
+  for (var j = 0; j < notes.length; j++) {
+    notes[j].hidden = notes[j].getAttribute('data-os') !== key;
+  }
+}
+
+(function () {
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].addEventListener('click', function () { showOS(this.getAttribute('data-os')); });
+  }
+  // Opened on a Mac or a Linux box, the tab that matters is already the one in
+  // front. The platform string is the only hint a page gets, and it is enough.
+  var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  if (/Mac/i.test(p)) { showOS('mac'); }
+  else if (/Linux|X11/i.test(p) && !/Android/i.test(navigator.userAgent || '')) { showOS('lin'); }
+})();
 
 var sel = document.getElementById('lang');
 for (var code in NAMES) {
