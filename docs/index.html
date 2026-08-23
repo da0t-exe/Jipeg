@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jipeg — right-click, lighter image</title>
+<meta name="description" content="Convert an image to JPEG from the Windows right-click menu, with Google's jpegli encoder. Smaller files, nothing added to them, and never a heavier one.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6.4' fill='%234A7BE8'/%3E%3Cpath d='M6.9 9.4h13.1v13.1H6.9z' fill='%23fff'/%3E%3Cpath d='M15.4 17.6h6.7v6.6h-6.7z' fill='%234A7BE8'/%3E%3Crect x='20.6' y='17.6' width='4.7' height='4.7' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0a0a0a; --panel:#111113; --edge:#1e1e22;
+  --ink:#f0f0f0; --dim:#a0a0a0; --mute:#6d6d73;
+  --accent:#4A7BE8; --accent-soft:rgba(74,123,232,.12);
+  --ok:#4ade80;
+  --mono:ui-monospace,SFMono-Regular,Monaco,Consolas,"Liberation Mono",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:light){
+  :root{ --bg:#fbfbfc; --panel:#fff; --edge:#e6e6ea; --ink:#15151a; --dim:#55555f; --mute:#8a8a94;
+         --accent:#2f5fd0; --accent-soft:rgba(47,95,208,.09); --ok:#1a9d52; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--mono);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;overflow-x:hidden;
+}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--mute)}
+a{color:inherit}
+.wrap{max-width:860px;margin:0 auto;padding:0 24px}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
+  background:color-mix(in srgb,var(--bg) 82%,transparent);
+  border-bottom:1px solid var(--edge);
+}
+.bar{display:flex;align-items:center;gap:14px;height:56px}
+.mark{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em}
+.mark svg{display:block;border-radius:5px}
+.chip{
+  font-size:11px;color:var(--dim);border:1px solid var(--edge);
+  padding:2px 8px;border-radius:999px;letter-spacing:.04em;
+}
+.bar nav{margin-left:auto;display:flex;gap:20px;font-size:13px;color:var(--dim)}
+.bar nav a{text-decoration:none;transition:color .2s}
+.bar nav a:hover{color:var(--ink)}
+@media(max-width:640px){ .bar nav a.hide-sm{display:none} }
+
+/* ---------- hero ---------- */
+.hero{padding:88px 0 64px}
+.status{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--dim);margin-bottom:26px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2.4s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+h1{
+  font-size:clamp(2rem,6.2vw,3.4rem);line-height:1.08;font-weight:700;
+  letter-spacing:-.035em;margin-bottom:20px;
+}
+h1 .scr{color:var(--accent)}
+.lede{color:var(--dim);max-width:56ch;font-size:clamp(.95rem,2.1vw,1.05rem)}
+.lede b{color:var(--ink);font-weight:600}
+
+/* ---------- install box ---------- */
+.cmd{
+  margin-top:34px;border:1px solid var(--edge);border-radius:var(--r);
+  background:var(--panel);overflow:hidden;
+}
+.cmd-top{
+  display:flex;align-items:center;gap:8px;padding:9px 14px;
+  border-bottom:1px solid var(--edge);font-size:11px;color:var(--mute);
+}
+.led{width:9px;height:9px;border-radius:50%;background:var(--edge)}
+.cmd-body{display:flex;align-items:center;gap:12px;padding:15px 16px;overflow-x:auto}
+.cmd-body code{font-size:13px;white-space:nowrap}
+.cmd-body .p{color:var(--accent);user-select:none}
+.copy{
+  margin-left:auto;flex:none;border:1px solid var(--edge);background:transparent;
+  color:var(--dim);font-family:var(--mono);font-size:11px;padding:5px 11px;
+  border-radius:6px;cursor:pointer;transition:all .2s;
+}
+.copy:hover{color:var(--ink);border-color:var(--mute)}
+.copy.done{color:var(--ok);border-color:var(--ok)}
+.sub{margin-top:11px;font-size:12px;color:var(--mute)}
+.sub a{color:var(--dim)}
+
+/* ---------- sections ---------- */
+section{padding:56px 0;border-top:1px solid var(--edge)}
+.h{display:flex;align-items:center;gap:12px;margin-bottom:30px}
+.h span{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.h h2{font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--edge);border:1px solid var(--edge);border-radius:var(--r);overflow:hidden}
+.stat{background:var(--bg);padding:22px 18px}
+.stat b{display:block;font-size:clamp(1.5rem,4vw,2rem);letter-spacing:-.03em;line-height:1.1}
+.stat.acc b{color:var(--accent)}
+.stat small{display:block;color:var(--mute);font-size:11.5px;margin-top:7px;line-height:1.5}
+
+/* ---------- cards ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.card{border:1px solid var(--edge);border-radius:var(--r);padding:20px;background:var(--panel);transition:border-color .25s,transform .25s}
+.card:hover{border-color:var(--mute);transform:translateY(-2px)}
+.card h3{font-size:14px;margin-bottom:8px;font-weight:600}
+.card p{font-size:13px;color:var(--dim);line-height:1.6}
+
+/* ---------- table ---------- */
+.tbl{border:1px solid var(--edge);border-radius:var(--r);overflow:hidden;overflow-x:auto}
+.tbl table{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;padding:11px 16px;color:var(--mute);font-weight:500;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;background:var(--panel);white-space:nowrap}
+.tbl td{padding:11px 16px;border-top:1px solid var(--edge);color:var(--dim);white-space:nowrap}
+.tbl td:first-child{color:var(--ink)}
+.tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+.gain{color:var(--accent)}
+.tbl tr:hover td{background:var(--accent-soft)}
+
+/* ---------- list ---------- */
+.notes{display:flex;flex-direction:column;gap:2px}
+.note{border-left:2px solid var(--edge);padding:14px 0 14px 20px;transition:border-color .25s,padding .25s}
+.note:hover{border-color:var(--accent);padding-left:26px}
+.note h4{font-size:13.5px;font-weight:600;margin-bottom:5px}
+.note p{font-size:12.5px;color:var(--dim);line-height:1.65}
+.note code{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+/* ---------- formats ---------- */
+.fmt{display:flex;flex-wrap:wrap;gap:7px}
+.fmt span{border:1px solid var(--edge);border-radius:6px;padding:5px 10px;font-size:11.5px;color:var(--dim)}
+.fmt span.on{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- shots ---------- */
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media(max-width:640px){.shots{grid-template-columns:1fr}}
+.shots figure{border:1px solid var(--edge);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.shots img{display:block;width:100%;height:auto}
+.shots figcaption{font-size:11.5px;color:var(--mute);padding:9px 13px;border-top:1px solid var(--edge)}
+
+/* ---------- cta / footer ---------- */
+.cta{display:flex;flex-wrap:wrap;gap:10px}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-size:13px;
+  padding:10px 17px;border-radius:8px;border:1px solid var(--edge);color:var(--ink);
+  transition:all .2s;
+}
+.btn:hover{border-color:var(--mute);transform:translateY(-1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+footer{border-top:1px solid var(--edge);padding:34px 0 48px;font-size:12px;color:var(--mute)}
+footer a{color:var(--dim)}
+.warn{border:1px solid var(--edge);border-left:2px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:15px 18px;font-size:12.5px;color:var(--dim);background:var(--panel)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <span class="mark">
+      <svg width="19" height="19" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="6.4" fill="#4A7BE8"/>
+        <path d="M6.9 9.4h13.1v13.1H6.9z" fill="#fff"/>
+        <path d="M15.4 17.6h6.7v6.6h-6.7z" fill="#4A7BE8"/>
+        <rect x="20.6" y="17.6" width="4.7" height="4.7" fill="#fff"/>
+      </svg>
+      jipeg
+    </span>
+    <span class="chip">v3.0</span>
+    <nav>
+      <a href="#numbers" class="hide-sm">numbers</a>
+      <a href="#what" class="hide-sm">what</a>
+      <a href="#how" class="hide-sm">how</a>
+      <a href="https://github.com/da0t-exe/Jipeg">github</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <div class="status"><span class="dot"></span> Windows 10 and 11 &middot; no administrator rights</div>
+    <h1>Right-click.<br>Lighter image.<br><span class="scr" id="scramble">Nothing else.</span></h1>
+    <p class="lede">
+      Jipeg adds one entry to the Windows right-click menu and encodes with
+      Google's <b>jpegli</b>. Smaller files, <b>no metadata carried over</b>, and
+      it will never hand you back something heavier than what you gave it.
+    </p>
+
+    <div class="cmd">
+      <div class="cmd-top"><span class="led"></span><span class="led"></span><span class="led"></span>&nbsp;PowerShell</div>
+      <div class="cmd-body">
+        <span class="p">&gt;</span>
+        <code id="cmd">irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/install.ps1 | iex</code>
+        <button class="copy" id="copy">copy</button>
+      </div>
+    </div>
+    <p class="sub">
+      Checked against the SHA-256 GitHub publishes for the release &middot;
+      removed just as simply with <a href="https://github.com/da0t-exe/Jipeg#uninstall">uninstall.ps1</a>
+    </p>
+  </div>
+
+  <section id="numbers">
+    <div class="h"><span></span><h2>Measured, not claimed</h2></div>
+    <div class="stats">
+      <div class="stat acc"><b>&minus;90%</b><small>a photograph, at the default quality</small></div>
+      <div class="stat acc"><b>&minus;62%</b><small>a transparent logo, with nothing lost at all</small></div>
+      <div class="stat"><b>0</b><small>bytes of metadata in what comes out</small></div>
+      <div class="stat"><b>0.3s</b><small>for a 1400&times;950 photograph</small></div>
+    </div>
+    <div style="height:16px"></div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>what you give it</th><th class="n">before</th><th class="n">after</th><th class="n">change</th></tr></thead>
+        <tbody>
+          <tr><td>photograph (PNG)</td><td class="n">630 KB</td><td class="n">66 KB</td><td class="n gain">&minus;90%</td></tr>
+          <tr><td>scan of a document</td><td class="n">10 KB</td><td class="n">3 KB</td><td class="n gain">&minus;68%</td></tr>
+          <tr><td>transparent logo</td><td class="n">1.1 KB</td><td class="n">0.4 KB</td><td class="n gain">&minus;62%</td></tr>
+          <tr><td>diagram, flat colour</td><td class="n">3.9 KB</td><td class="n">1.7 KB</td><td class="n gain">&minus;57%</td></tr>
+          <tr><td>screenshot</td><td class="n">36 KB</td><td class="n">26 KB</td><td class="n gain">&minus;29%</td></tr>
+          <tr><td>a JPEG already small</td><td class="n">40 KB</td><td class="n">&mdash;</td><td class="n">left alone</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="what">
+    <div class="h"><span></span><h2>What it does that others do not</h2></div>
+    <div class="cards">
+      <div class="card">
+        <h3>Never heavier</h3>
+        <p>JPEG is bad at flat colour and text. When the result would weigh more than the original, nothing is written and it says so — the lighter file was already on your disk.</p>
+      </div>
+      <div class="card">
+        <h3>Transparency survives</h3>
+        <p>A PNG with transparent pixels is never flattened onto white. It is shrunk as a PNG instead, losslessly: pixels and alpha come back byte for byte identical.</p>
+      </div>
+      <div class="card">
+        <h3>Nothing tags along</h3>
+        <p>No Exif, no GPS, no camera model, no colour profile, no thumbnail. The rotation a phone asks for is applied to the pixels, then thrown away with the rest.</p>
+      </div>
+      <div class="card">
+        <h3>Colour by content</h3>
+        <p>Chroma subsampling is chosen by measuring the picture's hard colour transitions — the thing 4:2:0 destroys. Photographs score zero, a screenshot 3.5%.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="h"><span></span><h2>It looks like Windows, because it is Windows</h2></div>
+    <div class="shots">
+      <figure><img src="preview.png" alt="The Jipeg progress window at the end of a conversion" loading="lazy"><figcaption>the whole interface, while converting</figcaption></figure>
+      <figure><img src="settings.png" alt="The Jipeg settings window" loading="lazy"><figcaption>six settings, and no more</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="h"><span></span><h2>Formats</h2></div>
+    <div class="fmt">
+      <span class="on">PNG</span><span class="on">JPEG</span><span class="on">WebP</span><span class="on">GIF</span>
+      <span class="on">APNG</span><span class="on">BMP</span><span class="on">TIFF</span><span class="on">ICO</span>
+      <span class="on">JXL</span><span class="on">PPM</span><span class="on">PNM</span><span class="on">PGM</span>
+      <span class="on">PAM</span><span class="on">PFM</span><span class="on">EMF</span><span class="on">WMF</span>
+      <span>HEIC</span><span>HEIF</span><span>AVIF</span><span>JPEG&nbsp;XR</span>
+    </div>
+    <p class="sub">Blue is read out of the box. The last four need the free Microsoft Store codec — Jipeg names the one to install rather than failing quietly.</p>
+  </section>
+
+  <section id="how">
+    <div class="h"><span></span><h2>Under the hood</h2></div>
+    <div class="notes">
+      <div class="note">
+        <h4>The smallest JPEG jpegli can write</h4>
+        <p>Every switch was measured. <code>--xyb</code> is 24% smaller and rejected: a viewer that ignores its colour profile renders an average error of 34.78 against 0.88. The progressive level, which changes no pixel at all, sat at a default that was never the smallest of the three — worth 1 to 7%.</p>
+      </div>
+      <div class="note">
+        <h4>Corners identical to the byte</h4>
+        <p>GDI+ rasterises the right and bottom of a shape differently from the left and top. Every rounded shape is drawn once and its top-left quarter mirrored over the other three, so all four corners measure <b>0</b> difference.</p>
+      </div>
+      <div class="note">
+        <h4>Drawn at your screen's real resolution</h4>
+        <p>The window asks Windows for per-monitor DPI awareness rather than being stretched up from 96 DPI, and one factor sets the fonts, every control and every radius — capped by what the screen can actually hold.</p>
+      </div>
+      <div class="note">
+        <h4>When something goes wrong, there is something to read</h4>
+        <p>A log holds the machine, the settings in force, every failure with its reason and a summary of every batch. Nothing waits for ever: the encoder gets two minutes, the WebP tools thirty seconds.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="h"><span></span><h2>Linux and macOS</h2></div>
+    <div class="warn">
+      <b>Experimental, and never run by its author.</b> The same right-click entry for
+      GNOME&nbsp;Files, KDE&nbsp;Dolphin, XFCE&nbsp;Thunar and the macOS Finder lives in
+      <code>platform/</code>. It was written on Windows: the shell parses and the property
+      lists are valid XML, and that is the whole of what has been checked.
+    </div>
+  </section>
+
+  <section>
+    <div class="h"><span></span><h2>Get it</h2></div>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/da0t-exe/Jipeg/releases/latest">Download the latest release</a>
+      <a class="btn" href="https://github.com/da0t-exe/Jipeg">Source on GitHub</a>
+      <a class="btn" href="https://github.com/da0t-exe/Jipeg#settings">Read the manual</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    Encoding by <a href="https://github.com/google/jpegli">jpegli</a>, built by
+    <a href="https://github.com/libjxl/libjxl">libjxl</a>. PNGs shrunk by
+    <a href="https://github.com/oxipng/oxipng">oxipng</a>, WebP read by
+    <a href="https://github.com/webmproject/libwebp">libwebp</a>.
+    Jipeg is MIT licensed and is not affiliated with Google or the JPEG committee.
+  </div>
+</footer>
+
+<script>
+(function () {
+  // The headline settles into place one character at a time, the rest of it
+  // still noise. The same trick the reference used, kept short.
+  var el = document.getElementById('scramble');
+  if (!el) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var text = el.textContent, chars = '-_~`!@#$%^&*()+=[]{}|;:,.<>?', shown = 0;
+  var t = setInterval(function () {
+    shown++;
+    if (shown >= text.length) { el.textContent = text; clearInterval(t); return; }
+    var noise = '';
+    for (var i = shown; i < text.length; i++) {
+      noise += text.charAt(i) === ' ' ? ' ' : chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    el.textContent = text.slice(0, shown) + noise;
+  }, 45);
+})();
+
+document.getElementById('copy').addEventListener('click', function () {
+  var b = this, txt = document.getElementById('cmd').textContent;
+  var done = function () {
+    b.textContent = 'copied'; b.classList.add('done');
+    setTimeout(function () { b.textContent = 'copy'; b.classList.remove('done'); }, 1600);
+  };
+  if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt).then(done, done); return; }
+  var a = document.createElement('textarea');
+  a.value = txt; a.style.position = 'fixed'; a.style.opacity = '0';
+  document.body.appendChild(a); a.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(a); done();
+});
+</script>
+</body>
+</html>

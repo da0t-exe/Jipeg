@@ -12,6 +12,7 @@
 # macOS port working and failing before it prints anything.
 *.sh text eol=lf
 *.md text eol=lf
+*.html text eol=lf
 
 # never touched
 *.exe binary
