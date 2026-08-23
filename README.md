@@ -34,8 +34,7 @@ or `-Gui` for the setup window.
 Or by hand:
 
 1. Download the ZIP from [Releases](https://github.com/da0t-exe/Jipeg/releases/latest) and unpack it.
-2. Double-click **`Install.bat`**.
-3. Click **Install**.
+2. Run `src\Install-Jipeg.ps1` — add `-Silent` to skip the window.
 
 No administrator rights. Everything stays inside your user profile.
 
@@ -71,6 +70,15 @@ Right-click an image → **Convert to JPEG (Jipeg)**.
 | **Close the window automatically** | Off by default, so the result stays until you dismiss it. |
 | **Install new versions quietly** | Once a day, after a conversion and never during one, Jipeg looks for a newer release and installs it without showing anything. Only from this repository, only a strictly higher version, and only if the archive matches the SHA-256 GitHub publishes for it. Turn it off and nothing is fetched. |
 | **Check for updates** | The settings window also checks when it opens, without blocking. If a newer release exists the button becomes *Update* and installs it on the spot — the same download, checksum and silent install the daily check uses, just without waiting for tomorrow. |
+
+## Linux and macOS
+
+There is an experimental port in [`platform/`](platform/) — the same right-click
+entry for GNOME Files, KDE Dolphin, XFCE Thunar and the macOS Finder, following
+the same rules. **It has never been run by its author**, who works on Windows:
+the shell parses and the property lists are valid XML, and that is the whole of
+what has been checked. See [`platform/README.md`](platform/README.md) for what is
+most likely to break.
 
 ## Supported formats
 
@@ -148,7 +156,20 @@ reporting a problem, send that file.
 
 ## Uninstall
 
-**`Uninstall.bat`**, or *Settings → Installed apps → Jipeg*.
+One line in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/uninstall.ps1 | iex
+```
+
+It asks once, with the same ten-second countdown as the installer, and answers
+itself if nobody is at the keyboard. Add `-Yes` to skip the question:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/da0t-exe/Jipeg/main/uninstall.ps1))) -Yes
+```
+
+Or *Settings → Installed apps → Jipeg*.
 
 Removes the context menu entry, the Start menu shortcut, the install folder and — only if the
 installer turned it on — the classic context menu tweak. Converted images are left alone.
@@ -324,8 +345,7 @@ corners Windows 11 draws itself. What needed doing by hand:
 
 ```
 install.ps1              one-line installer, fetches the latest release
-Install.bat              runs the installer
-Uninstall.bat            runs the uninstaller
+uninstall.ps1            one-line uninstaller
 bin/cjpegli.exe          the jpegli encoder (+ component licences)
 bin/dwebp.exe            libwebp's WebP decoder
 bin/webpmux.exe          pulls the first frame out of an animated WebP
@@ -338,6 +358,7 @@ src/Install-Jipeg.ps1    installer (window, or -Silent for deployment)
 src/Uninstall-Jipeg.ps1
 src/launch.vbs           starts the converter without a console window
 src/settings.vbs         starts the settings window without a console window
+platform/                Linux and macOS, experimental and untested
 ```
 
 ## Credits and licences

@@ -1,11 +1,20 @@
-# Ces scripts ne tournent que sous Windows : on garantit des fins de ligne CRLF
-# aussi bien a la copie de travail que dans l'archive ZIP produite par GitHub.
 * text=auto
 
+# Windows reads these, and the console ones must keep CRLF or a stray line
+# shows up wrong in cmd.
+*.ps1 text eol=crlf
 *.bat text eol=crlf
 *.vbs text eol=crlf
-*.ps1 text eol=crlf
-*.md  text eol=lf
 
+# Unix reads these, and a shell script with CRLF endings does not start at all:
+# the interpreter line ends in a carriage return and the kernel looks for
+# "/usr/bin/env bash\r". This one line is the difference between the Linux and
+# macOS port working and failing before it prints anything.
+*.sh text eol=lf
+*.md text eol=lf
+
+# never touched
 *.exe binary
+*.ico binary
 *.png binary
+*.zip binary
