@@ -71,7 +71,13 @@ try {
 $JipegAsked = $JipegRealDpi
 if ($env:JIPEG_SCALE) {
     $forced = 0.0
-    if ([double]::TryParse($env:JIPEG_SCALE, [ref]$forced) -and $forced -ge 0.5 -and $forced -le 4.0) {
+    # Parsed against the invariant culture, not the machine's: on a French
+    # Windows [double]::TryParse('1.5') returns false, and the override would
+    # have been silently ignored on exactly the machines most likely to use it.
+    $inv = [System.Globalization.CultureInfo]::InvariantCulture
+    $style = [System.Globalization.NumberStyles]::Float
+    if ([double]::TryParse($env:JIPEG_SCALE, $style, $inv, [ref]$forced) -and
+        $forced -ge 0.5 -and $forced -le 4.0) {
         $JipegAsked = $forced
     }
 }

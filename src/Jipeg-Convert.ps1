@@ -634,7 +634,11 @@ function Start-Next {
         $dir = Split-Path -Parent $src
         $script:TmpOut = Join-Path $dir ('.jipeg-{0}.tmp' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
 
-        $cmdArgs = '"{0}" "{1}" -q {2}' -f $source, $script:TmpOut, $Settings.quality
+        # The quality goes onto a command line, so it is written as a plain
+        # integer rather than through the machine's number format: a decimal
+        # separator picked up from a French or German Windows would reach
+        # cjpegli as "90,5" and be refused.
+        $cmdArgs = '"{0}" "{1}" -q {2}' -f $source, $script:TmpOut, ([int]$Settings.quality)
         # 'auto' used to answer "yes, full colour" for anything that was not a
         # JPEG, which meant every PNG, every screenshot and every WebP was
         # encoded 4:4:4 - the most expensive setting there is, measured at 14 to
