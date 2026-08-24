@@ -374,11 +374,29 @@ function ConvertTo-JipegPng-Gdi([string]$src, [string]$dst, [int]$orientation = 
         try {
             $flip = Get-JipegRotateFlip $orientation
             if ($flip) { $img.RotateFlip($flip) }
-            $bmp = New-Object System.Drawing.Bitmap($img.Width, $img.Height,
-                       [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+            # Transparency is carried through instead of being painted over.
+            # This cleared to white whatever came in, which is how a see-through
+            # WebP, GIF or TIFF reached the encoder already stuck on a white
+            # square. What to do about the transparency is decided further on -
+            # the decoder's one job here is not to destroy it.
+            #
+            # An indexed image needs its palette read: GDI reports
+            # Format8bppIndexed for a transparent GIF and answers False to both
+            # IsAlphaPixelFormat and the HasAlpha flag, so the transparent
+            # entry only shows up in the palette itself.
+            $keep = [System.Drawing.Image]::IsAlphaPixelFormat($img.PixelFormat)
+            if (-not $keep -and $img.Palette -and $img.Palette.Entries.Count -gt 0) {
+                foreach ($entry in $img.Palette.Entries) {
+                    if ($entry.A -lt 255) { $keep = $true; break }
+                }
+            }
+            $format = [System.Drawing.Imaging.PixelFormat]::Format24bppRgb
+            if ($keep) { $format = [System.Drawing.Imaging.PixelFormat]::Format32bppArgb }
+            $bmp = New-Object System.Drawing.Bitmap($img.Width, $img.Height, $format)
             try {
                 $g = [System.Drawing.Graphics]::FromImage($bmp)
-                $g.Clear([System.Drawing.Color]::White)
+                if ($keep) { $g.Clear([System.Drawing.Color]::Transparent) }
+                else       { $g.Clear([System.Drawing.Color]::White) }
                 $g.PixelOffsetMode   = 'Half'
                 $g.InterpolationMode = 'NearestNeighbor'
                 $g.DrawImage($img, (New-Object System.Drawing.Rectangle(0, 0, $img.Width, $img.Height)))
@@ -594,16 +612,39 @@ function Start-Next {
                 $raw = Join-Path $env:TEMP ('jipeg-raw-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
                 if ($WebpExt -contains $ext) { ConvertTo-JipegPng-Webp $src $raw }
                 else                         { ConvertTo-JipegPng-Wic  $src $raw $ext }
-                # these decoders keep the alpha channel, so the same flattening
-                # applies to them
-                $rawPng = Get-JipegPngFacts $raw
-                if ($rawPng.Alpha -or $rawPng.Animated) { ConvertTo-JipegPng-Gdi $raw $tmpPng }
+                # Only an animated file still needs GDI, to pick the first
+                # frame out of it. Transparency alone does not, and sending it
+                # through here is what used to flatten it.
+                if ((Get-JipegPngFacts $raw).Animated) { ConvertTo-JipegPng-Gdi $raw $tmpPng }
                 else { Move-Item -LiteralPath $raw -Destination $tmpPng -Force }
                 Remove-Item -LiteralPath $raw -Force -ErrorAction SilentlyContinue
             } else {
                 ConvertTo-JipegPng-Gdi $src $tmpPng $orient
             }
             $source = $tmpPng; $script:TmpIn = $tmpPng
+        }
+
+        # The rule above - transparency is never flattened - was written for
+        # PNG sources and only ever checked those. Every other format that can
+        # carry an alpha channel walked straight past it: measured on a 900x700
+        # lossless WebP, 351,403 transparent pixels went in and none came out,
+        # the picture arriving on a white square. The question is asked again
+        # here, of whatever the decoders produced, so the answer no longer
+        # depends on which door the file came in through.
+        if ($script:TmpIn -and (Test-JipegTransparentPixels $source)) {
+            $script:Mode = 'png'
+            $script:TmpOut = Join-Path (Split-Path -Parent $src) ('.jipeg-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
+            Copy-Item -LiteralPath $source -Destination $script:TmpOut -Force
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName               = $Oxipng
+            $psi.Arguments              = '-o 4 --strip safe -q "{0}"' -f $script:TmpOut
+            $psi.UseShellExecute        = $false
+            $psi.CreateNoWindow         = $true
+            $psi.RedirectStandardError  = $true
+            $psi.RedirectStandardOutput = $true
+            $script:Proc = [System.Diagnostics.Process]::Start($psi)
+            $script:ProcStarted = Get-Date
+            return
         }
 
         # One decode answers both questions: is the picture grey, and does it

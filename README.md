@@ -92,12 +92,17 @@ This is most of what separates Jipeg from any other converter.
   bad at flat colour and text. Measured on real files, a screenshot grew 88%, a
   diagram 325%, a 64-pixel icon 448%. Those are not written at all — the lighter
   version was already on your disk, and the summary says how many were left alone.
-- **It never flattens transparency onto a background.** A PNG with transparent
-  pixels is not turned into a JPEG, because JPEG has no alpha channel and the only
-  way to make one is to paint something behind the picture. Those files are shrunk
-  as PNGs instead, losslessly: the pixels and the alpha channel come back byte for
-  byte identical. A PNG that would merely have grown as a JPEG takes the same
-  route rather than producing nothing.
+- **It never flattens transparency onto a background.** A picture with
+  see-through pixels is not turned into a JPEG, because JPEG has no alpha channel
+  and the only way to make one is to paint something behind the picture. Those
+  files are shrunk as PNGs instead, losslessly: the pixels and the alpha channel
+  come back byte for byte identical. This holds whichever format the transparency
+  arrived in — PNG, WebP, GIF, TIFF, ICO — and the question is asked of the pixels
+  rather than the header, so a GIF that declares a transparent palette entry it
+  never uses is still encoded as the opaque picture it actually is. Where the
+  lossless result would be heavier than the original, the original is kept. A PNG
+  that would merely have grown as a JPEG takes the same route rather than
+  producing nothing.
 - **It carries nothing over.** No Exif, no GPS, no camera model, no colour
   profile, no embedded thumbnail. That is the single biggest saving on a phone
   photograph, and it means the file cannot tell anyone where it was taken. The
@@ -153,7 +158,11 @@ likely to break.
 Twenty behaviours are checked against a corpus on every change — the formats
 above, a transparent PNG, a grey one, a rotated photograph, a file that would
 grow, an empty file, a truncated one, a JPEG saved under a `.png` name, a
-read-only source and a name full of accents and spaces. Alongside them:
+read-only source and a name full of accents and spaces. A wider run of 48 adds
+the eight Exif orientations one at a time, a 16-bit PNG, an interlaced one,
+2000×40 and 37×1301, transparency arriving as WebP, GIF, TIFF and ICO, a name
+in Japanese, one 130 characters long, and a file already carrying the
+`_jipeg` suffix. Alongside them:
 the settings migration (7 cases), the Exif orientation reader (7), the JPEG
 frame-header reader (5), the timeout guard, the stale-lock rule, the update
 round trip and a full uninstall-reinstall cycle. The window's geometry is

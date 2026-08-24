@@ -331,9 +331,51 @@ namespace Jipeg {
         return true;
       } finally { b.UnlockBits(d); }
     }
+
+    // Whether any pixel is actually see-through. Having an alpha channel is a
+    // different question, and the two answers part company more often than
+    // they look: a GIF can declare a transparent palette entry the picture
+    // never uses, and a frame decoded from one arrives with a full alpha
+    // channel in which every byte is 255. Answering the first question when
+    // the second was meant sends a perfectly opaque image down the lossless
+    // path and gives up a better result for nothing. Every pixel is read -
+    // sampling would eventually miss the one transparent corner that matters.
+    public static bool AnyTransparent(Bitmap b) {
+      if (b.Width < 1 || b.Height < 1) return false;
+      Rectangle r = new Rectangle(0, 0, b.Width, b.Height);
+      BitmapData d = b.LockBits(r, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+      try {
+        byte[] row = new byte[d.Stride];
+        for (int y = 0; y < b.Height; y++) {
+          Marshal.Copy(IntPtr.Add(d.Scan0, y * d.Stride), row, 0, d.Stride);
+          for (int x = 0; x < b.Width; x++) {
+            if (row[x * 4 + 3] < 255) return true;
+          }
+        }
+        return false;
+      } finally { b.UnlockBits(d); }
+    }
   }
 }
 '@ -ReferencedAssemblies System.Drawing
+
+# Whether the picture has a pixel you can see through, asked of the pixels
+# themselves rather than of the header. Unreadable answers yes: the only thing
+# it costs is a lossless attempt that will fail the same way the other path
+# would have, whereas answering no destroys transparency for good.
+function Test-JipegTransparentPixels([string]$path) {
+    $fs = $null; $bmp = $null
+    try {
+        $fs  = [System.IO.File]::OpenRead($path)
+        $bmp = New-Object System.Drawing.Bitmap($fs)
+        return [Jipeg.Pixels]::AnyTransparent($bmp)
+    } catch {
+        return $true
+    } finally {
+        if ($bmp) { $bmp.Dispose() }
+        if ($fs)  { $fs.Dispose() }
+    }
+}
 
 # What a WebP actually holds, read from its RIFF header: VP8 is lossy and always
 # 4:2:0 inside, VP8L is lossless, and VP8X with an ANIM chunk is an animation -
