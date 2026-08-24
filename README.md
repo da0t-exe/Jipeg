@@ -147,6 +147,35 @@ and the property lists are valid XML, and that is the whole of what has been
 checked. See [`platform/README.md`](platform/README.md) for where it is most
 likely to break.
 
+## Tested, and not tested
+
+Twenty behaviours are checked against a corpus on every change — the formats
+above, a transparent PNG, a grey one, a rotated photograph, a file that would
+grow, an empty file, a truncated one, a JPEG saved under a `.png` name, a
+read-only source and a name full of accents and spaces. Alongside them:
+the settings migration (7 cases), the Exif orientation reader (7), the JPEG
+frame-header reader (5), the timeout guard, the stale-lock rule, the update
+round trip and a full uninstall-reinstall cycle. The window's geometry is
+measured rather than looked at: all four corners of every rounded shape come out
+identical to the byte.
+
+**All of it on one machine**: Windows 11 build 26100, one screen at 100%
+scaling, dark theme, one accent colour, French as the system language.
+
+What that leaves untested, in plain terms:
+
+| | |
+|---|---|
+| **HEIC, HEIF, AVIF, JPEG XR** | Never actually decoded. The codecs are not installed here, so only the message naming the missing one is verified. |
+| **Display scaling** | Only simulated, with `JIPEG_SCALE`. The layout has never been seen on a real 125% or 150% screen. |
+| **Linux and macOS** | Never executed at all. See [`platform/README.md`](platform/README.md). |
+| **Other Windows** | No other build, no other system language, no other accent colour, no second monitor, no touch. |
+| **Somebody else's machine** | No antivirus, no managed or corporate policy, no SmartScreen prompt as a stranger would see it. |
+
+The two bugs that mattered most — PNGs coming out heavier, and WebP — were found
+by somebody else running it, not by any of the above. That is the honest measure
+of what this covers.
+
 ## When something goes wrong
 
 Jipeg keeps a log at `%LOCALAPPDATA%\Jipeg\jipeg.log`. One line per event: what
