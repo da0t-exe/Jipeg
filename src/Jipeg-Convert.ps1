@@ -12,6 +12,7 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $Cjpegli  = Join-Path $Root 'bin\cjpegli.exe'
 $Settings = Get-JipegSettings
+$L        = Import-JipegLang $Settings.language
 $Theme    = Get-JipegTheme $Settings.theme
 $Suffix   = '_jipeg'
 
@@ -110,7 +111,7 @@ foreach ($f in @(Read-Queue)) { if ($Files -notcontains $f) { $Files.Add($f) } }
 
 if (-not (Test-Path -LiteralPath $Cjpegli)) {
     [void][System.Windows.Forms.MessageBox]::Show(
-        "cjpegli.exe was not found at:`n$Cjpegli`n`nRun the Jipeg installer again.",
+        ('{0}{1}{2}{1}{1}{3}' -f $L.cvNoEncoder, [Environment]::NewLine, $Cjpegli, $L.cvReinstall),
         'Jipeg', 'OK', 'Error')
     exit 1
 }
@@ -154,7 +155,7 @@ $lblTitle = New-Object System.Windows.Forms.Label
 $lblTitle.SetBounds(16, 16, 398, 24)
 $lblTitle.Font = $JipegFontSection
 $lblTitle.ForeColor = $Theme.Text
-$lblTitle.Text = 'Getting ready...'
+$lblTitle.Text = $L.cvReady
 Set-JipegLabel $lblTitle $Theme $Mica
 $form.Controls.Add($lblTitle)
 
@@ -230,7 +231,7 @@ $form.Controls.Add($lblSizes)
 
 $btn = New-Object System.Windows.Forms.Button
 $btn.SetBounds(430 - 16 - 100, 102, 100, 32)
-$btn.Text = 'Cancel'
+$btn.Text = $L.btnCancel
 Set-JipegButton $btn $Theme $Backdrop
 $form.Controls.Add($btn)
 $form.CancelButton = $btn
@@ -276,8 +277,8 @@ function Set-Bar([double]$fraction) {
 
 function Set-Status {
     $n = $Files.Count
-    if ($n -eq 1) { $lblTitle.Text = 'Converting to JPEG...' }
-    else          { $lblTitle.Text = "Converting to JPEG... ($($script:Index) of $n)" }
+    if ($n -eq 1) { $lblTitle.Text = $L.cvOne }
+    else          { $lblTitle.Text = $L.cvMany -f $script:Index, $n }
     if ($n -gt 0) { Set-Bar ($script:Index / [double]$n) } else { Set-Bar 0 }
 }
 
@@ -432,7 +433,7 @@ function Test-JipegPngHasAlpha([string]$path) {
     try {
         $fs = [System.IO.File]::OpenRead($path)
         $head = New-Object byte[] 26
-        if ($fs.Read($head, 0, 26) -lt 26) { return $false }
+        if ($fs.Read($head, 0, 26) -lt 26) { return $true }
         $type = [int]$head[25]
         if ($type -eq 4 -or $type -eq 6) { return $true }
         if ($type -ne 3) { return $false }        # only a palette can carry tRNS
@@ -447,7 +448,12 @@ function Test-JipegPngHasAlpha([string]$path) {
             [void]$br.ReadBytes($len + 4)
         }
     } catch { } finally { if ($fs) { $fs.Dispose() } }
-    return $false
+    # Only IDAT answers this for certain. Anything else - a truncated file, a
+    # length field pointing past the end, a read that throws - leaves the
+    # question open, and the two ways of being wrong do not cost the same:
+    # guessing "opaque" sends a transparent image down the JPEG path and
+    # flattens it for good, while guessing "transparent" costs a few kilobytes.
+    return $true
 }
 
 function Test-JipegPngNeedsDecode([string]$path) {
@@ -456,7 +462,7 @@ function Test-JipegPngNeedsDecode([string]$path) {
     try {
         $fs = [System.IO.File]::OpenRead($path)
         $head = New-Object byte[] 26
-        if ($fs.Read($head, 0, 26) -lt 26) { return $false }
+        if ($fs.Read($head, 0, 26) -lt 26) { return $true }
         $type = [int]$head[25]
         $alpha = ($type -eq 4 -or $type -eq 6)
         # 8 signature bytes, then IHDR: 4 length + 4 name + 13 data + 4 CRC.
@@ -475,7 +481,7 @@ function Test-JipegPngNeedsDecode([string]$path) {
         }
         return $alpha
     } catch { } finally { if ($fs) { $fs.Dispose() } }
-    return $false
+    return $true          # unreadable header: take the long way round, as above
 }
 
 # These run on the window's own thread, so an external tool that never returns
@@ -785,7 +791,7 @@ function Complete-Current {
     } else {
         Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
         $why = ($err -split "`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
-        if (-not $why) { $why = "the encoder refused it (exit $code)" }
+        if (-not $why) { $why = $L.cvRefused -f $code }
         Add-JipegReason ('{0}: {1}' -f [System.IO.Path]::GetFileName($script:Current), $why.Trim())
         $script:Failed++
     }
@@ -798,7 +804,7 @@ function Resume-Batch {
     # files arrived after the batch was done: pick the work back up
     $script:Finished = $false
     $autoClose.Stop()
-    $btn.Text = 'Cancel'
+    $btn.Text = $L.btnCancel
     $form.AcceptButton = $null
     $lblPercent.Text = ''
     $lblSizes.Text = ''
@@ -824,33 +830,31 @@ function Complete-Batch {
         $lblSizes.Text = '{0} {1} {2}' -f (Format-JipegSize $script:TotalIn), ([char]0x2192),
                                           (Format-JipegSize $script:TotalOut)
     }
-    $word = 'images'
-    if ($script:Done -eq 1) { $word = 'image' }
+    # One key for one, another for several, and a language that needs three
+    # forms can phrase both around the number instead - which is what the
+    # Russian and Polish files do.
+    $done = $L.cvDoneMany -f $script:Done
+    if ($script:Done -eq 1) { $done = $L.cvDoneOne }
     $tail = ''
-    if ($script:Failed -gt 0) {
-        $f = 'failures'; if ($script:Failed -eq 1) { $f = 'failure' }
-        $tail = ", $($script:Failed) $f"
-    }
-    if ($script:Kept -gt 0) { $tail = $tail + ", $($script:Kept) left alone" }
-    if ($script:Cancelled) {
-        $lblTitle.Text = "Cancelled - $($script:Done) $word converted$tail"
-    } else {
-        $lblTitle.Text = "$($script:Done) $word converted$tail"
-    }
+    if ($script:Failed -eq 1)    { $tail = $L.cvFailOne }
+    elseif ($script:Failed -gt 1) { $tail = $L.cvFailMany -f $script:Failed }
+    if ($script:Kept -gt 0) { $tail = $tail + ($L.cvKept -f $script:Kept) }
+    $lblTitle.Text = $done + $tail
+    if ($script:Cancelled) { $lblTitle.Text = $L.cvCancelled -f ($done + $tail) }
     Write-JipegLog ('batch    {0} converted, {1} failed, {2} left alone, {3} -> {4}' -f
         $script:Done, $script:Failed, $script:Kept,
         (Format-JipegSize $script:TotalIn), (Format-JipegSize $script:TotalOut))
     $lblFile.Text = ''
     if ($script:Kept -gt 0 -and $script:Failed -eq 0) {
-        $lblFile.Text = 'JPEG would have been bigger, so the originals were kept.'
+        $lblFile.Text = $L.cvKeptNote
     }
     if ($script:Failed -gt 0 -and $script:Reason) {
         $lblFile.Text = $script:Reason
         if ($script:Reasons.Count -gt 1) {
-            $lblFile.Text = '{0}  (+{1} more in the log)' -f $script:Reason, ($script:Reasons.Count - 1)
+            $lblFile.Text = $L.cvMore -f $script:Reason, ($script:Reasons.Count - 1)
         }
     }
-    $btn.Text = 'OK'
+    $btn.Text = $L.btnOK
     $btn.Enabled = $true
     $form.AcceptButton = $btn
     $btn.Focus()
@@ -885,8 +889,7 @@ $engine.Add_Tick({
         # with nothing on screen to say why. Two minutes is far past anything
         # real - a 1400x950 photograph takes about a third of a second.
         if (((Get-Date) - $script:ProcStarted).TotalSeconds -lt 120) { return }
-        Add-JipegReason ('{0}: the encoder took too long and was stopped.' -f
-                         [System.IO.Path]::GetFileName($script:Current))
+        Add-JipegReason ($L.cvTimeout -f [System.IO.Path]::GetFileName($script:Current))
         try { $script:Proc.Kill() } catch { }
         try { [void]$script:Proc.WaitForExit(2000) } catch { }
     }
@@ -929,7 +932,7 @@ $btn.Add_Click({
     if ($script:Finished) { $form.Close(); return }
     $script:Cancelled = $true
     $btn.Enabled = $false
-    $lblTitle.Text = 'Cancelling...'
+    $lblTitle.Text = $L.cvCancelling
 })
 
 $form.Add_Shown({

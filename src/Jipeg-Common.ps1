@@ -125,7 +125,60 @@ function Get-JipegDefaults {
         autoUpdate    = $true       # fetch and install newer releases quietly
         lastCheck     = 0           # ticks of the last update check
         lastUpdate    = ''          # what the last quiet update did
+        language      = 'auto'      # auto | one of the codes in $JipegLangs
     }
+}
+
+# ----------------------------------------------------------------- language
+# Ten of them, one file each, and only the one in use is ever read. The names
+# are written in the language itself on purpose: somebody who has landed in the
+# wrong one has to be able to find the way back out of the list.
+$JipegLangs = [ordered]@{
+    en = 'English';   fr = 'Français'; es = 'Español'; de = 'Deutsch'
+    pt = 'Português'; it = 'Italiano'; pl = 'Polski';   ru = 'Русский'
+    ja = '日本語';    zh = '中文'
+}
+
+# The wording of the right-click entry does not live with the other strings: it
+# is written into the registry when Jipeg is installed, and the shell reads it
+# from there. Changing the language has to come back and rewrite it, or the menu
+# keeps speaking whatever language the machine was in on installation day.
+function Set-JipegMenuLabels($lang) {
+    $done = 0
+    $assoc = 'HKCU:\Software\Classes\SystemFileAssociations'
+    if (Test-Path -LiteralPath $assoc) {
+        foreach ($ext in (Get-ChildItem -LiteralPath $assoc -ErrorAction SilentlyContinue)) {
+            $key = Join-Path $ext.PSPath 'shell\JipegConvert'
+            if (-not (Test-Path -LiteralPath $key)) { continue }
+            Set-ItemProperty -LiteralPath $key -Name 'MUIVerb' -Value $lang.verbFile
+            $done++
+        }
+    }
+    $dir = 'HKCU:\Software\Classes\Directory\shell\JipegConvert'
+    if (Test-Path -LiteralPath $dir) {
+        Set-ItemProperty -LiteralPath $dir -Name 'MUIVerb' -Value $lang.verbDir
+        $done++
+    }
+    return $done
+}
+
+function Import-JipegLang([string]$want) {
+    if (-not $want -or $want -eq 'auto') {
+        $want = [System.Globalization.CultureInfo]::CurrentUICulture.TwoLetterISOLanguageName
+    }
+    if (-not $JipegLangs.Contains($want)) { $want = 'en' }
+    $dir = Join-Path $PSScriptRoot 'lang'
+    $t = @{}
+    # English goes in first whatever the choice: it is what a key missing from a
+    # translation falls back to, so no line can ever come out blank.
+    foreach ($code in @('en', $want)) {
+        if ($code -eq 'en' -and $t.Count -gt 0) { continue }
+        try {
+            $f = Import-PowerShellDataFile (Join-Path $dir ($code + '.psd1'))
+            foreach ($k in $f.Keys) { if ($f[$k]) { $t[$k] = $f[$k] } }
+        } catch { }
+    }
+    return $t
 }
 
 $JipegLogPath = Join-Path (Split-Path -Parent $JipegSettingsPath) 'jipeg.log'
@@ -217,6 +270,7 @@ function Get-JipegSettings {
     if ($s.quality -lt 1 -or $s.quality -gt 100) { $s.quality = 90 }
     if ('auto', 'light', 'dark' -notcontains $s.theme) { $s.theme = 'auto' }
     if ('auto', 'always', 'never' -notcontains $s.chroma) { $s.chroma = 'auto' }
+    if ($s.language -ne 'auto' -and -not $JipegLangs.Contains($s.language)) { $s.language = 'auto' }
     return $s
 }
 

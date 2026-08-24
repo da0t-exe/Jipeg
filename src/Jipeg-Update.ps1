@@ -22,16 +22,23 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $Work = Join-Path $env:TEMP ('jipeg-update-{0}' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
 
-function Save-Trace([string]$text) {
+# The sentence the settings window shows is in the user's language; the one
+# written to the log stays in English. The log exists to be read by whoever is
+# working out why an update has been failing for a week, and that reader should
+# not have to guess which of ten languages the machine was set to.
+$UiLang = Import-JipegLang (Get-JipegSettings).language
+$EnLang = Import-JipegLang 'en'
+
+function Save-Trace([string]$key, [object[]]$parts) {
+    $shown = ''
     try {
         $s = Get-JipegSettings
         $s.lastCheck = [DateTime]::UtcNow.Ticks
-        if ($text) { $s.lastUpdate = $text }
+        if ($key) { $shown = $UiLang[$key] -f $parts; $s.lastUpdate = $shown }
         Save-JipegSettings $s
     } catch { }
-    # the settings file keeps the last word only; the log keeps all of them,
-    # which is what tells you whether an update has been failing for a week
-    if ($text) { try { Write-JipegLog ('update   ' + $text) } catch { } }
+    # the settings file keeps the last word only; the log keeps all of them
+    if ($key) { try { Write-JipegLog ('update   ' + ($EnLang[$key] -f $parts)) } catch { } }
 }
 
 try {
@@ -57,11 +64,11 @@ try {
     if (-not $rel) { exit 3 }                     # offline; try again tomorrow
 
     if ((Compare-JipegVersion $rel.Tag $JipegVersion) -le 0) {
-        Save-Trace ''                             # already current
+        Save-Trace '' @()                         # already current
         exit 2
     }
     if (-not $rel.AssetUrl -or -not $rel.Digest) {
-        Save-Trace "Skipped $($rel.Tag): no checksummed archive published."
+        Save-Trace 'trSkipped' @($rel.Tag)
         exit 3
     }
 
@@ -75,7 +82,7 @@ try {
 
     $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
     if ($actual -ne $rel.Digest) {
-        Save-Trace "Refused $($rel.Tag): checksum did not match."
+        Save-Trace 'trRefused' @($rel.Tag)
         exit 3
     }
 
@@ -83,7 +90,7 @@ try {
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, $Work)
     $setup = Get-ChildItem -Path $Work -Recurse -Filter 'Install-Jipeg.ps1' | Select-Object -First 1
     if (-not $setup) {
-        Save-Trace "Skipped $($rel.Tag): the archive had no installer."
+        Save-Trace 'trNoInstaller' @($rel.Tag)
         exit 3
     }
 
@@ -93,14 +100,14 @@ try {
         '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $setup.FullName, '-Silent')
 
     if ($proc.ExitCode -eq 0) {
-        Save-Trace ("Updated to {0} on {1}." -f $rel.Tag, (Get-Date).ToString('d MMM yyyy'))
+        Save-Trace 'trUpdated' @($rel.Tag, (Get-Date).ToString('d MMM yyyy'))
         $script:Code = 0
     } else {
-        Save-Trace "Update to $($rel.Tag) failed (exit $($proc.ExitCode))."
+        Save-Trace 'trFailed' @($rel.Tag, $proc.ExitCode)
         $script:Code = 3
     }
 } catch {
-    try { Save-Trace ("Update check failed: " + $_.Exception.Message) } catch { }
+    try { Save-Trace 'trCheckFail' @($_.Exception.Message) } catch { }
     $script:Code = 3
 } finally {
     if (Test-Path -LiteralPath $Work) {

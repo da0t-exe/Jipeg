@@ -13,10 +13,13 @@ $Project = Split-Path -Parent $Here
 . (Join-Path $Here 'Jipeg-Common.ps1')
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# The language has to be settled before anything else: the wording written
+# into the registry comes out of it, not just what this window says.
+$L      = Import-JipegLang (Get-JipegSettings).language
 $Dest   = Join-Path $env:LOCALAPPDATA 'Jipeg'
 $ZipUrl = 'https://github.com/libjxl/libjxl/releases/download/v0.11.1/jxl-x64-windows-static.zip'
 $ZipSha = '8F53EBCE91820C30C9FC9294F06380213C1E2E66B361718880580246B2BE008E'
-$Verb   = 'Convert to JPEG (Jipeg)'
+$Verb   = $L.verbFile
 
 # libwebp's own Windows build, from the WebM project's release host. Only
 # dwebp.exe is taken out of it: nothing else on a stock Windows reads WebP.
@@ -235,7 +238,7 @@ function Set-ContextMenu([string]$icon) {
     $key = 'HKCU:\Software\Classes\Directory\shell\JipegConvert'
     New-Item -Path $key -Force | Out-Null
     New-Item -Path "$key\command" -Force | Out-Null
-    Set-ItemProperty -Path $key -Name 'MUIVerb' -Value 'Convert images to JPEG (Jipeg)'
+    Set-ItemProperty -Path $key -Name 'MUIVerb' -Value $L.verbDir
     Set-ItemProperty -Path $key -Name 'Icon'    -Value $icon
     Set-ItemProperty -Path "$key\command" -Name '(default)' -Value (
         'wscript.exe "{0}" "%V"' -f (Join-Path $Dest 'launch.vbs'))
@@ -279,6 +282,15 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
                      'Jipeg-Update.ps1', 'Uninstall-Jipeg.ps1',
                      'launch.vbs', 'settings.vbs', 'update.vbs')) {
         Copy-Item -LiteralPath (Join-Path $Here $f) -Destination $Dest -Force
+    }
+    # The whole folder rather than a list: a language added to the repository
+    # then ships without anyone having to remember to name it here.
+    $langSrc = Join-Path $Here 'lang'
+    if (Test-Path -LiteralPath $langSrc) {
+        $langDest = Join-Path $Dest 'lang'
+        New-Item -ItemType Directory -Path $langDest -Force | Out-Null
+        Get-ChildItem -LiteralPath $langSrc -Filter '*.psd1' |
+            ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $langDest -Force }
     }
     $licSrc = Join-Path $Project 'bin'
     if (Test-Path $licSrc) {
@@ -337,7 +349,7 @@ $Mica  = ((Get-JipegSettings).mica -and (Test-JipegMica $Theme))   # suit le reg
 $Backdrop = $Theme.Back
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text            = 'Install Jipeg'
+$form.Text            = $L.inTitle
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
 $form.ClientSize      = New-Object System.Drawing.Size(520, 282)
@@ -364,7 +376,7 @@ $lbl1.ForeColor = $Theme.Text
 $lbl1.Font = $JipegFont
 $Quote1 = [char]0x201C
 $Quote2 = [char]0x201D
-$lbl1.Text = 'Jipeg adds {0}{1}{2} to the right-click menu on images and converts them with Google''s jpegli encoder.' -f $Quote1, $Verb, $Quote2
+$lbl1.Text = $L.inWhat -f ('{0}{1}{2}' -f $Quote1, $Verb, $Quote2)
 Set-JipegLabel $lbl1 $Theme $Mica
 $form.Controls.Add($lbl1)
 
@@ -372,7 +384,7 @@ $lbl2 = New-Object System.Windows.Forms.Label
 $lbl2.SetBounds(20, 72, 480, 40)
 $lbl2.Font = $JipegFontHint
 $lbl2.ForeColor = $Theme.Muted
-$lbl2.Text = "Installs to: $Dest" + [Environment]::NewLine + 'No administrator rights required.'
+$lbl2.Text = ($L.inWhere -f $Dest) + [Environment]::NewLine + $L.inNoAdmin
 Set-JipegLabel $lbl2 $Theme $Mica
 $form.Controls.Add($lbl2)
 
@@ -382,19 +394,18 @@ $chk.SetBounds(20, 124, 480, 22)
 $chk.AutoSize = $true   # la bande opaque epouse le texte au lieu de barrer le Mica
 $chk.Checked = $IsWin11
 $chk.Enabled = $IsWin11
-$chk.Text = 'Show the entry directly in the right-click menu'
+$chk.Text = $L.inChk
 Set-JipegCheck $chk $Theme $Theme.Back   # posee sur le fond de fenetre, pas sur une carte
-if (-not $IsWin11) { $chk.Text = 'Classic context menu - not needed on this Windows'; $chk.ForeColor = $Theme.Muted }
+if (-not $IsWin11) { $chk.Text = $L.inChkOld; $chk.ForeColor = $Theme.Muted }
 $form.Controls.Add($chk)
 
 $lblChk = New-Object System.Windows.Forms.Label
 $lblChk.SetBounds(44, 150, 456, 56)
 $lblChk.Font = $JipegFontHint
 $lblChk.ForeColor = $Theme.Muted
-$lblChk.Text = ('Otherwise Windows 11 hides it under {0}Show more options{1}.' -f $Quote1, $Quote2) +
-               [Environment]::NewLine + 'Explorer restarts: the taskbar and any open folders' +
-               [Environment]::NewLine + 'close, and come back after a few seconds.'
-if (-not $IsWin11) { $lblChk.Text = 'Your Windows already shows the full menu.' }
+$lblChk.Text = ($L.inChkHint -f ('{0}{1}{2}' -f $Quote1, $L.inShowMore, $Quote2)) +
+               [Environment]::NewLine + $L.inRestart
+if (-not $IsWin11) { $lblChk.Text = $L.inChkHintOld }
 Set-JipegLabel $lblChk $Theme $Mica
 $form.Controls.Add($lblChk)
 
@@ -407,13 +418,13 @@ $form.Controls.Add($lblState)
 
 $btnGo = New-Object System.Windows.Forms.Button
 $btnGo.SetBounds(520 - 20 - 100 - 8 - 100, 230, 100, 32)
-$btnGo.Text = 'Install'
+$btnGo.Text = $L.btnInstall
 Set-JipegButton $btnGo $Theme $Backdrop
 $form.Controls.Add($btnGo)
 
 $btnNo = New-Object System.Windows.Forms.Button
 $btnNo.SetBounds(520 - 20 - 100, 230, 100, 32)
-$btnNo.Text = 'Cancel'
+$btnNo.Text = $L.btnCancel
 Set-JipegButton $btnNo $Theme $Backdrop
 $btnNo.Add_Click({ $form.Close() })
 $form.Controls.Add($btnNo)
@@ -431,15 +442,15 @@ $btnGo.Add_Click({
         } ([bool]$chk.Checked)
         $form.Cursor = 'Default'
         [void][System.Windows.Forms.MessageBox]::Show(
-            'Jipeg is installed.' + [Environment]::NewLine + [Environment]::NewLine +
-            "Right-click an image   →   $Verb",
+            $L.inDone + [Environment]::NewLine + [Environment]::NewLine +
+            ($L.inDoneHow -f ([char]0x2192), $Verb),
             'Jipeg', 'OK', 'Information')
         $form.Close()
     } catch {
         $form.Cursor = 'Default'
         $lblState.Text = ''
         [void][System.Windows.Forms.MessageBox]::Show(
-            'The installation failed.' + [Environment]::NewLine + [Environment]::NewLine + $_.Exception.Message,
+            $L.inFailed + [Environment]::NewLine + [Environment]::NewLine + $_.Exception.Message,
             'Jipeg', 'OK', 'Error')
         $btnGo.Enabled = $true; $btnNo.Enabled = $true; $chk.Enabled = $IsWin11
     }

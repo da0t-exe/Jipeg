@@ -5,15 +5,15 @@ $ErrorActionPreference = 'SilentlyContinue'
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
 
 $Dest      = Join-Path $env:LOCALAPPDATA 'Jipeg'
+$L = Import-JipegLang (Get-JipegSettings).language
 $UninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jipeg'
 $Shortcut  = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Jipeg Settings.lnk'
 
 if (-not $Silent) {
     $r = [System.Windows.Forms.MessageBox]::Show(
-        'Remove Jipeg?' + [Environment]::NewLine + [Environment]::NewLine +
-        "The context menu entry and the folder $Dest will be deleted." + [Environment]::NewLine +
-        'Images you already converted are left alone.',
-        'Uninstall Jipeg', 'YesNo', 'Question')
+        $L.unAsk + [Environment]::NewLine + [Environment]::NewLine +
+        ($L.unWhat -f $Dest) + [Environment]::NewLine + $L.unKeep,
+        $L.unTitle, 'YesNo', 'Question')
     if ($r -ne 'Yes') { exit }
 }
 
@@ -47,5 +47,5 @@ if (Test-Path -LiteralPath $Dest) {
 }
 
 if (-not $Silent) {
-    [void][System.Windows.Forms.MessageBox]::Show('Jipeg has been removed.', 'Jipeg', 'OK', 'Information')
+    [void][System.Windows.Forms.MessageBox]::Show($L.unDone, 'Jipeg', 'OK', 'Information')
 }

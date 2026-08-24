@@ -8,6 +8,7 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 $Settings = Get-JipegSettings
+$L        = Import-JipegLang $Settings.language
 $Theme    = Get-JipegTheme $Settings.theme
 $Mica     = ($Settings.mica -and (Test-JipegMica $Theme))
 # What gets painted in the corners outside every rounded shape. Never black,
@@ -28,28 +29,18 @@ $FieldX   = $CardW - $Pad - $FieldW
 
 # One label per value, spelled out. Two entries reading "light, for the web"
 # told the reader nothing about the difference between them.
-$QualityText = @{
-    100 = 'maximum, files get very large'
-     96 = 'visually lossless'
-     92 = 'very high quality'
-     90 = 'high quality (default)'
-     85 = 'balanced'
-     80 = 'small files, still crisp'
-     75 = 'light, made for the web'
-     70 = 'strong compression'
-     60 = 'very strong, artefacts show'
-}
 function Quality-Label([int]$q) {
-    if ($QualityText.ContainsKey($q)) { return "$q - $($QualityText[$q])" }
-    return "$q - custom"
+    $key = 'q' + $q
+    if ($L.ContainsKey($key)) { return '{0} - {1}' -f $q, $L[$key] }
+    return '{0} - {1}' -f $q, $L.qCustom
 }
 
 # ------------------------------------------------------------------- window
 $form = New-Object System.Windows.Forms.Form
-$form.Text            = 'Jipeg Settings'
+$form.Text            = $L.stTitle
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size($W, 760)
+$form.ClientSize      = New-Object System.Drawing.Size($W, 798)
 # Everything below is written in the units the window was designed in; WinForms
 # multiplies them by the screen's scaling for us, so long as the process is
 # DPI-aware, which Jipeg-Common arranges before any window exists.
@@ -303,10 +294,10 @@ function New-Combo([int]$y, $parent) {
 }
 
 # --------------------------------------------------------------- conversion
-New-Section 'Conversion' 20
+New-Section $L.secConv 20
 $card1 = New-Card 50 138
 
-[void](New-Label 'JPEG quality' $Pad 16 160 $card1)
+[void](New-Label $L.lblQuality $Pad 16 160 $card1)
 $QualityValues = @(100, 96, 92, 90, 85, 80, 75, 70, 60)
 $cmbQ = New-Combo 14 $card1
 foreach ($v in $QualityValues) { [void]$cmbQ.Items.Add((Quality-Label $v)) }
@@ -317,78 +308,88 @@ if ($QualityValues -notcontains $saved) {
 }
 $cmbQ.SelectedIndex = [array]::IndexOf($QualityValues, $saved)
 
-[void](New-Hint 'Higher keeps more detail and makes bigger files.' $Pad 46 $InnerW $card1)
+[void](New-Hint $L.hintQuality $Pad 46 $InnerW $card1)
 
-[void](New-Label 'Colour detail' $Pad 74 160 $card1)
+[void](New-Label $L.lblChroma $Pad 74 160 $card1)
 $ChromaValues = @('auto', 'always', 'never')
 $cmbC = New-Combo 72 $card1
-[void]$cmbC.Items.AddRange(@('Follow the source', 'Always full (4:4:4)', 'Smaller files (4:2:0)'))
+[void]$cmbC.Items.AddRange(@($L.chromaAuto, $L.chromaFull, $L.chromaSmall))
 $cmbC.SelectedIndex = [array]::IndexOf($ChromaValues, [string]$Settings.chroma)
 if ($cmbC.SelectedIndex -lt 0) { $cmbC.SelectedIndex = 0 }
 
-[void](New-Hint 'Full colour keeps text and sharp edges clean, and costs some size.' $Pad 104 $InnerW $card1)
+[void](New-Hint $L.hintChroma $Pad 104 $InnerW $card1)
 
 # --------------------------------------------------------------- appearance
-New-Section 'Appearance' 208
-$card2 = New-Card 238 132
+New-Section $L.secAppearance 208
+$card2 = New-Card 238 170
 
-[void](New-Label 'Theme' $Pad 16 160 $card2)
-$cmbT = New-Combo 14 $card2
-[void]$cmbT.Items.AddRange(@('Follow Windows', 'Light', 'Dark'))
+# Every language is listed under its own name rather than translated into the
+# current one: somebody who has landed in the wrong language still has to be
+# able to recognise their way out of the list.
+[void](New-Label $L.lblLanguage $Pad 16 160 $card2)
+$cmbL = New-Combo 14 $card2
+$LangCodes = @('auto') + @($JipegLangs.Keys)
+[void]$cmbL.Items.Add($L.langAuto)
+foreach ($code in $JipegLangs.Keys) { [void]$cmbL.Items.Add($JipegLangs[$code]) }
+$cmbL.SelectedIndex = [math]::Max(0, $LangCodes.IndexOf([string]$Settings.language))
+
+[void](New-Label $L.lblTheme $Pad 54 160 $card2)
+$cmbT = New-Combo 52 $card2
+[void]$cmbT.Items.AddRange(@($L.themeAuto, $L.themeLight, $L.themeDark))
 $cmbT.SelectedIndex = switch ($Settings.theme) { 'light' { 1 } 'dark' { 2 } default { 0 } }
 
-[void](New-Hint 'Takes effect the next time a window opens.' $Pad 46 $InnerW $card2)
+[void](New-Hint $L.hintTheme $Pad 84 $InnerW $card2)
 
 $chkMica = New-Object System.Windows.Forms.CheckBox
-$chkMica.SetBounds($Pad, 74, $InnerW, 22)
-$chkMica.Text = 'Translucent window background (Mica)'
+$chkMica.SetBounds($Pad, 112, $InnerW, 22)
+$chkMica.Text = $L.chkMica
 $chkMica.Checked = [bool]$Settings.mica
 Set-JipegCheck $chkMica $Theme
 $card2.Controls.Add($chkMica)
-[void](New-Hint 'The Windows 11 material: the background picks up what is behind it.' ($Pad + 26) 98 ($InnerW - 26) $card2)
+[void](New-Hint $L.hintMica ($Pad + 26) 136 ($InnerW - 26) $card2)
 
-New-Section 'Updates' 390
-$card4 = New-Card 420 76
+New-Section $L.secUpdates 428
+$card4 = New-Card 458 76
 $chkAuto = New-Object System.Windows.Forms.CheckBox
 $chkAuto.SetBounds($Pad, 16, $InnerW, 22)
-$chkAuto.Text = 'Install new versions quietly'
+$chkAuto.Text = $L.chkAuto
 $chkAuto.Checked = [bool]$Settings.autoUpdate
 Set-JipegCheck $chkAuto $Theme
 $card4.Controls.Add($chkAuto)
-$autoHint = 'Checked once a day after a conversion, never during one.'
+$autoHint = $L.hintAuto
 if ($Settings.lastUpdate) { $autoHint = [string]$Settings.lastUpdate }
 [void](New-Hint $autoHint ($Pad + 26) 42 ($InnerW - 26) $card4)
 
 # ------------------------------------------------------------------ finish
-New-Section 'When a conversion finishes' 516
-$card3 = New-Card 546 76
+New-Section $L.secFinish 554
+$card3 = New-Card 584 76
 
 $chkClose = New-Object System.Windows.Forms.CheckBox
 $chkClose.SetBounds($Pad, 16, $InnerW, 22)
-$chkClose.Text = 'Close the window automatically'
+$chkClose.Text = $L.chkClose
 $chkClose.Checked = [bool]$Settings.closeWhenDone
 Set-JipegCheck $chkClose $Theme
 $card3.Controls.Add($chkClose)
-[void](New-Hint 'Otherwise the result stays on screen until you click OK.' ($Pad + 26) 42 ($InnerW - 26) $card3)
+[void](New-Hint $L.hintClose ($Pad + 26) 42 ($InnerW - 26) $card3)
 
 # ----------------------------------------------------------------- version
 $lblVer = New-Object System.Windows.Forms.Label
-$lblVer.SetBounds($Margin, 642, 260, 22)
+$lblVer.SetBounds($Margin, 680, 260, 22)
 $lblVer.ForeColor = $Theme.Text
 $lblVer.Text = "Jipeg $JipegVersion"
 Set-JipegLabel $lblVer $Theme $Mica
 $form.Controls.Add($lblVer)
 
 $lblUpd = New-Object System.Windows.Forms.Label
-$lblUpd.SetBounds($Margin, 664, 320, 18)
+$lblUpd.SetBounds($Margin, 702, 320, 18)
 $lblUpd.Font = $JipegFontHint
 $lblUpd.ForeColor = $Theme.Muted
 Set-JipegLabel $lblUpd $Theme $Mica
 $form.Controls.Add($lblUpd)
 
 $btnUpd = New-Object System.Windows.Forms.Button
-$btnUpd.SetBounds(($W - $Margin - 160), 646, 160, 32)
-$btnUpd.Text = 'Check for updates'
+$btnUpd.SetBounds(($W - $Margin - 160), 684, 160, 32)
+$btnUpd.Text = $L.btnCheck
 Set-JipegButton $btnUpd $Theme $Backdrop
 $form.Controls.Add($btnUpd)
 
@@ -398,14 +399,14 @@ $script:Job    = $null
 
 function Show-UpdateResult($rel) {
     if (-not $rel) {
-        $lblUpd.Text = 'Could not reach GitHub.'
+        $lblUpd.Text = $L.updNoReach
     } elseif ((Compare-JipegVersion $rel.Tag $JipegVersion) -gt 0) {
-        $lblUpd.Text = "Version $($rel.Tag) is available."
+        $lblUpd.Text = $L.updAvailable -f $rel.Tag
         $lblUpd.ForeColor = $Theme.Text
         $script:NewTag = $rel.Tag
-        $btnUpd.Text = 'Update'
+        $btnUpd.Text = $L.btnUpdate
     } else {
-        $lblUpd.Text = 'You have the latest version.'
+        $lblUpd.Text = $L.updLatest
     }
     $btnUpd.Enabled = $true
 }
@@ -413,9 +414,9 @@ function Show-UpdateResult($rel) {
 function Start-Check {
     $script:NewTag = $null
     $btnUpd.Enabled = $false
-    $btnUpd.Text = 'Check for updates'
+    $btnUpd.Text = $L.btnCheck
     $lblUpd.ForeColor = $Theme.Muted
-    $lblUpd.Text = 'Checking for updates...'
+    $lblUpd.Text = $L.updChecking
     $script:Check = Start-JipegUpdateCheck
     if (-not $script:Check) { Show-UpdateResult $null; return }
     $poll.Start()
@@ -430,13 +431,13 @@ function Start-Check {
 function Start-Update {
     $btnUpd.Enabled = $false
     $lblUpd.ForeColor = $Theme.Muted
-    $lblUpd.Text = "Downloading Jipeg $script:NewTag..."
+    $lblUpd.Text = $L.updDownloading -f $script:NewTag
     try {
         $script:Job = Start-Process -FilePath 'powershell.exe' -PassThru -WindowStyle Hidden -ArgumentList @(
             '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
             '-File', (Join-Path $Root 'Jipeg-Update.ps1'), '-Force')
     } catch {
-        $lblUpd.Text = 'Could not start the update.'
+        $lblUpd.Text = $L.updNoStart
         $btnUpd.Enabled = $true
         return
     }
@@ -466,8 +467,8 @@ $watch.Add_Tick({
     if ($code -eq 0) {
         $lblVer.Text = "Jipeg $JipegVersion -> $script:NewTag"
         $lblUpd.ForeColor = $Theme.Text
-        $lblUpd.Text = "Installed. It takes effect the next time you convert."
-        $btnUpd.Text = 'Up to date'
+        $lblUpd.Text = $L.updInstalled
+        $btnUpd.Text = $L.btnUpToDate
         # the updater wrote lastCheck and lastUpdate; keep them, or clicking OK
         # here would save this window's older copy back over them
         try {
@@ -476,12 +477,12 @@ $watch.Add_Tick({
             $Settings.lastUpdate = $fresh.lastUpdate
         } catch { }
     } elseif ($code -eq 2) {
-        $lblUpd.Text = 'Nothing to install right now.'
-        $btnUpd.Text = 'Check for updates'
+        $lblUpd.Text = $L.updNothing
+        $btnUpd.Text = $L.btnCheck
         $btnUpd.Enabled = $true
     } else {
-        $lblUpd.Text = 'The update did not go through. Try again later.'
-        $btnUpd.Text = 'Update'
+        $lblUpd.Text = $L.updFailed
+        $btnUpd.Text = $L.btnUpdate
         $btnUpd.Enabled = $true
     }
 })
@@ -493,15 +494,15 @@ $btnUpd.Add_Click({
 
 # --------------------------------------------------------------- OK/Cancel
 $btnCancel = New-Object System.Windows.Forms.Button
-$btnCancel.SetBounds(($W - $Margin - 100), 708, 100, 32)
-$btnCancel.Text = 'Cancel'
+$btnCancel.SetBounds(($W - $Margin - 100), 746, 100, 32)
+$btnCancel.Text = $L.btnCancel
 Set-JipegButton $btnCancel $Theme $Backdrop
 $btnCancel.Add_Click({ $form.Close() })
 $form.Controls.Add($btnCancel)
 
 $btnOK = New-Object System.Windows.Forms.Button
-$btnOK.SetBounds(($W - $Margin - 208), 708, 100, 32)
-$btnOK.Text = 'OK'
+$btnOK.SetBounds(($W - $Margin - 208), 746, 100, 32)
+$btnOK.Text = $L.btnOK
 Set-JipegButton $btnOK $Theme $Backdrop
 $form.Controls.Add($btnOK)
 
@@ -509,18 +510,30 @@ $form.AcceptButton = $btnOK
 $form.CancelButton = $btnCancel
 
 $btnOK.Add_Click({
+    $wasLang = [string]$Settings.language
     $Settings.quality       = [int]$QualityValues[$cmbQ.SelectedIndex]
     $Settings.chroma        = [string]$ChromaValues[$cmbC.SelectedIndex]
     $Settings.closeWhenDone = [bool]$chkClose.Checked
     $Settings.mica          = [bool]$chkMica.Checked
     $Settings.autoUpdate    = [bool]$chkAuto.Checked
+    $Settings.language      = [string]$LangCodes[$cmbL.SelectedIndex]
     $Settings.theme         = switch ($cmbT.SelectedIndex) { 1 { 'light' } 2 { 'dark' } default { 'auto' } }
     try {
         Save-JipegSettings $Settings
     } catch {
         [void][System.Windows.Forms.MessageBox]::Show(
-            "Settings could not be saved.`n`n" + $_.Exception.Message, 'Jipeg', 'OK', 'Error')
+            $L.stNoSave + [Environment]::NewLine + [Environment]::NewLine + $_.Exception.Message,
+            'Jipeg', 'OK', 'Error')
         return
+    }
+    # The menu entry is the one piece of wording the shell keeps a copy of, so
+    # a change of language has to be carried back out to the registry.
+    if ($Settings.language -ne $wasLang) {
+        try {
+            $moved = Set-JipegMenuLabels (Import-JipegLang $Settings.language)
+            Write-JipegLog ('language {0} -> {1}, {2} menu entries renamed' -f
+                            $wasLang, $Settings.language, $moved)
+        } catch { }
     }
     $form.Close()
 })
