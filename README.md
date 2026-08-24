@@ -116,6 +116,7 @@ This is most of what separates Jipeg from any other converter.
 |---|---|
 | **JPEG quality** | libjpeg scale. 90 is the default and is exactly distance 1.0, jpegli's own definition of visually lossless. |
 | **Colour detail** | *Follow the source* asks two questions rather than guessing from the file type. Does the content need full colour — measured from the density of hard colour transitions, which is what 4:2:0 destroys: photographs score 0.00%, a photograph with a line of coloured text over it 0.10%, a screenshot 3.48%. And can the source even have it — a JPEG states its sampling in its own frame header, and a lossy WebP is 4:2:0 inside whatever it looks like. |
+| **Language** | Ten of them: English, Français, Español, Deutsch, Português, Italiano, Polski, Русский, 日本語, 中文. *Automatic* follows the Windows display language and falls back to English. The right-click entry is renamed too — the shell keeps its own copy of that wording in the registry, so changing the language goes back and rewrites all twenty-three keys. |
 | **Theme** | Follow Windows, or force Light or Dark. |
 | **Translucent window background (Mica)** | The Windows 11 material, on by default. It shows only in the space between the cards; the surfaces on top of it are opaque and measure exactly the colours they were given. |
 | **Close the window automatically** | Off by default, so the result stays until you dismiss it. |
@@ -171,6 +172,7 @@ What that leaves untested, in plain terms:
 | **Linux and macOS** | Never executed at all. See [`platform/README.md`](platform/README.md). |
 | **Other Windows** | No other build, no other system language, no other accent colour, no second monitor, no touch. |
 | **Somebody else's machine** | No antivirus, no managed or corporate policy, no SmartScreen prompt as a stranger would see it. |
+| **The nine translations** | Every string was measured against the box it has to fit in, so nothing is cut off. None of them has been read by a native speaker. |
 
 The two bugs that mattered most — PNGs coming out heavier, and WebP — were found
 by somebody else running it, not by any of the above. That is the honest measure

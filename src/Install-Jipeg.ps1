@@ -15,7 +15,10 @@ $Project = Split-Path -Parent $Here
 
 # The language has to be settled before anything else: the wording written
 # into the registry comes out of it, not just what this window says.
-$L      = Import-JipegLang (Get-JipegSettings).language
+# The language has to be settled before anything else: the wording written
+# into the registry comes out of it, not just what this window says.
+$Saved  = Get-JipegSettings
+$L      = Import-JipegLang $Saved.language
 $Dest   = Join-Path $env:LOCALAPPDATA 'Jipeg'
 $ZipUrl = 'https://github.com/libjxl/libjxl/releases/download/v0.11.1/jxl-x64-windows-static.zip'
 $ZipSha = '8F53EBCE91820C30C9FC9294F06380213C1E2E66B361718880580246B2BE008E'
@@ -343,7 +346,7 @@ if ($Silent) {
 
 # ------------------------------------------------------------------- window
 $Theme = Get-JipegTheme 'auto'
-$Mica  = ((Get-JipegSettings).mica -and (Test-JipegMica $Theme))   # suit le reglage, comme les autres fenetres
+$Mica  = ($Saved.mica -and (Test-JipegMica $Theme))   # follows the setting, like every other window
 # never black: DWM composites a child control opaquely, so black in the corners
 # outside a rounded shape stays black instead of turning to glass
 $Backdrop = $Theme.Back
@@ -391,11 +394,11 @@ $form.Controls.Add($lbl2)
 $IsWin11 = ([Environment]::OSVersion.Version.Build -ge 22000)
 $chk = New-Object System.Windows.Forms.CheckBox
 $chk.SetBounds(20, 124, 480, 22)
-$chk.AutoSize = $true   # la bande opaque epouse le texte au lieu de barrer le Mica
+$chk.AutoSize = $true   # the opaque strip hugs the text instead of cutting across the Mica
 $chk.Checked = $IsWin11
 $chk.Enabled = $IsWin11
 $chk.Text = $L.inChk
-Set-JipegCheck $chk $Theme $Theme.Back   # posee sur le fond de fenetre, pas sur une carte
+Set-JipegCheck $chk $Theme $Theme.Back   # sitting on the window background, not on a card
 if (-not $IsWin11) { $chk.Text = $L.inChkOld; $chk.ForeColor = $Theme.Muted }
 $form.Controls.Add($chk)
 

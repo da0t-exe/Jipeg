@@ -519,11 +519,11 @@ function Get-JipegTheme([string]$preference) {
             Back    = [System.Drawing.Color]::FromArgb(32, 32, 32)
             Panel   = [System.Drawing.Color]::FromArgb(43, 43, 43)
             Text    = [System.Drawing.Color]::FromArgb(255, 255, 255)
-            Muted   = [System.Drawing.Color]::FromArgb(192, 192, 192)   # 7.8:1 sur les cartes
+            Muted   = [System.Drawing.Color]::FromArgb(192, 192, 192)   # 7.8:1 against a card
             Button  = [System.Drawing.Color]::FromArgb(45, 45, 45)
             Edge    = [System.Drawing.Color]::FromArgb(70, 70, 70)
             Track   = [System.Drawing.Color]::FromArgb(58, 58, 58)
-            Field   = [System.Drawing.Color]::FromArgb(56, 56, 56)   # doit trancher sur la carte
+            Field   = [System.Drawing.Color]::FromArgb(56, 56, 56)   # has to stand out from the card
             CardEdge = [System.Drawing.Color]::FromArgb(58, 58, 58)
             CheckEdge = [System.Drawing.Color]::FromArgb(122, 122, 122)
             Accent  = Get-JipegAccent $true
@@ -534,7 +534,7 @@ function Get-JipegTheme([string]$preference) {
         Back    = [System.Drawing.Color]::FromArgb(243, 243, 243)
         Panel   = [System.Drawing.Color]::FromArgb(251, 251, 251)
         Text    = [System.Drawing.Color]::FromArgb(26, 26, 26)
-        Muted   = [System.Drawing.Color]::FromArgb(80, 80, 80)          # 7.9:1 sur les cartes
+        Muted   = [System.Drawing.Color]::FromArgb(80, 80, 80)          # 7.9:1 against a card
         Button  = [System.Drawing.Color]::FromArgb(253, 253, 253)
         Edge    = [System.Drawing.Color]::FromArgb(205, 205, 205)
         Track   = [System.Drawing.Color]::FromArgb(222, 222, 222)
@@ -564,7 +564,6 @@ function New-JipegSemibold([single]$size) {
 $JipegFont        = New-Object System.Drawing.Font($JipegFamily, (10.0  * $JipegFontMul))  # labels, body
 $JipegFontHint    = New-Object System.Drawing.Font($JipegFamily, (8.75  * $JipegFontMul))  # explanations
 $JipegFontSection = New-JipegSemibold (11.25 * $JipegFontMul)            # section headings
-$JipegFontBold    = New-JipegSemibold (10.0  * $JipegFontMul)            # emphasis in body
 $JipegFontBig     = New-JipegSemibold (15.0  * $JipegFontMul)            # the one number that matters
 
 # Windows 11 rounds top-level windows on its own; this only syncs the title bar

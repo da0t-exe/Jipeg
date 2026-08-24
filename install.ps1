@@ -207,7 +207,16 @@ try {
 
     Write-Host ''
     Say "Installed in $Dest" 'Green'
-    Say 'Right-click an image  ->  Convert to JPEG (Jipeg)' 'Green'
+    # Read back rather than repeated: the entry is named in whichever of the
+    # ten languages the installer chose, and printing the English one here
+    # would send people looking for words that are not in their menu.
+    $verb = 'Convert to JPEG (Jipeg)'
+    try {
+        $key = 'HKCU:\Software\Classes\SystemFileAssociations\.png\shell\JipegConvert'
+        $seen = (Get-ItemProperty -LiteralPath $key -Name MUIVerb -ErrorAction Stop).MUIVerb
+        if ($seen) { $verb = $seen }
+    } catch { }
+    Say "Right-click an image  ->  $verb" 'Green'
     Say 'Settings are in the Start menu, under "Jipeg Settings".' 'DarkGray'
 } catch {
     Write-Host ''

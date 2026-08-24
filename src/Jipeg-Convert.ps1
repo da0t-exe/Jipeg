@@ -294,18 +294,6 @@ function Set-Status {
 # against 0.38 s, and on a transparent image it buys 0.3% for another 0.36 s.
 # --strip safe drops metadata but keeps the chunks that decide how the colours
 # are read, which is the whole point of not losing anything.
-function Compress-JipegPng([string]$src, [string]$dst) {
-    if (-not (Test-Path -LiteralPath $Oxipng)) {
-        throw "Shrinking a PNG needs bin\oxipng.exe. Run the Jipeg installer again."
-    }
-    Copy-Item -LiteralPath $src -Destination $dst -Force
-    $r = Invoke-JipegTool $Oxipng ('-o 4 --strip safe -q "{0}"' -f $dst) 120000
-    if ($r.Code -ne 0 -or -not (Test-Path -LiteralPath $dst)) {
-        Remove-Item -LiteralPath $dst -Force -ErrorAction SilentlyContinue
-        throw ("The PNG could not be shrunk: " + $r.Error)
-    }
-}
-
 # Whether the picture is grey even though it is stored in colour - a scanned
 # page, a diagram, a black and white photograph exported as RGB. Encoding those
 # as one channel instead of three takes about 8% off the result, measured, and
@@ -427,44 +415,18 @@ function Test-JipegIsPng([string]$path) {
 # decoding: an animated PNG needs the long way round but has nothing to do with
 # alpha, and sending one down the PNG-shrinking path would be answering the
 # wrong question.
-function Test-JipegPngHasAlpha([string]$path) {
-    if (-not (Test-JipegIsPng $path)) { return $false }
+# Both facts come out of the same handful of bytes, so they are read together.
+# They used to be two nearly identical functions, which meant opening the file
+# and walking it twice to learn things that sit next to each other.
+function Get-JipegPngFacts([string]$path) {
+    $facts = @{ Alpha = $false; Animated = $false }
+    if (-not (Test-JipegIsPng $path)) { return $facts }
     $fs = $null
     try {
         $fs = [System.IO.File]::OpenRead($path)
         $head = New-Object byte[] 26
-        if ($fs.Read($head, 0, 26) -lt 26) { return $true }
-        $type = [int]$head[25]
-        if ($type -eq 4 -or $type -eq 6) { return $true }
-        if ($type -ne 3) { return $false }        # only a palette can carry tRNS
-        $fs.Position = 33
-        $br = New-Object System.IO.BinaryReader($fs)
-        while ($fs.Position -lt $fs.Length) {
-            $len = ([int]$br.ReadByte() -shl 24) -bor ([int]$br.ReadByte() -shl 16) -bor
-                   ([int]$br.ReadByte() -shl 8)  -bor  [int]$br.ReadByte()
-            $name = [System.Text.Encoding]::ASCII.GetString($br.ReadBytes(4))
-            if ($name -eq 'tRNS') { return $true }
-            if ($name -eq 'IDAT') { return $false }
-            [void]$br.ReadBytes($len + 4)
-        }
-    } catch { } finally { if ($fs) { $fs.Dispose() } }
-    # Only IDAT answers this for certain. Anything else - a truncated file, a
-    # length field pointing past the end, a read that throws - leaves the
-    # question open, and the two ways of being wrong do not cost the same:
-    # guessing "opaque" sends a transparent image down the JPEG path and
-    # flattens it for good, while guessing "transparent" costs a few kilobytes.
-    return $true
-}
-
-function Test-JipegPngNeedsDecode([string]$path) {
-    if (-not (Test-JipegIsPng $path)) { return $false }
-    $fs = $null
-    try {
-        $fs = [System.IO.File]::OpenRead($path)
-        $head = New-Object byte[] 26
-        if ($fs.Read($head, 0, 26) -lt 26) { return $true }
-        $type = [int]$head[25]
-        $alpha = ($type -eq 4 -or $type -eq 6)
+        if ($fs.Read($head, 0, 26) -lt 26) { $facts.Alpha = $true; return $facts }
+        $facts.Alpha = ([int]$head[25] -eq 4 -or [int]$head[25] -eq 6)
         # 8 signature bytes, then IHDR: 4 length + 4 name + 13 data + 4 CRC.
         # Reading 26 bytes to reach the colour type leaves the cursor inside
         # IHDR's data, so the chunk walk has to be put back on the boundary.
@@ -474,14 +436,19 @@ function Test-JipegPngNeedsDecode([string]$path) {
             $len = ([int]$br.ReadByte() -shl 24) -bor ([int]$br.ReadByte() -shl 16) -bor
                    ([int]$br.ReadByte() -shl 8)  -bor  [int]$br.ReadByte()
             $name = [System.Text.Encoding]::ASCII.GetString($br.ReadBytes(4))
-            if ($name -eq 'acTL') { return $true }              # animated
-            if ($name -eq 'tRNS') { $alpha = $true }
-            if ($name -eq 'IDAT') { return $alpha }             # header is over
+            if ($name -eq 'acTL') { $facts.Animated = $true }   # animated
+            if ($name -eq 'tRNS') { $facts.Alpha = $true }      # palette transparency
+            if ($name -eq 'IDAT') { return $facts }             # the header is over
             [void]$br.ReadBytes($len + 4)                       # data plus its CRC
         }
-        return $alpha
     } catch { } finally { if ($fs) { $fs.Dispose() } }
-    return $true          # unreadable header: take the long way round, as above
+    # Only IDAT settles this for certain. Anything else - a truncated file, a
+    # length field pointing past the end, a read that throws - leaves the
+    # question open, and the two ways of being wrong do not cost the same:
+    # guessing "opaque" sends a transparent image down the JPEG path and
+    # flattens it for good, while guessing "transparent" costs a few kilobytes.
+    $facts.Alpha = $true
+    return $facts
 }
 
 # These run on the window's own thread, so an external tool that never returns
@@ -589,8 +556,9 @@ function Start-Next {
         # for, and a logo meant to sit on any background comes back stuck on a
         # white square. It is shrunk as a PNG instead, losslessly, and stays
         # readable on everything that reads PNG, which is everything.
+        $png = Get-JipegPngFacts $src
         $script:Mode = 'jpeg'
-        if (($script:ForcePng -or (Test-JipegPngHasAlpha $src)) -and (Test-JipegIsPng $src)) {
+        if (($script:ForcePng -or $png.Alpha) -and (Test-JipegIsPng $src)) {
             $script:Mode = 'png'
         }
         if ($script:Mode -eq 'png') {
@@ -609,7 +577,7 @@ function Start-Next {
         }
         # a PNG only needs the detour if it is transparent or animated; a JPEG
         # needs it if it asks to be shown rotated
-        $awkward = ($ext -eq '.png' -and (Test-JipegPngNeedsDecode $src))
+        $awkward = ($ext -eq '.png' -and ($png.Alpha -or $png.Animated))
         $orient  = Get-JipegOrientation $src
         # A four-component JPEG is CMYK or YCCK. cjpegli will not touch one, so
         # Windows decodes it instead - both GDI+ and WIC read them without
@@ -628,7 +596,8 @@ function Start-Next {
                 else                         { ConvertTo-JipegPng-Wic  $src $raw $ext }
                 # these decoders keep the alpha channel, so the same flattening
                 # applies to them
-                if (Test-JipegPngNeedsDecode $raw) { ConvertTo-JipegPng-Gdi $raw $tmpPng }
+                $rawPng = Get-JipegPngFacts $raw
+                if ($rawPng.Alpha -or $rawPng.Animated) { ConvertTo-JipegPng-Gdi $raw $tmpPng }
                 else { Move-Item -LiteralPath $raw -Destination $tmpPng -Force }
                 Remove-Item -LiteralPath $raw -Force -ErrorAction SilentlyContinue
             } else {
