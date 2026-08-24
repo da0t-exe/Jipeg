@@ -372,8 +372,15 @@ function Get-JipegOrientation([string]$path) {
 # a [byte] in PowerShell masks the shift count and quietly returns the wrong
 # number.
 function Test-JipegSourceFullChroma([string]$path) {
+    # Two different reasons to get nothing back, and they want opposite answers:
+    # anything that is not a JPEG is a lossless source and does hold full colour,
+    # while a JPEG whose header will not read is an unknown, and the careful
+    # answer there is the cheap one. Folding both into "yes" was a regression
+    # from a refactor - a corrupt JPEG started asking for 4:4:4.
+    $ext = [System.IO.Path]::GetExtension($path).ToLower()
+    if ('.jpg', '.jpeg', '.jpe', '.jfif' -notcontains $ext) { return $true }
     $frame = Get-JipegJpegFrame $path
-    if ($null -eq $frame) { return $true }
+    if ($null -eq $frame) { return $false }
     return $frame.FullChroma
 }
 

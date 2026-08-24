@@ -406,11 +406,28 @@ function ConvertTo-JipegPng-Gdi([string]$src, [string]$dst, [int]$orientation = 
 # before the pixel data; an APNG is one with an acTL chunk, and it usually calls
 # itself .png, so the extension says nothing. Both send the file the long way
 # round - cjpegli lays transparency on black, and fails outright on animation.
+# The eight bytes every PNG starts with. Nothing else in here may trust the
+# extension: a JPEG saved as .png reads as a PNG to every check that looks at
+# byte 25 and up, and the one that mattered handed it to oxipng, which refused
+# it and reported the encoder as the culprit.
+function Test-JipegIsPng([string]$path) {
+    $fs = $null
+    try {
+        $fs = [System.IO.File]::OpenRead($path)
+        $sig = New-Object byte[] 8
+        if ($fs.Read($sig, 0, 8) -lt 8) { return $false }
+        $want = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
+        for ($i = 0; $i -lt 8; $i++) { if ($sig[$i] -ne $want[$i]) { return $false } }
+        return $true
+    } catch { return $false } finally { if ($fs) { $fs.Dispose() } }
+}
+
 # Transparency alone, which is a different question from whether the file needs
 # decoding: an animated PNG needs the long way round but has nothing to do with
 # alpha, and sending one down the PNG-shrinking path would be answering the
 # wrong question.
 function Test-JipegPngHasAlpha([string]$path) {
+    if (-not (Test-JipegIsPng $path)) { return $false }
     $fs = $null
     try {
         $fs = [System.IO.File]::OpenRead($path)
@@ -434,6 +451,7 @@ function Test-JipegPngHasAlpha([string]$path) {
 }
 
 function Test-JipegPngNeedsDecode([string]$path) {
+    if (-not (Test-JipegIsPng $path)) { return $false }
     $fs = $null
     try {
         $fs = [System.IO.File]::OpenRead($path)
@@ -566,7 +584,7 @@ function Start-Next {
         # white square. It is shrunk as a PNG instead, losslessly, and stays
         # readable on everything that reads PNG, which is everything.
         $script:Mode = 'jpeg'
-        if ($ext -eq '.png' -and ($script:ForcePng -or (Test-JipegPngHasAlpha $src))) {
+        if (($script:ForcePng -or (Test-JipegPngHasAlpha $src)) -and (Test-JipegIsPng $src)) {
             $script:Mode = 'png'
         }
         if ($script:Mode -eq 'png') {
@@ -732,8 +750,8 @@ function Complete-Current {
             # as a PNG instead it usually loses a fifth to three quarters of its
             # weight, without a pixel changing. The same file comes back round
             # once, in png mode, rather than being written off.
-            if ($pointless -and $script:Mode -eq 'jpeg' -and
-                $srcExt -eq '.png' -and -not $script:ForcePng) {
+            if ($pointless -and $script:Mode -eq 'jpeg' -and -not $script:ForcePng -and
+                (Test-JipegIsPng $script:Current)) {
                 Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
                 $script:TmpOut = $null
                 $script:ForcePng = $true
