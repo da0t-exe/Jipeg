@@ -41,6 +41,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File src\Install-Jipeg.ps1 -Silen
 | `fuzz-build.py` | 100 random images and 60 copies with bytes flipped at random, into `random/`. Takes a seed: `python fuzz-build.py 1337`. |
 | `fuzz-check.py` | Not "did it produce the right file" but "did it break a rule": nothing heavier than its source, no unreadable output, no transparency lost, no temporary file left in the folder or in `%TEMP%`. |
 
+## Before publishing
+
+`Build-Release.ps1`, at the top of the repository, assembles the archive from
+what git tracks rather than from a list somebody keeps up to date, and refuses
+to write one that is missing anything the installer reaches for.
+
+`Test-Release.ps1` then installs that archive and looks at what it left. It
+uninstalls first, because leftovers answer for the archive otherwise — tried
+without that step and an archive containing no `src/lang` at all still reported
+ten language files, since the installer copies over what is there rather than
+replacing it.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Build-Release.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\Test-Release.ps1 -Zip Jipeg-3.0.zip
+```
+
+The one it was written for: leave `src/lang` out and nothing throws. Every
+string comes back empty, so the settings window opens with no text in it and the
+right-click entry has no name. The check has been run against an archive
+sabotaged that way, and it fires.
+
 ## A full round
 
 ```powershell
