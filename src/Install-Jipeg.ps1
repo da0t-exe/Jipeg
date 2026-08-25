@@ -262,7 +262,13 @@ function Set-StartMenuShortcut([string]$icon) {
 
 function Set-UninstallEntry([string]$icon) {
     $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jipeg'
-    New-Item -Path $key -Force | Out-Null
+    # -Force on a key that already exists clears every value under it, and one
+    # of them is the only record of whether Jipeg was the one that turned the
+    # classic context menu on. A quiet update reinstalls without -ClassicMenu,
+    # so the flag was wiped and never written back, and the uninstall that came
+    # afterwards left the menu forced on with nothing to say who had done it -
+    # a setting taken from someone's Windows and never given back.
+    if (-not (Test-Path -LiteralPath $key)) { New-Item -Path $key -Force | Out-Null }
     Set-ItemProperty -Path $key -Name 'DisplayName'     -Value 'Jipeg'
     Set-ItemProperty -Path $key -Name 'DisplayVersion'  -Value $JipegVersion
     Set-ItemProperty -Path $key -Name 'Publisher'       -Value 'Jipeg'

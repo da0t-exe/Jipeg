@@ -1,0 +1,62 @@
+name: Fix a translation
+description: A line of Jipeg reads wrong in your language
+title: "[fr] "
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Jipeg speaks ten languages. Nine of them were written without a native
+        speaker ever reading them back, so some lines are almost certainly stiff,
+        stilted, or plain wrong. If one of them is in your language, this is the
+        place to say so — one line is worth reporting, you do not need to review
+        the whole thing.
+
+        The strings live in [`src/lang/`](https://github.com/da0t-exe/Jipeg/tree/main/src/lang),
+        one file per language. A pull request is just as welcome as an issue.
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Français (fr)
+        - Español (es)
+        - Deutsch (de)
+        - Português (pt)
+        - Italiano (it)
+        - Polski (pl)
+        - Русский (ru)
+        - 日本語 (ja)
+        - 中文 (zh)
+        - another one, not in the list yet
+    validations:
+      required: true
+
+  - type: input
+    id: current
+    attributes:
+      label: What it says now
+      description: Copy the line as it appears, or give its key from the .psd1 file.
+      placeholder: "btnCheck = 'Voir les mises à jour'"
+    validations:
+      required: true
+
+  - type: input
+    id: better
+    attributes:
+      label: What it should say
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Anything worth adding
+      description: |
+        Whether it is wrong, awkward, or too long for the space it sits in. If it
+        is cut off on screen, a screenshot helps — the boxes are fixed widths and
+        every string is measured against them, so a clipped line is a bug on our
+        side.
+    validations:
+      required: false

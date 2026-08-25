@@ -386,6 +386,29 @@ src/settings.vbs         starts the settings window without a console window
 platform/                Linux and macOS, experimental and untested
 ```
 
+## Contributing a translation
+
+Jipeg speaks English, Français, Español, Deutsch, Português, Italiano, Polski,
+Русский, 日本語 and 中文. Nine of those were written without a native speaker
+ever reading them back, so some lines are almost certainly stiff, stilted, or
+plain wrong.
+
+One line is worth reporting. [Open a translation
+issue](https://github.com/da0t-exe/Jipeg/issues/new?template=translation.yml) —
+it asks what the line says, what it should say, and nothing else. A pull request
+against [`src/lang/`](src/lang) is just as welcome; each language is one file,
+and the English one is the reference every other falls back to.
+
+Two things worth knowing before editing one:
+
+- **Never use a curly apostrophe.** PowerShell treats `‘` and `’` as string
+  delimiters, so a single one inside a value stops the whole file parsing. Plain
+  `'` doubled — `''` — is how an apostrophe is written.
+- **Every string is measured against the box it sits in.** A label column is 176
+  design units wide, a hint 442 to 468, the update button 152. Six strings had to
+  be shortened before all ten languages fit. If a line is cut off on screen, that
+  is a bug on this side and worth a screenshot.
+
 ## Credits and licences
 
 - The encoding is done by **[jpegli](https://github.com/google/jpegli)**, a Google

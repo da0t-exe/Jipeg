@@ -248,11 +248,23 @@ $script:ProcStarted = Get-Date
 # different causes at once - one file with no HEIC codec, one corrupt - and
 # showing only the earlier of them sent the other into thin air. All of them go
 # to the log; the window shows the first and counts the rest.
-function Add-JipegReason([string]$why) {
+# The English table, fetched once and only if something actually goes wrong.
+function Get-JipegEnglish {
+    if (-not $script:EnLang) { $script:EnLang = Import-JipegLang 'en' }
+    return $script:EnLang
+}
+
+# The window speaks the user's language; the log stays in English. It is there
+# to be read by whoever is working out what went wrong, and that reader should
+# not have to work out which of ten languages the machine was set to first - a
+# German "der Encoder hat es abgelehnt" turned up in a log during testing and
+# made the point.
+function Add-JipegReason([string]$why, [string]$logged) {
     if (-not $why) { return }
     if (-not $script:Reasons.Contains($why)) { $script:Reasons.Add($why) }
     if (-not $script:Reason) { $script:Reason = $why }
-    Write-JipegLog ('failed   ' + $why)
+    if (-not $logged) { $logged = $why }
+    Write-JipegLog ('failed   ' + $logged)
 }
 $script:Grey      = $false
 $script:Kept      = 0
@@ -801,8 +813,13 @@ function Complete-Current {
     } else {
         Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
         $why = ($err -split "`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
-        if (-not $why) { $why = $L.cvRefused -f $code }
-        Add-JipegReason ('{0}: {1}' -f [System.IO.Path]::GetFileName($script:Current), $why.Trim())
+        $whyLog = $why
+        if (-not $why) {
+            $why    = $L.cvRefused -f $code
+            $whyLog = (Get-JipegEnglish).cvRefused -f $code
+        }
+        $name = [System.IO.Path]::GetFileName($script:Current)
+        Add-JipegReason ('{0}: {1}' -f $name, $why.Trim()) ('{0}: {1}' -f $name, $whyLog.Trim())
         $script:Failed++
     }
     $script:TmpOut = $null
@@ -899,7 +916,8 @@ $engine.Add_Tick({
         # with nothing on screen to say why. Two minutes is far past anything
         # real - a 1400x950 photograph takes about a third of a second.
         if (((Get-Date) - $script:ProcStarted).TotalSeconds -lt 120) { return }
-        Add-JipegReason ($L.cvTimeout -f [System.IO.Path]::GetFileName($script:Current))
+        $late = [System.IO.Path]::GetFileName($script:Current)
+        Add-JipegReason ($L.cvTimeout -f $late) ((Get-JipegEnglish).cvTimeout -f $late)
         try { $script:Proc.Kill() } catch { }
         try { [void]$script:Proc.WaitForExit(2000) } catch { }
     }
