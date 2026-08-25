@@ -227,8 +227,9 @@ footer a{color:var(--dim)}
       </div>
       <div class="note">
         <h3 data-t="n2h">Flatten transparency onto white</h3>
-        <p data-t="n2p">JPEG has no alpha channel, so a PNG with transparent pixels is shrunk
-        as a PNG instead, losslessly: pixels and alpha come back byte for byte identical.</p>
+        <p data-t="n2p">JPEG has no alpha channel, so a picture with see-through pixels is
+        shrunk as a PNG instead, losslessly: pixels and alpha come back byte for byte identical.
+        Whichever format the transparency arrived in — PNG, WebP, GIF, TIFF, ICO.</p>
       </div>
       <div class="note">
         <h3 data-t="n3h">Keep what came with the file</h3>
@@ -261,6 +262,8 @@ footer a{color:var(--dim)}
     change, and the window's geometry is measured rather than looked at — but all of it on one
     Windows 11 machine, at 100% scaling. HEIC and AVIF have never actually been decoded here, the
     display scaling is only simulated, and the Linux and macOS port has never been run at all.
+    The interface speaks ten languages and every string was measured against the box it has to fit
+    in, but no native speaker has read the nine translations.
     The two bugs that mattered most were found by somebody else running it.</p>
   </section>
 
@@ -316,7 +319,7 @@ var T = {
     n1h:"Vous rendre plus lourd",
     n1p:"Le JPEG est excellent sur les photos et mauvais sur les aplats et le texte. Une capture d'écran a gonflé de 88 % ici, une icône de 448 %. Ces fichiers ne sont pas écrits du tout : le plus léger des deux était déjà sur votre disque.",
     n2h:"Aplatir la transparence sur du blanc",
-    n2p:"Le JPEG n'a pas de canal alpha, donc un PNG à pixels transparents est compressé en PNG, sans perte : les pixels et l'alpha ressortent identiques octet pour octet.",
+    n2p:"Le JPEG n'a pas de canal alpha, donc une image à pixels transparents est compressée en PNG, sans perte : les pixels et l'alpha ressortent identiques octet pour octet. Quel que soit le format d'où vient la transparence — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Garder ce qui accompagnait le fichier",
     n3p:"La rotation demandée par un téléphone est appliquée aux pixels puis jetée avec le reste : l'image est droite partout et ne peut plus dire où elle a été prise.",
     cap1:"pendant la conversion", cap2:"tous les réglages, sans exception",
@@ -345,7 +348,7 @@ var T = {
     n1h:"Devolverte algo más pesado",
     n1p:"JPEG es muy bueno con fotografías y muy malo con colores planos y texto. Aquí una captura creció un 88 % y un icono un 448 %. Esos archivos no se escriben: el más ligero ya estaba en tu disco.",
     n2h:"Aplanar la transparencia sobre blanco",
-    n2p:"JPEG no tiene canal alfa, así que un PNG con píxeles transparentes se comprime como PNG, sin pérdida: los píxeles y el alfa vuelven idénticos byte a byte.",
+    n2p:"JPEG no tiene canal alfa, así que una imagen con píxeles transparentes se comprime como PNG, sin pérdida: los píxeles y el alfa vuelven idénticos byte a byte. Venga la transparencia del formato que venga — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Conservar lo que venía con el archivo",
     n3p:"La rotación que pide un teléfono se aplica a los píxeles y luego se descarta con todo lo demás: la imagen queda derecha en todas partes y ya no puede decir dónde se tomó.",
     cap1:"durante la conversión", cap2:"todos los ajustes que hay",
@@ -374,7 +377,7 @@ var T = {
     n1h:"Etwas Schwereres zurückgeben",
     n1p:"JPEG ist sehr gut bei Fotos und sehr schlecht bei Flächen und Text. Ein Bildschirmfoto wuchs hier um 88 %, ein Symbol um 448 %. Diese Dateien werden gar nicht erst geschrieben — die leichtere lag ohnehin schon auf der Platte.",
     n2h:"Transparenz auf Weiß plattdrücken",
-    n2p:"JPEG hat keinen Alphakanal, deshalb wird ein PNG mit transparenten Pixeln als PNG verkleinert, verlustfrei: Pixel und Alpha kommen Byte für Byte identisch zurück.",
+    n2p:"JPEG hat keinen Alphakanal, deshalb wird ein Bild mit durchsichtigen Pixeln als PNG verkleinert, verlustfrei: Pixel und Alpha kommen Byte für Byte identisch zurück. Egal aus welchem Format die Transparenz kam — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Behalten, was an der Datei hing",
     n3p:"Die Drehung, die ein Telefon verlangt, wird auf die Pixel angewandt und dann mit allem anderen verworfen: Das Bild steht überall richtig und kann nicht mehr verraten, wo es aufgenommen wurde.",
     cap1:"während der Umwandlung", cap2:"sämtliche Einstellungen",
@@ -403,7 +406,7 @@ var T = {
     n1h:"Devolver algo mais pesado",
     n1p:"O JPEG é muito bom em fotografias e muito mau em cores planas e texto. Aqui uma captura cresceu 88 % e um ícone 448 %. Esses ficheiros não chegam a ser escritos: o mais leve já estava no disco.",
     n2h:"Achatar a transparência sobre branco",
-    n2p:"O JPEG não tem canal alfa, por isso um PNG com píxeis transparentes é comprimido como PNG, sem perdas: os píxeis e o alfa voltam idênticos byte a byte.",
+    n2p:"O JPEG não tem canal alfa, por isso uma imagem com píxeis transparentes é comprimida como PNG, sem perdas: os píxeis e o alfa voltam idênticos byte a byte. Venha a transparência do formato que vier — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Guardar o que vinha com o ficheiro",
     n3p:"A rotação que um telemóvel pede é aplicada aos píxeis e depois descartada com o resto: a imagem fica direita em todo o lado e já não pode dizer onde foi tirada.",
     cap1:"durante a conversão", cap2:"todas as definições que existem",
@@ -432,7 +435,7 @@ var T = {
     n1h:"Restituirti qualcosa di più pesante",
     n1p:"Il JPEG è ottimo con le fotografie e pessimo con i colori piatti e il testo. Qui una schermata è cresciuta dell'88 % e un'icona del 448 %. Quei file non vengono nemmeno scritti: il più leggero era già sul disco.",
     n2h:"Appiattire la trasparenza sul bianco",
-    n2p:"Il JPEG non ha canale alfa, quindi un PNG con pixel trasparenti viene compresso come PNG, senza perdite: pixel e alfa tornano identici byte per byte.",
+    n2p:"Il JPEG non ha canale alfa, quindi un'immagine con pixel trasparenti viene compressa come PNG, senza perdita: i pixel e l'alfa tornano identici byte per byte. Da qualunque formato arrivi la trasparenza — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Conservare ciò che accompagnava il file",
     n3p:"La rotazione richiesta da un telefono viene applicata ai pixel e poi buttata via con tutto il resto: l'immagine è dritta ovunque e non può più dire dove è stata scattata.",
     cap1:"durante la conversione", cap2:"tutte le impostazioni che ci sono",
@@ -461,7 +464,7 @@ var T = {
     n1h:"Odda ci coś cięższego",
     n1p:"JPEG jest bardzo dobry w fotografii i bardzo zły w płaskich barwach i tekście. Zrzut ekranu urósł tu o 88 %, ikona o 448 %. Takie pliki w ogóle nie powstają — lżejszy już był na dysku.",
     n2h:"Spłaszczy przezroczystość na biel",
-    n2p:"JPEG nie ma kanału alfa, więc PNG z przezroczystymi pikselami jest zmniejszany jako PNG, bezstratnie: piksele i alfa wracają identyczne co do bajtu.",
+    n2p:"JPEG nie ma kanału alfa, więc obraz z przezroczystymi pikselami jest zmniejszany jako PNG, bezstratnie: piksele i alfa wracają identyczne co do bajtu. Niezależnie od tego, z jakiego formatu przyszła przezroczystość — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Zachowa to, co przyszło z plikiem",
     n3p:"Obrót, o który prosi telefon, zostaje nałożony na piksele i wyrzucony razem z resztą: obraz stoi prosto wszędzie i nie potrafi już powiedzieć, gdzie powstał.",
     cap1:"w trakcie konwersji", cap2:"wszystkie ustawienia, jakie są",
@@ -490,7 +493,7 @@ var T = {
     n1h:"Вернёт вам что-то тяжелее",
     n1p:"JPEG прекрасен на фотографиях и плох на плоских заливках и тексте. Снимок экрана вырос здесь на 88 %, значок — на 448 %. Такие файлы просто не создаются: более лёгкий и так лежал у вас на диске.",
     n2h:"Положит прозрачность на белое",
-    n2p:"В JPEG нет альфа-канала, поэтому PNG с прозрачными пикселями сжимается как PNG, без потерь: пиксели и альфа возвращаются побайтово теми же.",
+    n2p:"У JPEG нет альфа-канала, поэтому изображение с прозрачными пикселями сжимается как PNG, без потерь: пиксели и альфа возвращаются побайтово одинаковыми. Из какого бы формата прозрачность ни пришла — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Сохранит то, что пришло вместе с файлом",
     n3p:"Поворот, о котором просит телефон, применяется к пикселям и выбрасывается вместе со всем остальным: снимок стоит правильно везде и больше не может сказать, где он сделан.",
     cap1:"во время преобразования", cap2:"все настройки, какие есть",
@@ -519,7 +522,7 @@ var T = {
     n1h:"より重いものを返す",
     n1p:"JPEG は写真にはとても強く、べた塗りや文字にはとても弱い形式です。ここではスクリーンショットが 88 %、アイコンが 448 % 膨らみました。そうしたファイルはそもそも書き出しません。軽いほうは最初から手元にあります。",
     n2h:"透過を白で塗りつぶす",
-    n2p:"JPEG にアルファチャンネルはないので、透過を含む PNG は PNG のまま可逆で小さくします。画素もアルファもバイト単位で元のままです。",
+    n2p:"JPEG にはアルファチャンネルがないため、透けるピクセルを持つ画像は PNG のまま可逆圧縮します。ピクセルもアルファもバイト単位で元どおりです。透明度がどの形式から来たかは問いません — PNG、WebP、GIF、TIFF、ICO。",
     n3h:"ファイルに付いてきたものを残す",
     n3p:"スマートフォンが要求する回転は画素に適用したうえで、ほかのすべてと一緒に捨てます。どこで見ても正しい向きで、撮影場所を語ることもありません。",
     cap1:"変換中", cap2:"設定はこれで全部",
@@ -548,7 +551,7 @@ var T = {
     n1h:"还给你更大的文件",
     n1p:"JPEG 擅长照片，却拙于纯色和文字。这里一张截图涨了 88 %，一个图标涨了 448 %。这些文件根本不会写出来——更小的那个本来就在你硬盘上。",
     n2h:"把透明压成白底",
-    n2p:"JPEG 没有 alpha 通道，所以带透明像素的 PNG 会以 PNG 的形式无损压缩：像素和 alpha 逐字节保持原样。",
+    n2p:"JPEG 没有 alpha 通道，所以含透明像素的图片会以 PNG 无损压缩：像素和 alpha 逐字节原样返回。无论透明度来自哪种格式——PNG、WebP、GIF、TIFF、ICO。",
     n3h:"留下随文件一起来的东西",
     n3p:"手机要求的旋转会作用到像素上，然后和其余信息一起丢弃：图片在哪儿看都是正的，也再说不出它是在哪里拍的。",
     cap1:"转换过程中", cap2:"全部设置就这些",
