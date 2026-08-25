@@ -179,7 +179,8 @@ What that leaves untested, in plain terms:
 | **HEIC, HEIF, AVIF, JPEG XR** | Never actually decoded. The codecs are not installed here, so only the message naming the missing one is verified. |
 | **Display scaling** | Only simulated, with `JIPEG_SCALE`. The layout has never been seen on a real 125% or 150% screen. |
 | **Linux and macOS** | Never executed at all. See [`platform/README.md`](platform/README.md). |
-| **Other Windows** | No other build, no other system language, no other accent colour, no second monitor, no touch. |
+| **Other Windows** | No other build, no other system language, no other accent colour, no touch. |
+| **A second screen at a different scale** | Known limitation rather than an untested guess: the scale and the height it has to fit into are both read from the *primary* screen, once, before any window exists. On a laptop at 150% beside an external screen at 100%, a window opening on the second one is sized for the first. Two screens were on hand to find this; both were at the same scale, so the consequence has never been seen. |
 | **Somebody else's machine** | No antivirus, no managed or corporate policy, no SmartScreen prompt as a stranger would see it. |
 | **The nine translations** | Every string was measured against the box it has to fit in, so nothing is cut off. None of them has been read by a native speaker. |
 
