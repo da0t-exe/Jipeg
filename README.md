@@ -111,6 +111,29 @@ This is most of what separates Jipeg from any other converter.
 - **It keeps the original's date**, so a converted folder still sorts by when the
   pictures were taken rather than by when they went through Jipeg.
 
+### The codecs Windows does not come with
+
+Windows reads neither an iPhone photo (`.heic`) nor an `.avif` on its own, and
+Jipeg cannot carry what it takes: these are Microsoft Store packages, and the
+one a `.heic` needs comes with a patent licence paid per machine.
+
+The console installer asks once, and prints the links rather than opening them:
+
+| | | |
+|---|---|---|
+| [HEIF Image Extensions](https://apps.microsoft.com/detail/9PMMSR1CGPWG) | `9PMMSR1CGPWG` | free |
+| [HEVC Video Extensions from Device Manufacturer](https://apps.microsoft.com/detail/9N4WGH0Z6VHQ) | `9N4WGH0Z6VHQ` | free where the PC maker paid for it |
+| [AV1 Video Extension](https://apps.microsoft.com/detail/9MVZQVXJBQ9V) | `9MVZQVXJBQ9V` | free |
+
+**A `.heic` needs the first two together** — the HEIF package reads the
+container, and the picture inside it is HEVC-coded. An `.avif` needs only the
+third.
+
+Answer up front with `-Codecs` or `-NoCodecs`, the same way `-ClassicMenu` and
+`-NoClassicMenu` work. Opening the three pages was tried first and dropped: the
+Store navigates a single window, so three in a row leave only the last one
+showing, whatever pause sits between them — measured, not assumed.
+
 ## Settings
 
 **Start menu → Jipeg Settings.** A small window, opened only when you want it.
@@ -136,7 +159,7 @@ This is most of what separates Jipeg from any other converter.
 | **Decoded first, then encoded** | BMP, TIFF, ICO, EMF, WMF, GIF, APNG — through Windows' own imaging. Animated files keep their first frame. |
 | **WebP** | Decoded by `dwebp.exe`, libwebp's own tool, shipped with Jipeg. Nothing already on a Windows machine reads WebP: `cjpegli` refuses it, GDI+ never knew it, and Windows only decodes it if someone installed the Store extension. An **animated** WebP goes through `webpmux.exe` first, which lifts out the first frame. |
 | **CMYK JPEG** | Four-component JPEGs, the kind print workflows produce, are decoded by Windows. `cjpegli` answers *"Failed to decode input image"* and stops. |
-| **HEIC, HEIF, AVIF, JPEG XR** | Handed to Windows, which reads them when the matching codec is installed — *HEIF Image Extensions* for HEIC, *AV1 Video Extension* for AVIF, both free. Without it you get the name of the one to install rather than a bare failure. |
+| **HEIC, HEIF, AVIF, JPEG XR** | Handed to Windows, which reads them when the matching codec is installed. Without it you get the name of the one to install rather than a bare failure. The console installer offers to print the links; see below. |
 
 ## Linux and macOS
 

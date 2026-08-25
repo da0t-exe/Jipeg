@@ -9,13 +9,16 @@
 
     Switches, when the file is run directly rather than piped:
         -ClassicMenu / -NoClassicMenu   answer the Windows 11 menu question up front
+        -Codecs / -NoCodecs             answer the HEIC and AVIF question up front
         -Gui                            open the setup window instead
 #>
 [CmdletBinding()]
 param(
     [switch]$Gui,
     [switch]$ClassicMenu,
-    [switch]$NoClassicMenu
+    [switch]$NoClassicMenu,
+    [switch]$Codecs,
+    [switch]$NoCodecs
 )
 
 $ErrorActionPreference = 'Stop'
@@ -180,6 +183,7 @@ try {
     # RemoteSigned - the Windows default - would refuse to run.
     $psArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-File', $setup.FullName)
 
+    $wantCodecs = $false
     if ($Gui) {
         Say 'Opening the setup window...'
         Write-Host ''
@@ -196,6 +200,22 @@ try {
             Say 'open File Explorer windows are closed.' 'DarkGray'
             $classic = Read-YesNoTimed 'Show Jipeg directly in the right-click menu?' 10 $true
         }
+        # Windows reads neither format on its own, and Jipeg cannot carry the
+        # codecs: they are Store packages, and the one a .heic needs comes with
+        # a licence paid per machine. Off unless asked for - most people never
+        # meet either format, and nobody should have the Store opened at them
+        # for a question they did not ask.
+        $wantCodecs = $false
+        if ($Codecs)       { $wantCodecs = $true }
+        elseif ($NoCodecs) { $wantCodecs = $false }
+        else {
+            Write-Host ''
+            Say 'Windows cannot read iPhone photos (.heic) or .avif on its own, and' 'DarkGray'
+            Say 'Jipeg is not allowed to ship what it takes: three Microsoft Store' 'DarkGray'
+            Say 'packages, two of them free. The HEVC one that .heic needs is free' 'DarkGray'
+            Say 'only on PCs whose maker paid the licence.' 'DarkGray'
+            $wantCodecs = Read-YesNoTimed 'Open the Store pages for them after installing?' 10 $false
+        }
         $psArgs += '-Silent'
         if ($classic) { $psArgs += '-ClassicMenu' }
         Write-Host ''
@@ -204,6 +224,18 @@ try {
 
     $proc = Start-Process -FilePath 'powershell.exe' -ArgumentList $psArgs -Wait -PassThru -NoNewWindow
     if ($proc.ExitCode -ne 0) { throw "The installer exited with code $($proc.ExitCode)." }
+
+    if ($wantCodecs) {
+        Write-Host ''
+        Say 'For .heic and .avif, from the Microsoft Store:' 'White'
+        Say '  https://apps.microsoft.com/detail/9PMMSR1CGPWG   HEIF Image Extensions      free' 'DarkGray'
+        Say '  https://apps.microsoft.com/detail/9N4WGH0Z6VHQ   HEVC, from the PC maker    free where offered' 'DarkGray'
+        Say '  https://apps.microsoft.com/detail/9MVZQVXJBQ9V   AV1 Video Extension        free' 'DarkGray'
+        Say 'A .heic needs the first two together. A .avif needs only the third.' 'DarkGray'
+        # Opening them was tried and dropped: the Store navigates one window, so
+        # three pages in a row leave only the last one showing, whatever pause
+        # sits between them. Printed links let somebody take them one at a time.
+    }
 
     Write-Host ''
     Say "Installed in $Dest" 'Green'
