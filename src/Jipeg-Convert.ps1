@@ -588,6 +588,7 @@ function Start-Next {
         # readable on everything that reads PNG, which is everything.
         $png = Get-JipegPngFacts $src
         $script:Mode = 'jpeg'
+        $script:Flat = $false
         if (($script:ForcePng -or $png.Alpha) -and (Test-JipegIsPng $src)) {
             $script:Mode = 'png'
         }
@@ -615,7 +616,11 @@ function Start-Next {
         # failure with "Failed to decode input image" behind it.
         $frame = Get-JipegJpegFrame $src
         $cmyk  = ($null -ne $frame -and [int]$frame.Components -ge 4)
-        if ($GdiExt -contains $ext -or $WebpExt -contains $ext -or
+        # $script:ForcePng is the second pass asking for a lossless result. A PNG
+        # source has already been dealt with above, so anything arriving here on
+        # that flag has to be decoded before oxipng can be pointed at it.
+        if ($script:ForcePng -or
+            $GdiExt -contains $ext -or $WebpExt -contains $ext -or
             $WicExt -contains $ext -or $awkward -or $orient -ne 1 -or $cmyk) {
             # cjpegli reads none of these: decode to PNG first, by whichever
             # route knows the format, and hand it that instead
@@ -643,7 +648,7 @@ function Start-Next {
         # the picture arriving on a white square. The question is asked again
         # here, of whatever the decoders produced, so the answer no longer
         # depends on which door the file came in through.
-        if ($script:TmpIn -and (Test-JipegTransparentPixels $source)) {
+        if ($script:TmpIn -and ($script:ForcePng -or (Test-JipegTransparentPixels $source))) {
             $script:Mode = 'png'
             $script:TmpOut = Join-Path (Split-Path -Parent $src) ('.jipeg-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
             Copy-Item -LiteralPath $source -Destination $script:TmpOut -Force
@@ -664,6 +669,10 @@ function Start-Next {
         # whatever is about to be encoded, so a rotated or flattened image is
         # measured on what it became rather than on what it was.
         $traits = Get-JipegTraits $source
+        # The same measurement that chooses 4:4:4 over 4:2:0 also says whether a
+        # lossless PNG stands a chance: both questions are really "is this flat
+        # colour and text, or is it a photograph".
+        $script:Flat = [bool]$traits.HardChroma
         $script:Grey = $false
         if ($traits.Grey) {
             $greyPng = Join-Path $env:TEMP ('jipeg-g-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -774,12 +783,19 @@ function Complete-Current {
             # and the point of the exercise was to save space.
             $pointless = ($outLen -ge $inLen)
 
-            # A PNG that would have grown as a JPEG is not a lost cause: shrunk
-            # as a PNG instead it usually loses a fifth to three quarters of its
-            # weight, without a pixel changing. The same file comes back round
-            # once, in png mode, rather than being written off.
+            # A picture that would have grown as a JPEG is not a lost cause:
+            # shrunk losslessly instead it usually loses a fifth to three
+            # quarters of its weight, without a pixel changing. The same file
+            # comes back round once, in png mode, rather than being written off.
+            #
+            # This used to be offered to PNG sources only, so a GIF of flat
+            # colour was simply handed back untouched - measured, one gave up
+            # 71% by being left alone. The second pass is worth spending on
+            # anything the chroma measurement calls flat colour, and worth
+            # refusing to a photograph, where a lossless PNG is many times the
+            # size and the attempt is pure waste.
             if ($pointless -and $script:Mode -eq 'jpeg' -and -not $script:ForcePng -and
-                (Test-JipegIsPng $script:Current)) {
+                ((Test-JipegIsPng $script:Current) -or $script:Flat)) {
                 Remove-Item -LiteralPath $script:TmpOut -Force -ErrorAction SilentlyContinue
                 $script:TmpOut = $null
                 $script:ForcePng = $true

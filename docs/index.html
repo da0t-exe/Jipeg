@@ -222,8 +222,9 @@ footer a{color:var(--dim)}
       <div class="note">
         <h3 data-t="n1h">Give you back something heavier</h3>
         <p data-t="n1p">JPEG is very good at photographs and very bad at flat colour and text.
-        A screenshot grew 88% here, an icon 448%. Those are not written at all — the lighter
-        file was already on your disk.</p>
+        A screenshot grew 88% here, an icon 448%. Those JPEGs are never written: the picture is
+        shrunk losslessly instead, and where even that would come out bigger, handed back
+        untouched.</p>
       </div>
       <div class="note">
         <h3 data-t="n2h">Flatten transparency onto white</h3>
@@ -317,7 +318,7 @@ var T = {
     r1:"une photo", r2:"un document scanné", r3:"un logo transparent",
     r4:"un schéma", r5:"une capture d'écran", r6:"un JPEG déjà léger", r6b:"laissé tel quel",
     n1h:"Vous rendre plus lourd",
-    n1p:"Le JPEG est excellent sur les photos et mauvais sur les aplats et le texte. Une capture d'écran a gonflé de 88 % ici, une icône de 448 %. Ces fichiers ne sont pas écrits du tout : le plus léger des deux était déjà sur votre disque.",
+    n1p:"Le JPEG est excellent sur les photos et mauvais sur les aplats et le texte. Une capture d'écran a gonflé de 88 % ici, une icône de 448 %. Ces JPEG ne sont jamais écrits : l'image est compressée sans perte à la place, et quand même ça serait plus gros, elle est rendue intacte.",
     n2h:"Aplatir la transparence sur du blanc",
     n2p:"Le JPEG n'a pas de canal alpha, donc une image à pixels transparents est compressée en PNG, sans perte : les pixels et l'alpha ressortent identiques octet pour octet. Quel que soit le format d'où vient la transparence — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Garder ce qui accompagnait le fichier",
@@ -346,7 +347,7 @@ var T = {
     r1:"una fotografía", r2:"un documento escaneado", r3:"un logotipo transparente",
     r4:"un diagrama", r5:"una captura de pantalla", r6:"un JPEG ya pequeño", r6b:"intacto",
     n1h:"Devolverte algo más pesado",
-    n1p:"JPEG es muy bueno con fotografías y muy malo con colores planos y texto. Aquí una captura creció un 88 % y un icono un 448 %. Esos archivos no se escriben: el más ligero ya estaba en tu disco.",
+    n1p:"JPEG es excelente con fotos y malo con los colores planos y el texto. Aquí una captura de pantalla creció un 88 %, un icono un 448 %. Esos JPEG no se escriben nunca: la imagen se comprime sin pérdida, y cuando ni eso sale más pequeño, se devuelve intacta.",
     n2h:"Aplanar la transparencia sobre blanco",
     n2p:"JPEG no tiene canal alfa, así que una imagen con píxeles transparentes se comprime como PNG, sin pérdida: los píxeles y el alfa vuelven idénticos byte a byte. Venga la transparencia del formato que venga — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Conservar lo que venía con el archivo",
@@ -375,7 +376,7 @@ var T = {
     r1:"ein Foto", r2:"ein gescanntes Dokument", r3:"ein transparentes Logo",
     r4:"eine Grafik", r5:"ein Bildschirmfoto", r6:"ein bereits kleines JPEG", r6b:"unberührt",
     n1h:"Etwas Schwereres zurückgeben",
-    n1p:"JPEG ist sehr gut bei Fotos und sehr schlecht bei Flächen und Text. Ein Bildschirmfoto wuchs hier um 88 %, ein Symbol um 448 %. Diese Dateien werden gar nicht erst geschrieben — die leichtere lag ohnehin schon auf der Platte.",
+    n1p:"JPEG ist bei Fotos sehr gut und bei Flächen und Text sehr schlecht. Ein Screenshot wuchs hier um 88 %, ein Symbol um 448 %. Diese JPEGs werden nie geschrieben: das Bild wird stattdessen verlustfrei verkleinert, und wenn selbst das größer würde, unangetastet zurückgegeben.",
     n2h:"Transparenz auf Weiß plattdrücken",
     n2p:"JPEG hat keinen Alphakanal, deshalb wird ein Bild mit durchsichtigen Pixeln als PNG verkleinert, verlustfrei: Pixel und Alpha kommen Byte für Byte identisch zurück. Egal aus welchem Format die Transparenz kam — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Behalten, was an der Datei hing",
@@ -404,7 +405,7 @@ var T = {
     r1:"uma fotografia", r2:"um documento digitalizado", r3:"um logótipo transparente",
     r4:"um diagrama", r5:"uma captura de ecrã", r6:"um JPEG já pequeno", r6b:"intocado",
     n1h:"Devolver algo mais pesado",
-    n1p:"O JPEG é muito bom em fotografias e muito mau em cores planas e texto. Aqui uma captura cresceu 88 % e um ícone 448 %. Esses ficheiros não chegam a ser escritos: o mais leve já estava no disco.",
+    n1p:"O JPEG é excelente com fotografias e mau com cores lisas e texto. Aqui uma captura de ecrã cresceu 88 %, um ícone 448 %. Esses JPEG nunca são escritos: a imagem é comprimida sem perdas, e quando nem isso fica menor, é devolvida intacta.",
     n2h:"Achatar a transparência sobre branco",
     n2p:"O JPEG não tem canal alfa, por isso uma imagem com píxeis transparentes é comprimida como PNG, sem perdas: os píxeis e o alfa voltam idênticos byte a byte. Venha a transparência do formato que vier — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Guardar o que vinha com o ficheiro",
@@ -433,7 +434,7 @@ var T = {
     r1:"una fotografia", r2:"un documento scansionato", r3:"un logo trasparente",
     r4:"uno schema", r5:"una schermata", r6:"un JPEG già piccolo", r6b:"intatto",
     n1h:"Restituirti qualcosa di più pesante",
-    n1p:"Il JPEG è ottimo con le fotografie e pessimo con i colori piatti e il testo. Qui una schermata è cresciuta dell'88 % e un'icona del 448 %. Quei file non vengono nemmeno scritti: il più leggero era già sul disco.",
+    n1p:"Il JPEG è ottimo sulle fotografie e pessimo sulle tinte piatte e sul testo. Qui uno screenshot è cresciuto dell'88 %, un'icona del 448 %. Quei JPEG non vengono mai scritti: l'immagine viene invece compressa senza perdita, e quando neanche questo è più piccolo, restituita intatta.",
     n2h:"Appiattire la trasparenza sul bianco",
     n2p:"Il JPEG non ha canale alfa, quindi un'immagine con pixel trasparenti viene compressa come PNG, senza perdita: i pixel e l'alfa tornano identici byte per byte. Da qualunque formato arrivi la trasparenza — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Conservare ciò che accompagnava il file",
@@ -462,7 +463,7 @@ var T = {
     r1:"fotografia", r2:"zeskanowany dokument", r3:"przezroczyste logo",
     r4:"diagram", r5:"zrzut ekranu", r6:"JPEG i tak już mały", r6b:"nietknięty",
     n1h:"Odda ci coś cięższego",
-    n1p:"JPEG jest bardzo dobry w fotografii i bardzo zły w płaskich barwach i tekście. Zrzut ekranu urósł tu o 88 %, ikona o 448 %. Takie pliki w ogóle nie powstają — lżejszy już był na dysku.",
+    n1p:"JPEG jest świetny do zdjęć i fatalny do jednolitych barw i tekstu. Zrzut ekranu urósł tu o 88 %, ikona o 448 %. Takie pliki JPEG nigdy nie powstają: obraz jest zamiast tego zmniejszany bezstratnie, a gdy i to wyszłoby większe, wracany nietknięty.",
     n2h:"Spłaszczy przezroczystość na biel",
     n2p:"JPEG nie ma kanału alfa, więc obraz z przezroczystymi pikselami jest zmniejszany jako PNG, bezstratnie: piksele i alfa wracają identyczne co do bajtu. Niezależnie od tego, z jakiego formatu przyszła przezroczystość — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Zachowa to, co przyszło z plikiem",
@@ -491,7 +492,7 @@ var T = {
     r1:"фотография", r2:"отсканированный документ", r3:"логотип с прозрачностью",
     r4:"схема", r5:"снимок экрана", r6:"уже маленький JPEG", r6b:"не тронут",
     n1h:"Вернёт вам что-то тяжелее",
-    n1p:"JPEG прекрасен на фотографиях и плох на плоских заливках и тексте. Снимок экрана вырос здесь на 88 %, значок — на 448 %. Такие файлы просто не создаются: более лёгкий и так лежал у вас на диске.",
+    n1p:"JPEG прекрасно справляется с фотографиями и очень плохо — с плоскими заливками и текстом. Снимок экрана здесь вырос на 88 %, значок — на 448 %. Такие JPEG не записываются никогда: вместо этого изображение сжимается без потерь, а если и так выходит больше, возвращается нетронутым.",
     n2h:"Положит прозрачность на белое",
     n2p:"У JPEG нет альфа-канала, поэтому изображение с прозрачными пикселями сжимается как PNG, без потерь: пиксели и альфа возвращаются побайтово одинаковыми. Из какого бы формата прозрачность ни пришла — PNG, WebP, GIF, TIFF, ICO.",
     n3h:"Сохранит то, что пришло вместе с файлом",
@@ -520,7 +521,7 @@ var T = {
     r1:"写真", r2:"スキャンした書類", r3:"透過つきのロゴ",
     r4:"図版", r5:"スクリーンショット", r6:"すでに小さい JPEG", r6b:"そのまま",
     n1h:"より重いものを返す",
-    n1p:"JPEG は写真にはとても強く、べた塗りや文字にはとても弱い形式です。ここではスクリーンショットが 88 %、アイコンが 448 % 膨らみました。そうしたファイルはそもそも書き出しません。軽いほうは最初から手元にあります。",
+    n1p:"JPEG は写真にはとても強く、べた塗りや文字にはとても弱い形式です。ここではスクリーンショットが 88 %、アイコンが 448 % 膨らみました。そうした JPEG は決して書き出しません。代わりに可逆で圧縮し、それでも大きくなるなら元のまま返します。",
     n2h:"透過を白で塗りつぶす",
     n2p:"JPEG にはアルファチャンネルがないため、透けるピクセルを持つ画像は PNG のまま可逆圧縮します。ピクセルもアルファもバイト単位で元どおりです。透明度がどの形式から来たかは問いません — PNG、WebP、GIF、TIFF、ICO。",
     n3h:"ファイルに付いてきたものを残す",
@@ -549,7 +550,7 @@ var T = {
     r1:"一张照片", r2:"一份扫描件", r3:"一个透明标志",
     r4:"一张示意图", r5:"一张截图", r6:"本来就很小的 JPEG", r6b:"原样保留",
     n1h:"还给你更大的文件",
-    n1p:"JPEG 擅长照片，却拙于纯色和文字。这里一张截图涨了 88 %，一个图标涨了 448 %。这些文件根本不会写出来——更小的那个本来就在你硬盘上。",
+    n1p:"JPEG 对照片很在行，对纯色块和文字很不在行。这里截图涨了 88 %，图标涨了 448 %。这样的 JPEG 从不写出：图片改用无损方式压缩，如果连这样都更大，就原样奉还。",
     n2h:"把透明压成白底",
     n2p:"JPEG 没有 alpha 通道，所以含透明像素的图片会以 PNG 无损压缩：像素和 alpha 逐字节原样返回。无论透明度来自哪种格式——PNG、WebP、GIF、TIFF、ICO。",
     n3h:"留下随文件一起来的东西",

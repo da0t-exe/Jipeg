@@ -5,3 +5,10 @@
 # divers Windows
 Thumbs.db
 desktop.ini
+
+# les lots d'epreuve se refabriquent a partir d'une graine : plusieurs Mo
+# d'images generees n'ont rien a faire dans l'historique
+tests/corpus/
+tests/random/
+tests/corpus-expected.json
+tests/random-index.json

@@ -90,8 +90,9 @@ This is most of what separates Jipeg from any other converter.
 
 - **It never writes a heavier file.** JPEG is very good at photographs and very
   bad at flat colour and text. Measured on real files, a screenshot grew 88%, a
-  diagram 325%, a 64-pixel icon 448%. Those are not written at all — the lighter
-  version was already on your disk, and the summary says how many were left alone.
+  diagram 325%, a 64-pixel icon 448%. Those JPEGs are never written: the picture
+  is shrunk losslessly instead, and where even that would come out bigger it is
+  handed back untouched, with the summary saying how many were left alone.
 - **It never flattens transparency onto a background.** A picture with
   see-through pixels is not turned into a JPEG, because JPEG has no alpha channel
   and the only way to make one is to paint something behind the picture. Those
@@ -102,7 +103,11 @@ This is most of what separates Jipeg from any other converter.
   never uses is still encoded as the opaque picture it actually is. Where the
   lossless result would be heavier than the original, the original is kept. A PNG
   that would merely have grown as a JPEG takes the same route rather than
-  producing nothing.
+  producing nothing — and so does anything else the chroma measurement calls
+  flat colour. A GIF of flat colour used to be handed straight back untouched;
+  measured, one of them was giving up 70% by being left alone. A photograph is
+  refused that second attempt on purpose: a lossless PNG of one is many times
+  the size, and the try would be pure waste.
 - **It carries nothing over.** No Exif, no GPS, no camera model, no colour
   profile, no embedded thumbnail. That is the single biggest saving on a phone
   photograph, and it means the file cannot tell anyone where it was taken. The
@@ -409,6 +414,14 @@ src/launch.vbs           starts the converter without a console window
 src/settings.vbs         starts the settings window without a console window
 platform/                Linux and macOS, experimental and untested
 ```
+
+## Tests
+
+Everything claimed above was measured by something in [`tests/`](tests) — 48
+files with their outcome written down before anything runs, a few hundred random
+and byte-flipped ones checked against rules rather than expected answers, and
+the install run in a loop with the registry compared each time. [`tests/README.md`](tests/README.md)
+says what each one does and what it needs.
 
 ## Contributing a translation
 
