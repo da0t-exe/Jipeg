@@ -40,6 +40,7 @@ function Ps1([string]$script, [string[]]$arguments = @()) {
 Etape 'encodages, fins de ligne, octets nuls' { & python (Join-Path $T 'check-encoding.py') }
 Etape 'la page et ses dix traductions'        { & python (Join-Path $T 'check-site.py') }
 Etape 'fonctions et variables mortes'         { & python (Join-Path $T 'check-dead-code.py') }
+Etape 'contrastes, echelle, rythme'           { & python (Join-Path $T 'check-design.py') }
 Etape 'tout le PowerShell parse' {
     $mauvais = 0
     foreach ($f in (Get-ChildItem (Join-Path $Repo 'src') -Filter '*.ps1') +
