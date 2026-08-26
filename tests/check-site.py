@@ -23,8 +23,10 @@ for code in langs:
         print('  %s : %d manquantes -> %s' % (code, len(miss), ', '.join(miss[:8])))
         bad += 1
 
-ext = [u for u in re.findall(r'(?:src|href)="(https?://[^"]+)"', s)
-       if 'github.com' not in u and 'raw.githubusercontent' not in u]
+# Ce qui compte est ce que la page CHARGE, pas ce vers quoi elle pointe : un
+# <a href> ne va rien chercher. Seuls src= et le href d'un <link> le font.
+ext = (re.findall(r'src="(https?://[^"]+)"', s)
+       + re.findall(r'<link[^>]+href="(https?://[^"]+)"', s))
 print('  ressources externes chargees : %s' % (', '.join(ext) if ext else 'aucune'))
 if ext:
     bad += 1

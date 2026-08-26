@@ -589,7 +589,17 @@ function Start-Next {
         $png = Get-JipegPngFacts $src
         $script:Mode = 'jpeg'
         $script:Flat = $false
-        if (($script:ForcePng -or $png.Alpha) -and (Test-JipegIsPng $src)) {
+        # Having an alpha channel is not the same as using one, and the gap is
+        # expensive: the same photograph saved as RGBA instead of RGB came out
+        # at 95 KB rather than 12 KB, eight times heavier, because the header
+        # said "alpha" and nothing looked. Plenty of tools write PNG-32 whether
+        # the picture needs it or not. The pixels are read when the header
+        # claims a channel - never otherwise, so an ordinary RGB PNG costs
+        # nothing. An animated one stays lossless whatever its pixels say:
+        # there the thing worth keeping is the animation.
+        $keepLossless = $script:ForcePng -or $png.Animated -or
+                        ($png.Alpha -and (Test-JipegTransparentPixels $src))
+        if ($keepLossless -and (Test-JipegIsPng $src)) {
             $script:Mode = 'png'
         }
         if ($script:Mode -eq 'png') {

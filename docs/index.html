@@ -142,6 +142,16 @@ tbody tr:last-child td{border-bottom:0}
 .btn.primary:hover{filter:brightness(1.1);background:var(--accent)}
 footer{border-top:1px solid var(--edge);padding:30px 0 46px;font-size:11.5px;color:var(--mute);line-height:1.85}
 footer a{color:var(--dim)}
+.made{display:flex;align-items:center;gap:12px;margin-top:22px;padding-top:20px;
+      border-top:1px solid var(--edge);font-size:11.5px;color:var(--mute)}
+.made svg{flex:none;display:block}
+/* Ce sont les mains qui tapent : les faire monter et descendre en alternance
+   dit la frappe sans rien ajouter au dessin. Le bloc prefers-reduced-motion
+   plus haut les arrete comme le reste. */
+@keyframes tap{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.6px)}}
+.made .k1,.made .k2{transform-box:fill-box;transform-origin:center;
+                    animation:tap 1s ease-in-out infinite}
+.made .k2{animation-delay:.5s}
 </style>
 </head>
 <body>
@@ -296,12 +306,34 @@ footer a{color:var(--dim)}
   <a href="https://github.com/oxipng/oxipng">oxipng</a>, WebP read by
   <a href="https://github.com/webmproject/libwebp">libwebp</a>. MIT licensed, and not
   affiliated with Google or the JPEG committee.</div>
+
+  <div class="wrap made">
+    <svg width="52" height="44" viewBox="0 0 64 54" aria-hidden="true">
+      <!-- la tete, au-dessus de l'ecran -->
+      <circle cx="32" cy="14" r="9" fill="var(--accent)"/>
+      <circle cx="28.6" cy="13" r="1.35" fill="var(--panel)"/>
+      <circle cx="35.4" cy="13" r="1.35" fill="var(--panel)"/>
+      <path d="M29.2 17.2q2.8 2.2 5.6 0" fill="none" stroke="var(--panel)"
+            stroke-width="1.3" stroke-linecap="round"/>
+      <!-- le dos de l'ecran, puis le clavier en perspective -->
+      <rect x="15" y="24" width="34" height="17" rx="2.5" fill="none"
+            stroke="var(--mute)" stroke-width="1.6"/>
+      <path d="M11 41h42l4 6H7z" fill="none" stroke="var(--mute)"
+            stroke-width="1.6" stroke-linejoin="round"/>
+      <!-- les mains sur le clavier, qui montent et descendent -->
+      <circle class="k1" cx="17" cy="44" r="2.4" fill="var(--accent)"/>
+      <circle class="k2" cx="47" cy="44" r="2.4" fill="var(--accent)"/>
+    </svg>
+    <span data-t="made">Co-created with <a href="https://claude.com/claude-code">Claude</a>.
+    Every figure on this page was measured, and what was never measured says so.</span>
+  </div>
 </footer>
 
 <script>
 var T = {
   en: {},
   fr: {
+    made:"Co-créé avec <a href=\"https://claude.com/claude-code\">Claude</a>. Chaque chiffre de cette page a été mesuré, et ce qui ne l'a jamais été le dit.",
     s7:"Ça sonne mal dans votre langue ?",
     p6:"L'interface parle dix langues. Neuf ont été écrites sans qu'un locuteur natif les relise, donc certaines phrases sonnent sûrement raide, ou sont carrément fausses. Une seule ligne vaut la peine d'être signalée — le formulaire demande ce qui est écrit, ce qu'il faudrait, et rien d'autre.",
     l5:"Corriger une ligne",
@@ -331,6 +363,7 @@ var T = {
     foot:"Encodage par <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilé par <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG compressés par <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP lus par <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Sous licence MIT, sans lien avec Google ni avec le comité JPEG."
   },
   es: {
+    made:"Co-creado con <a href=\"https://claude.com/claude-code\">Claude</a>. Cada cifra de esta página se midió, y lo que nunca se midió lo dice.",
     s7:"¿Suena mal en tu idioma?",
     p6:"La interfaz habla diez idiomas. Nueve se escribieron sin que ningún hablante nativo las revisara, así que algunas frases sonarán rígidas o serán directamente incorrectas. Basta con una sola línea — el formulario pregunta qué dice, qué debería decir, y nada más.",
     l5:"Corregir una línea",
@@ -360,6 +393,7 @@ var T = {
     foot:"Codificación de <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilado por <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG comprimidos por <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP leídos por <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licencia MIT, sin relación con Google ni con el comité JPEG."
   },
   de: {
+    made:"Mitentwickelt mit <a href=\"https://claude.com/claude-code\">Claude</a>. Jede Zahl auf dieser Seite wurde gemessen, und was nie gemessen wurde, sagt es.",
     s7:"Klingt es in deiner Sprache falsch?",
     p6:"Die Oberfläche spricht zehn Sprachen. Neun davon hat nie ein Muttersprachler gegengelesen, also klingen manche Zeilen steif oder sind schlicht falsch. Eine einzige Zeile zu melden lohnt sich — das Formular fragt, was dasteht, was dastehen sollte, und sonst nichts.",
     l5:"Eine Zeile berichtigen",
@@ -389,6 +423,7 @@ var T = {
     foot:"Kodierung durch <a href=\"https://github.com/google/jpegli\">jpegli</a>, gebaut von <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNGs verkleinert von <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP gelesen von <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. MIT-Lizenz, ohne Verbindung zu Google oder zum JPEG-Komitee."
   },
   pt: {
+    made:"Co-criado com <a href=\"https://claude.com/claude-code\">Claude</a>. Todos os números desta página foram medidos, e o que nunca foi medido di-lo.",
     s7:"Soa mal na sua língua?",
     p6:"A interface fala dez idiomas. Nove foram escritos sem que um falante nativo os lesse, por isso algumas frases soarão duras ou estarão simplesmente erradas. Uma só linha já vale a pena — o formulário pergunta o que diz, o que devia dizer, e mais nada.",
     l5:"Corrigir uma linha",
@@ -418,6 +453,7 @@ var T = {
     foot:"Codificação por <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilado pelo <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG comprimidos pelo <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP lidos pelo <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licença MIT, sem ligação à Google nem ao comité JPEG."
   },
   it: {
+    made:"Co-creato con <a href=\"https://claude.com/claude-code\">Claude</a>. Ogni cifra di questa pagina è stata misurata, e ciò che non lo è mai stato lo dice.",
     s7:"Suona male nella tua lingua?",
     p6:"L'interfaccia parla dieci lingue. Nove sono state scritte senza che un madrelingua le rileggesse, quindi qualche frase suonerà rigida o sarà proprio sbagliata. Vale la pena segnalare anche una sola riga — il modulo chiede cosa c'è scritto, cosa dovrebbe esserci, e nient'altro.",
     l5:"Correggere una riga",
@@ -447,6 +483,7 @@ var T = {
     foot:"Codifica di <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilato da <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG compressi da <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP letti da <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licenza MIT, senza legami con Google né con il comitato JPEG."
   },
   pl: {
+    made:"Współtworzone z <a href=\"https://claude.com/claude-code\">Claude</a>. Każda liczba na tej stronie została zmierzona, a to, czego nigdy nie zmierzono, mówi o tym wprost.",
     s7:"Brzmi źle w twoim języku?",
     p6:"Interfejs mówi w dziesięciu językach. Dziewięć powstało bez udziału rodzimego użytkownika, więc część zdań na pewno brzmi sztywno albo jest po prostu błędna. Warto zgłosić nawet jedną linijkę — formularz pyta, co jest napisane, co powinno być, i nic więcej.",
     l5:"Poprawić linijkę",
@@ -476,6 +513,7 @@ var T = {
     foot:"Kodowanie przez <a href=\"https://github.com/google/jpegli\">jpegli</a>, zbudowane przez <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG zmniejsza <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP czyta <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licencja MIT, bez związku z Google ani komitetem JPEG."
   },
   ru: {
+    made:"Создано вместе с <a href=\"https://claude.com/claude-code\">Claude</a>. Каждая цифра на этой странице измерена, а то, что не измерялось, так и сказано.",
     s7:"Звучит не по-русски?",
     p6:"Интерфейс говорит на десяти языках. Девять из них написаны без единого носителя языка, так что часть фраз наверняка звучит натянуто или просто неверна. Стоит сообщить даже об одной строке — форма спрашивает, что написано, как надо, и больше ничего.",
     l5:"Исправить строку",
@@ -505,6 +543,7 @@ var T = {
     foot:"Кодирование — <a href=\"https://github.com/google/jpegli\">jpegli</a>, сборка <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG сжимает <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP читает <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Лицензия MIT, без отношения к Google и комитету JPEG."
   },
   ja: {
+    made:"<a href=\"https://claude.com/claude-code\">Claude</a> と一緒に作りました。このページの数字はすべて実測で、測っていないものは測っていないと書いてあります。",
     s7:"あなたの言語で不自然ですか",
     p6:"画面は十の言語に対応していますが、そのうち九つは母語話者が一度も読み返していません。ぎこちない、あるいはまるきり誤った文もあるはずです。一行だけでも知らせる価値があります。フォームが尋ねるのは、いま何と書いてあるか、どう書くべきか、それだけです。",
     l5:"一行なおす",
@@ -534,6 +573,7 @@ var T = {
     foot:"符号化は <a href=\"https://github.com/google/jpegli\">jpegli</a>、ビルドは <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>。PNG の圧縮は <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>、WebP の読み込みは <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>。MIT ライセンス。Google とも JPEG 委員会とも関係はありません。"
   },
   zh: {
+    made:"与 <a href=\"https://claude.com/claude-code\">Claude</a> 共同创作。本页每一个数字都是实测的，没测过的地方也都写明了。",
     s7:"在你的语言里读着别扭吗？",
     p6:"界面支持十种语言，其中九种从未经母语者过目，所以有些句子多半生硬，甚至完全不对。哪怕只有一行也值得告诉我们——表单只问现在写的是什么、应该写成什么，再无其他。",
     l5:"改一行",

@@ -2,14 +2,21 @@
 """Fabrique un lot d'epreuve large et varie, avec pour chaque fichier ce qu'on
 attend de lui. 'jpg' = doit sortir en JPEG, 'png' = doit rester un PNG,
 'rien' = ne doit produire aucun fichier (trop petit, illisible, ou deja bon)."""
-import io, os, struct, random, shutil, sys
+import io, os, stat, struct, random, shutil, sys
 
 random.seed(11)
 from PIL import Image, ImageDraw, ImageFont
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'corpus')
+def _forcer(fonction, chemin, info):
+    # Le lot contient un fichier en lecture seule, expres. Sous Windows,
+    # os.unlink refuse d'y toucher : il faut lever l'attribut d'abord, sinon
+    # le generateur ne sait pas nettoyer ce qu'il a lui-meme ecrit.
+    os.chmod(chemin, stat.S_IWRITE)
+    fonction(chemin)
+
 if os.path.isdir(OUT):
-    shutil.rmtree(OUT)
+    shutil.rmtree(OUT, onexc=_forcer)
 os.makedirs(OUT)
 
 ATTENDU = {}
