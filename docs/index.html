@@ -232,22 +232,19 @@ footer a{color:var(--dim)}
     <div class="notes">
       <div class="note">
         <h3 data-t="n1h">Give you back something heavier</h3>
-        <p data-t="n1p">JPEG is very good at photographs and very bad at flat colour and text.
-        A screenshot grew 88% here, an icon 448%. Those JPEGs are never written: the picture is
-        shrunk losslessly instead, and where even that would come out bigger, handed back
-        untouched.</p>
+        <p data-t="n1p">A screenshot grew 88% here, an icon 448%. Those JPEGs are never
+        written: the picture is shrunk losslessly instead, or handed back untouched.</p>
       </div>
       <div class="note">
         <h3 data-t="n2h">Flatten transparency onto white</h3>
-        <p data-t="n2p">JPEG has no alpha channel, so a picture with see-through pixels is
-        shrunk as a PNG instead, losslessly: pixels and alpha come back byte for byte identical.
-        Whichever format the transparency arrived in — PNG, WebP, GIF, TIFF, ICO.</p>
+        <p data-t="n2p">A picture with see-through pixels is shrunk as a PNG instead,
+        losslessly, whichever format the transparency arrived in.</p>
       </div>
       <div class="note">
         <h3 data-t="n3h">Keep what came with the file</h3>
-        <p data-t="n3p">The rotation a phone asks for is applied to the pixels and then thrown
-        away with everything else, so the picture is upright everywhere and cannot say where
-        it was taken.</p>
+        <p data-t="n3p">The rotation a phone asks for is applied to the pixels and
+        thrown away with the rest, so the picture is upright everywhere and cannot say where it
+        was taken.</p>
       </div>
     </div>
   </section>
@@ -256,7 +253,6 @@ footer a{color:var(--dim)}
     <div class="h"><span></span><h2 data-t="s3">The whole interface</h2></div>
     <div class="shots">
       <figure><img src="preview.png" alt="" loading="lazy"><figcaption data-t="cap1">converting</figcaption></figure>
-      <figure><img src="settings.png" alt="" loading="lazy"><figcaption data-t="cap2">every setting there is</figcaption></figure>
     </div>
   </section>
 
@@ -272,19 +268,10 @@ footer a{color:var(--dim)}
     <div class="h"><span></span><h2 data-t="s6">Tested on one machine</h2></div>
     <p class="lede" data-t="p5" style="font-size:12.5px">Twenty behaviours are checked on every
     change, and the window's geometry is measured rather than looked at — but all of it on one
-    Windows 11 machine, at 100% scaling. HEIC and AVIF have never actually been decoded here, the
-    display scaling is only simulated, and the Linux and macOS port has never been run at all.
-    The interface speaks ten languages and every string was measured against the box it has to fit
-    in, but no native speaker has read the nine translations.
-    The two bugs that mattered most were found by somebody else running it.</p>
-  </section>
-
-  <section>
-    <div class="h"><span></span><h2 data-t="s7">Does it read badly in your language?</h2></div>
-    <p class="lede" data-t="p6" style="font-size:12.5px">The interface speaks ten languages.
-    Nine of them were written without a native speaker ever reading them back, so some lines are
-    probably stiff or plain wrong. One line is worth reporting — the form asks what it says, what
-    it should say, and nothing else.</p>
+    Windows 11 machine at 100% scaling. HEIC and AVIF have never been decoded here, the scaling is
+    only simulated, the port to Linux and macOS has never been run, and no native speaker has read
+    the nine translations. The two bugs that mattered most were found by somebody else running
+    it.</p>
     <div class="links" style="margin-top:20px">
       <a class="btn" href="https://github.com/da0t-exe/Jipeg/issues/new?template=translation.yml" data-t="l5">Fix a line</a>
     </div>
@@ -321,8 +308,8 @@ var T = {
   en: {},
   fr: {
     made:"Co-créé avec <a href=\"https://claude.com/claude-code\">Claude</a>. Chaque chiffre de cette page a été mesuré, et ce qui ne l'a jamais été le dit. Le personnage appartient à Anthropic ; il est repris sans aucune affiliation avec eux et n'est couvert par aucune licence de ce projet.",
-    s7:"Ça sonne mal dans votre langue ?",
-    p6:"L'interface parle dix langues. Neuf ont été écrites sans qu'un locuteur natif les relise, donc certaines phrases sonnent sûrement raide, ou sont carrément fausses. Une seule ligne vaut la peine d'être signalée — le formulaire demande ce qui est écrit, ce qu'il faudrait, et rien d'autre.",
+SUPPRIMEE
+SUPPRIMEE
     l5:"Corriger une ligne",
     status:"Windows 10 et 11, sans droits administrateur",
     h1a:"Clic droit sur une image.", h1b:"Elle ressort plus légère.",
@@ -337,22 +324,22 @@ var T = {
     r1:"une photo", r2:"un document scanné", r3:"un logo transparent",
     r4:"un schéma", r5:"une capture d'écran", r6:"un JPEG déjà léger", r6b:"laissé tel quel",
     n1h:"Vous rendre plus lourd",
-    n1p:"Le JPEG est excellent sur les photos et mauvais sur les aplats et le texte. Une capture d'écran a gonflé de 88 % ici, une icône de 448 %. Ces JPEG ne sont jamais écrits : l'image est compressée sans perte à la place, et quand même ça serait plus gros, elle est rendue intacte.",
+    n1p:"Une capture d'écran a gonflé de 88 % ici, une icône de 448 %. Ces JPEG ne sont jamais écrits : l'image est compressée sans perte à la place, ou rendue intacte.",
     n2h:"Aplatir la transparence sur du blanc",
-    n2p:"Le JPEG n'a pas de canal alpha, donc une image à pixels transparents est compressée en PNG, sans perte : les pixels et l'alpha ressortent identiques octet pour octet. Quel que soit le format d'où vient la transparence — PNG, WebP, GIF, TIFF, ICO.",
+    n2p:"Une image à pixels transparents est compressée en PNG, sans perte, quel que soit le format d'où vient la transparence.",
     n3h:"Garder ce qui accompagnait le fichier",
-    n3p:"La rotation demandée par un téléphone est appliquée aux pixels puis jetée avec le reste : l'image est droite partout et ne peut plus dire où elle a été prise.",
+    n3p:"La rotation demandée par un téléphone est appliquée aux pixels puis jetée avec le reste : l'image est droite partout et ne dit plus où elle a été prise.",
     cap1:"pendant la conversion", cap2:"tous les réglages, sans exception",
     unix:"<b>Expérimental, et jamais exécuté par son auteur.</b> Il existe un portage pour GNOME Files, KDE Dolphin, XFCE Thunar et le Finder de macOS. Il a été écrit sous Windows : le shell est syntaxiquement valide et les property lists aussi, c'est tout ce qui a été vérifié.",
     s6:"Testé sur une seule machine",
-    p5:"Vingt comportements sont vérifiés à chaque modification, et la géométrie de la fenêtre est mesurée plutôt que regardée — mais tout cela sur une seule machine Windows 11, à 100 % d'échelle. Le HEIC et l'AVIF n'y ont jamais été décodés pour de vrai, l'échelle d'affichage n'est que simulée, et le portage Linux et macOS n'a jamais été exécuté.L'interface parle dix langues et chaque chaîne a été mesurée par rapport à la boîte qui doit la contenir, mais aucun locuteur natif n'a relu les neuf traductions. Les deux bugs qui comptaient ont été trouvés par quelqu'un d'autre.",
+    p5:"Vingt comportements sont vérifiés à chaque modification, et la géométrie de la fenêtre est mesurée plutôt que regardée — mais tout cela sur une seule machine Windows 11, à 100 % d'échelle. Le HEIC et l'AVIF n'y ont jamais été décodés, l'échelle n'est que simulée, le portage Linux et macOS n'a jamais été exécuté, et aucun locuteur natif n'a relu les neuf traductions. Les deux bugs qui comptaient ont été trouvés par quelqu'un d'autre.",
     l1:"Télécharger", l2:"Code source", l3:"Manuel",
     foot:"Encodage par <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilé par <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG compressés par <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP lus par <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Sous licence MIT, sans lien avec Google ni avec le comité JPEG."
   },
   es: {
     made:"Co-creado con <a href=\"https://claude.com/claude-code\">Claude</a>. Cada cifra de esta página se midió, y lo que nunca se midió lo dice. El personaje pertenece a Anthropic; aparece aquí sin ninguna afiliación con ellos y no lo cubre ninguna licencia de este proyecto.",
-    s7:"¿Suena mal en tu idioma?",
-    p6:"La interfaz habla diez idiomas. Nueve se escribieron sin que ningún hablante nativo las revisara, así que algunas frases sonarán rígidas o serán directamente incorrectas. Basta con una sola línea — el formulario pregunta qué dice, qué debería decir, y nada más.",
+SUPPRIMEE
+SUPPRIMEE
     l5:"Corregir una línea",
     status:"Windows 10 y 11, sin permisos de administrador",
     h1a:"Clic derecho en una imagen.", h1b:"Vuelve más ligera.",
@@ -367,22 +354,22 @@ var T = {
     r1:"una fotografía", r2:"un documento escaneado", r3:"un logotipo transparente",
     r4:"un diagrama", r5:"una captura de pantalla", r6:"un JPEG ya pequeño", r6b:"intacto",
     n1h:"Devolverte algo más pesado",
-    n1p:"JPEG es excelente con fotos y malo con los colores planos y el texto. Aquí una captura de pantalla creció un 88 %, un icono un 448 %. Esos JPEG no se escriben nunca: la imagen se comprime sin pérdida, y cuando ni eso sale más pequeño, se devuelve intacta.",
+    n1p:"Aquí una captura de pantalla creció un 88 %, un icono un 448 %. Esos JPEG no se escriben nunca: la imagen se comprime sin pérdida, o se devuelve intacta.",
     n2h:"Aplanar la transparencia sobre blanco",
-    n2p:"JPEG no tiene canal alfa, así que una imagen con píxeles transparentes se comprime como PNG, sin pérdida: los píxeles y el alfa vuelven idénticos byte a byte. Venga la transparencia del formato que venga — PNG, WebP, GIF, TIFF, ICO.",
+    n2p:"Una imagen con píxeles transparentes se comprime como PNG, sin pérdida, venga la transparencia del formato que venga.",
     n3h:"Conservar lo que venía con el archivo",
-    n3p:"La rotación que pide un teléfono se aplica a los píxeles y luego se descarta con todo lo demás: la imagen queda derecha en todas partes y ya no puede decir dónde se tomó.",
+    n3p:"La rotación que pide un teléfono se aplica a los píxeles y se tira con lo demás: la imagen está derecha en todas partes y ya no dice dónde se tomó.",
     cap1:"durante la conversión", cap2:"todos los ajustes que hay",
     unix:"<b>Experimental, y su autor nunca lo ha ejecutado.</b> Hay una adaptación para GNOME Files, KDE Dolphin, XFCE Thunar y el Finder de macOS. Se escribió en Windows: el shell y las listas de propiedades son válidos, y eso es todo lo comprobado.",
     s6:"Probado en una sola máquina",
-    p5:"Veinte comportamientos se comprueban en cada cambio, y la geometría de la ventana se mide en vez de mirarse — pero todo en una sola máquina con Windows 11, al 100 % de escala. HEIC y AVIF nunca se han descodificado aquí de verdad, el escalado de pantalla solo está simulado, y la adaptación a Linux y macOS nunca se ha ejecutado.La interfaz habla diez idiomas y cada cadena se midió contra la caja que debe contenerla, pero ningún hablante nativo ha leído las nueve traducciones. Los dos fallos que importaban los encontró otra persona.",
+    p5:"Veinte comportamientos se comprueban en cada cambio, y la geometría de la ventana se mide en vez de mirarse — pero todo en una sola máquina con Windows 11, al 100 % de escala. HEIC y AVIF nunca se han descodificado aquí, el escalado solo está simulado, la adaptación a Linux y macOS nunca se ha ejecutado, y ningún hablante nativo ha leído las nueve traducciones. Los dos fallos que importaban los encontró otra persona.",
     l1:"Descargar", l2:"Código", l3:"Manual",
     foot:"Codificación de <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilado por <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG comprimidos por <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP leídos por <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licencia MIT, sin relación con Google ni con el comité JPEG."
   },
   de: {
     made:"Mitentwickelt mit <a href=\"https://claude.com/claude-code\">Claude</a>. Jede Zahl auf dieser Seite wurde gemessen, und was nie gemessen wurde, sagt es. Die Figur gehört Anthropic; sie steht hier ohne jede Verbindung zu ihnen und fällt unter keine Lizenz dieses Projekts.",
-    s7:"Klingt es in deiner Sprache falsch?",
-    p6:"Die Oberfläche spricht zehn Sprachen. Neun davon hat nie ein Muttersprachler gegengelesen, also klingen manche Zeilen steif oder sind schlicht falsch. Eine einzige Zeile zu melden lohnt sich — das Formular fragt, was dasteht, was dastehen sollte, und sonst nichts.",
+SUPPRIMEE
+SUPPRIMEE
     l5:"Eine Zeile berichtigen",
     status:"Windows 10 und 11, ohne Administratorrechte",
     h1a:"Rechtsklick auf ein Bild.", h1b:"Es kommt leichter zurück.",
@@ -397,22 +384,22 @@ var T = {
     r1:"ein Foto", r2:"ein gescanntes Dokument", r3:"ein transparentes Logo",
     r4:"eine Grafik", r5:"ein Bildschirmfoto", r6:"ein bereits kleines JPEG", r6b:"unberührt",
     n1h:"Etwas Schwereres zurückgeben",
-    n1p:"JPEG ist bei Fotos sehr gut und bei Flächen und Text sehr schlecht. Ein Screenshot wuchs hier um 88 %, ein Symbol um 448 %. Diese JPEGs werden nie geschrieben: das Bild wird stattdessen verlustfrei verkleinert, und wenn selbst das größer würde, unangetastet zurückgegeben.",
+    n1p:"Ein Screenshot wuchs hier um 88 %, ein Symbol um 448 %. Diese JPEGs werden nie geschrieben: das Bild wird stattdessen verlustfrei verkleinert oder unangetastet zurückgegeben.",
     n2h:"Transparenz auf Weiß plattdrücken",
-    n2p:"JPEG hat keinen Alphakanal, deshalb wird ein Bild mit durchsichtigen Pixeln als PNG verkleinert, verlustfrei: Pixel und Alpha kommen Byte für Byte identisch zurück. Egal aus welchem Format die Transparenz kam — PNG, WebP, GIF, TIFF, ICO.",
+    n2p:"Ein Bild mit durchsichtigen Pixeln wird als PNG verkleinert, verlustfrei, egal aus welchem Format die Transparenz kam.",
     n3h:"Behalten, was an der Datei hing",
-    n3p:"Die Drehung, die ein Telefon verlangt, wird auf die Pixel angewandt und dann mit allem anderen verworfen: Das Bild steht überall richtig und kann nicht mehr verraten, wo es aufgenommen wurde.",
+    n3p:"Die Drehung, die ein Telefon verlangt, wird auf die Pixel angewendet und mit allem anderen weggeworfen: das Bild steht überall richtig und verrät nicht mehr, wo es entstand.",
     cap1:"während der Umwandlung", cap2:"sämtliche Einstellungen",
     unix:"<b>Experimentell, und vom Autor nie ausgeführt.</b> Es gibt eine Portierung für GNOME Files, KDE Dolphin, XFCE Thunar und den macOS Finder. Sie entstand unter Windows: die Shell und die Property-Lists sind gültig, mehr wurde nicht geprüft.",
     s6:"Auf einem einzigen Rechner geprüft",
-    p5:"Zwanzig Verhaltensweisen werden bei jeder Änderung geprüft, und die Geometrie des Fensters wird gemessen statt angesehen — alles jedoch auf einem einzigen Windows-11-Rechner bei 100 % Skalierung. HEIC und AVIF wurden hier nie wirklich dekodiert, die Skalierung ist nur simuliert, und die Portierung auf Linux und macOS lief nie.Die Oberfläche spricht zehn Sprachen, und jede Zeichenkette wurde gegen ihren Platz gemessen - gelesen hat die neun Übersetzungen aber kein Muttersprachler. Die beiden Fehler, auf die es ankam, fand jemand anderes.",
+    p5:"Zwanzig Verhaltensweisen werden bei jeder Änderung geprüft, und die Geometrie des Fensters wird gemessen statt angesehen — alles jedoch auf einem einzigen Windows-11-Rechner bei 100 % Skalierung. HEIC und AVIF wurden hier nie dekodiert, die Skalierung ist nur simuliert, die Portierung auf Linux und macOS lief nie, und kein Muttersprachler hat die neun Übersetzungen gelesen. Die beiden Fehler, auf die es ankam, fand jemand anderes.",
     l1:"Herunterladen", l2:"Quelltext", l3:"Handbuch",
     foot:"Kodierung durch <a href=\"https://github.com/google/jpegli\">jpegli</a>, gebaut von <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNGs verkleinert von <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP gelesen von <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. MIT-Lizenz, ohne Verbindung zu Google oder zum JPEG-Komitee."
   },
   pt: {
     made:"Co-criado com <a href=\"https://claude.com/claude-code\">Claude</a>. Todos os números desta página foram medidos, e o que nunca foi medido di-lo. A personagem pertence à Anthropic; aparece aqui sem qualquer afiliação com eles e não está coberta por nenhuma licença deste projeto.",
-    s7:"Soa mal na sua língua?",
-    p6:"A interface fala dez idiomas. Nove foram escritos sem que um falante nativo os lesse, por isso algumas frases soarão duras ou estarão simplesmente erradas. Uma só linha já vale a pena — o formulário pergunta o que diz, o que devia dizer, e mais nada.",
+SUPPRIMEE
+SUPPRIMEE
     l5:"Corrigir uma linha",
     status:"Windows 10 e 11, sem direitos de administrador",
     h1a:"Clique direito numa imagem.", h1b:"Ela volta mais leve.",
@@ -427,22 +414,22 @@ var T = {
     r1:"uma fotografia", r2:"um documento digitalizado", r3:"um logótipo transparente",
     r4:"um diagrama", r5:"uma captura de ecrã", r6:"um JPEG já pequeno", r6b:"intocado",
     n1h:"Devolver algo mais pesado",
-    n1p:"O JPEG é excelente com fotografias e mau com cores lisas e texto. Aqui uma captura de ecrã cresceu 88 %, um ícone 448 %. Esses JPEG nunca são escritos: a imagem é comprimida sem perdas, e quando nem isso fica menor, é devolvida intacta.",
+    n1p:"Aqui uma captura de ecrã cresceu 88 %, um ícone 448 %. Esses JPEG nunca são escritos: a imagem é comprimida sem perdas, ou devolvida intacta.",
     n2h:"Achatar a transparência sobre branco",
-    n2p:"O JPEG não tem canal alfa, por isso uma imagem com píxeis transparentes é comprimida como PNG, sem perdas: os píxeis e o alfa voltam idênticos byte a byte. Venha a transparência do formato que vier — PNG, WebP, GIF, TIFF, ICO.",
+    n2p:"Uma imagem com píxeis transparentes é comprimida como PNG, sem perdas, venha a transparência do formato que vier.",
     n3h:"Guardar o que vinha com o ficheiro",
-    n3p:"A rotação que um telemóvel pede é aplicada aos píxeis e depois descartada com o resto: a imagem fica direita em todo o lado e já não pode dizer onde foi tirada.",
+    n3p:"A rotação que um telemóvel pede é aplicada aos píxeis e deitada fora com o resto: a imagem fica direita em todo o lado e já não diz onde foi tirada.",
     cap1:"durante a conversão", cap2:"todas as definições que existem",
     unix:"<b>Experimental, e nunca executado pelo autor.</b> Existe uma adaptação para o GNOME Files, KDE Dolphin, XFCE Thunar e o Finder do macOS. Foi escrita no Windows: a shell e as property lists são válidas, e é tudo o que foi verificado.",
     s6:"Testado numa só máquina",
-    p5:"Vinte comportamentos são verificados a cada alteração, e a geometria da janela é medida em vez de observada — mas tudo numa só máquina com Windows 11, a 100 % de escala. HEIC e AVIF nunca foram aqui descodificados a sério, a escala do ecrã é apenas simulada, e a adaptação a Linux e macOS nunca foi executada.A interface fala dez idiomas e cada texto foi medido contra a caixa que o tem de conter, mas nenhum falante nativo leu as nove traduções. Os dois erros que importavam foram encontrados por outra pessoa.",
+    p5:"Vinte comportamentos são verificados a cada alteração, e a geometria da janela é medida em vez de observada — mas tudo numa só máquina com Windows 11, a 100 % de escala. HEIC e AVIF nunca foram aqui descodificados, a escala é apenas simulada, a adaptação a Linux e macOS nunca foi executada, e nenhum falante nativo leu as nove traduções. Os dois erros que importavam foram encontrados por outra pessoa.",
     l1:"Transferir", l2:"Código", l3:"Manual",
     foot:"Codificação por <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilado pelo <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG comprimidos pelo <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP lidos pelo <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licença MIT, sem ligação à Google nem ao comité JPEG."
   },
   it: {
     made:"Co-creato con <a href=\"https://claude.com/claude-code\">Claude</a>. Ogni cifra di questa pagina è stata misurata, e ciò che non lo è mai stato lo dice. Il personaggio appartiene ad Anthropic; compare qui senza alcuna affiliazione con loro e non è coperto da nessuna licenza di questo progetto.",
-    s7:"Suona male nella tua lingua?",
-    p6:"L'interfaccia parla dieci lingue. Nove sono state scritte senza che un madrelingua le rileggesse, quindi qualche frase suonerà rigida o sarà proprio sbagliata. Vale la pena segnalare anche una sola riga — il modulo chiede cosa c'è scritto, cosa dovrebbe esserci, e nient'altro.",
+SUPPRIMEE
+SUPPRIMEE
     l5:"Correggere una riga",
     status:"Windows 10 e 11, senza diritti di amministratore",
     h1a:"Clic destro su un'immagine.", h1b:"Torna più leggera.",
@@ -457,22 +444,22 @@ var T = {
     r1:"una fotografia", r2:"un documento scansionato", r3:"un logo trasparente",
     r4:"uno schema", r5:"una schermata", r6:"un JPEG già piccolo", r6b:"intatto",
     n1h:"Restituirti qualcosa di più pesante",
-    n1p:"Il JPEG è ottimo sulle fotografie e pessimo sulle tinte piatte e sul testo. Qui uno screenshot è cresciuto dell'88 %, un'icona del 448 %. Quei JPEG non vengono mai scritti: l'immagine viene invece compressa senza perdita, e quando neanche questo è più piccolo, restituita intatta.",
+    n1p:"Qui uno screenshot è cresciuto dell'88 %, un'icona del 448 %. Quei JPEG non vengono mai scritti: l'immagine viene compressa senza perdita, oppure restituita intatta.",
     n2h:"Appiattire la trasparenza sul bianco",
-    n2p:"Il JPEG non ha canale alfa, quindi un'immagine con pixel trasparenti viene compressa come PNG, senza perdita: i pixel e l'alfa tornano identici byte per byte. Da qualunque formato arrivi la trasparenza — PNG, WebP, GIF, TIFF, ICO.",
+    n2p:"Un'immagine con pixel trasparenti viene compressa come PNG, senza perdita, da qualunque formato arrivi la trasparenza.",
     n3h:"Conservare ciò che accompagnava il file",
-    n3p:"La rotazione richiesta da un telefono viene applicata ai pixel e poi buttata via con tutto il resto: l'immagine è dritta ovunque e non può più dire dove è stata scattata.",
+    n3p:"La rotazione che un telefono chiede viene applicata ai pixel e buttata via con il resto: l'immagine è dritta ovunque e non dice più dove è stata scattata.",
     cap1:"durante la conversione", cap2:"tutte le impostazioni che ci sono",
     unix:"<b>Sperimentale, e mai eseguito dal suo autore.</b> Esiste un port per GNOME Files, KDE Dolphin, XFCE Thunar e il Finder di macOS. È stato scritto su Windows: la shell e le property list sono valide, ed è tutto ciò che è stato verificato.",
     s6:"Provato su una sola macchina",
-    p5:"Venti comportamenti sono verificati a ogni modifica, e la geometria della finestra è misurata invece che guardata — ma tutto su una sola macchina Windows 11, al 100 % di scala. HEIC e AVIF non sono mai stati davvero decodificati qui, il ridimensionamento dello schermo è solo simulato, e il port su Linux e macOS non è mai stato eseguito.L'interfaccia parla dieci lingue e ogni stringa è stata misurata rispetto allo spazio che deve occupare, ma nessun madrelingua ha letto le nove traduzioni. I due bug che contavano li ha trovati qualcun altro.",
+    p5:"Venti comportamenti sono verificati a ogni modifica, e la geometria della finestra è misurata invece che guardata — ma tutto su una sola macchina Windows 11, al 100 % di scala. HEIC e AVIF non sono mai stati decodificati qui, la scala è solo simulata, il port su Linux e macOS non è mai stato eseguito, e nessun madrelingua ha letto le nove traduzioni. I due bug che contavano li ha trovati qualcun altro.",
     l1:"Scarica", l2:"Codice", l3:"Manuale",
     foot:"Codifica di <a href=\"https://github.com/google/jpegli\">jpegli</a>, compilato da <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG compressi da <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP letti da <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licenza MIT, senza legami con Google né con il comitato JPEG."
   },
   pl: {
     made:"Współtworzone z <a href=\"https://claude.com/claude-code\">Claude</a>. Każda liczba na tej stronie została zmierzona, a to, czego nigdy nie zmierzono, mówi o tym wprost. Postać należy do Anthropic; pojawia się tu bez żadnego powiązania z nimi i nie obejmuje jej żadna licencja tego projektu.",
-    s7:"Brzmi źle w twoim języku?",
-    p6:"Interfejs mówi w dziesięciu językach. Dziewięć powstało bez udziału rodzimego użytkownika, więc część zdań na pewno brzmi sztywno albo jest po prostu błędna. Warto zgłosić nawet jedną linijkę — formularz pyta, co jest napisane, co powinno być, i nic więcej.",
+SUPPRIMEE
+SUPPRIMEE
     l5:"Poprawić linijkę",
     status:"Windows 10 i 11, bez uprawnień administratora",
     h1a:"Kliknij obraz prawym przyciskiem.", h1b:"Wraca lżejszy.",
@@ -487,22 +474,22 @@ var T = {
     r1:"fotografia", r2:"zeskanowany dokument", r3:"przezroczyste logo",
     r4:"diagram", r5:"zrzut ekranu", r6:"JPEG i tak już mały", r6b:"nietknięty",
     n1h:"Odda ci coś cięższego",
-    n1p:"JPEG jest świetny do zdjęć i fatalny do jednolitych barw i tekstu. Zrzut ekranu urósł tu o 88 %, ikona o 448 %. Takie pliki JPEG nigdy nie powstają: obraz jest zamiast tego zmniejszany bezstratnie, a gdy i to wyszłoby większe, wracany nietknięty.",
+    n1p:"Zrzut ekranu urósł tu o 88 %, ikona o 448 %. Takie pliki JPEG nigdy nie powstają: obraz jest zmniejszany bezstratnie albo wracany nietknięty.",
     n2h:"Spłaszczy przezroczystość na biel",
-    n2p:"JPEG nie ma kanału alfa, więc obraz z przezroczystymi pikselami jest zmniejszany jako PNG, bezstratnie: piksele i alfa wracają identyczne co do bajtu. Niezależnie od tego, z jakiego formatu przyszła przezroczystość — PNG, WebP, GIF, TIFF, ICO.",
+    n2p:"Obraz z przezroczystymi pikselami jest zmniejszany jako PNG, bezstratnie, niezależnie od tego, z jakiego formatu przyszła przezroczystość.",
     n3h:"Zachowa to, co przyszło z plikiem",
-    n3p:"Obrót, o który prosi telefon, zostaje nałożony na piksele i wyrzucony razem z resztą: obraz stoi prosto wszędzie i nie potrafi już powiedzieć, gdzie powstał.",
+    n3p:"Obrót, o który prosi telefon, jest nanoszony na piksele i wyrzucany razem z resztą: obraz stoi prosto wszędzie i nie mówi już, gdzie powstał.",
     cap1:"w trakcie konwersji", cap2:"wszystkie ustawienia, jakie są",
     unix:"<b>Eksperymentalne i nigdy nie uruchomione przez autora.</b> Istnieje port dla GNOME Files, KDE Dolphin, XFCE Thunar i Findera na macOS. Powstał na Windows: powłoka i property listy są poprawne, i tylko tyle zostało sprawdzone.",
     s6:"Sprawdzone na jednej maszynie",
-    p5:"Dwadzieścia zachowań jest sprawdzanych przy każdej zmianie, a geometria okna jest mierzona zamiast oglądana — ale wszystko na jednej maszynie z Windows 11, przy skali 100 %. HEIC i AVIF nigdy nie zostały tu naprawdę zdekodowane, skalowanie ekranu jest tylko symulowane, a port na Linuksa i macOS nigdy nie został uruchomiony.Interfejs mówi w dziesięciu językach i każdy napis zmierzono względem miejsca, w którym ma się zmieścić, ale żaden rodzimy użytkownik nie przeczytał dziewięciu tłumaczeń. Dwa błędy, które miały znaczenie, znalazł ktoś inny.",
+    p5:"Dwadzieścia zachowań jest sprawdzanych przy każdej zmianie, a geometria okna jest mierzona zamiast oglądana — ale wszystko na jednej maszynie z Windows 11, przy skali 100 %. HEIC i AVIF nigdy tu nie zostały zdekodowane, skalowanie jest tylko symulowane, port na Linuksa i macOS nigdy nie został uruchomiony, a żaden rodzimy użytkownik nie przeczytał dziewięciu tłumaczeń. Dwa błędy, które miały znaczenie, znalazł ktoś inny.",
     l1:"Pobierz", l2:"Kod", l3:"Podręcznik",
     foot:"Kodowanie przez <a href=\"https://github.com/google/jpegli\">jpegli</a>, zbudowane przez <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG zmniejsza <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP czyta <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Licencja MIT, bez związku z Google ani komitetem JPEG."
   },
   ru: {
     made:"Создано вместе с <a href=\"https://claude.com/claude-code\">Claude</a>. Каждая цифра на этой странице измерена, а то, что не измерялось, так и сказано. Персонаж принадлежит Anthropic; он приведён здесь без какой-либо связи с ними и не покрывается никакой лицензией этого проекта.",
-    s7:"Звучит не по-русски?",
-    p6:"Интерфейс говорит на десяти языках. Девять из них написаны без единого носителя языка, так что часть фраз наверняка звучит натянуто или просто неверна. Стоит сообщить даже об одной строке — форма спрашивает, что написано, как надо, и больше ничего.",
+SUPPRIMEE
+SUPPRIMEE
     l5:"Исправить строку",
     status:"Windows 10 и 11, без прав администратора",
     h1a:"Правый клик по картинке.", h1b:"Она возвращается легче.",
@@ -517,22 +504,22 @@ var T = {
     r1:"фотография", r2:"отсканированный документ", r3:"логотип с прозрачностью",
     r4:"схема", r5:"снимок экрана", r6:"уже маленький JPEG", r6b:"не тронут",
     n1h:"Вернёт вам что-то тяжелее",
-    n1p:"JPEG прекрасно справляется с фотографиями и очень плохо — с плоскими заливками и текстом. Снимок экрана здесь вырос на 88 %, значок — на 448 %. Такие JPEG не записываются никогда: вместо этого изображение сжимается без потерь, а если и так выходит больше, возвращается нетронутым.",
+    n1p:"Снимок экрана здесь вырос на 88 %, значок — на 448 %. Такие JPEG не записываются никогда: изображение сжимается без потерь или возвращается нетронутым.",
     n2h:"Положит прозрачность на белое",
-    n2p:"У JPEG нет альфа-канала, поэтому изображение с прозрачными пикселями сжимается как PNG, без потерь: пиксели и альфа возвращаются побайтово одинаковыми. Из какого бы формата прозрачность ни пришла — PNG, WebP, GIF, TIFF, ICO.",
+    n2p:"Изображение с прозрачными пикселями сжимается как PNG, без потерь, из какого бы формата прозрачность ни пришла.",
     n3h:"Сохранит то, что пришло вместе с файлом",
-    n3p:"Поворот, о котором просит телефон, применяется к пикселям и выбрасывается вместе со всем остальным: снимок стоит правильно везде и больше не может сказать, где он сделан.",
+    n3p:"Поворот, о котором просит телефон, применяется к пикселям и выбрасывается вместе с остальным: снимок везде стоит правильно и больше не говорит, где он сделан.",
     cap1:"во время преобразования", cap2:"все настройки, какие есть",
     unix:"<b>Экспериментально, автор ни разу это не запускал.</b> Есть порт для GNOME Files, KDE Dolphin, XFCE Thunar и Finder на macOS. Он написан под Windows: оболочка и property-списки корректны, и это всё, что проверено.",
     s6:"Проверено на одной машине",
-    p5:"Двадцать поведений проверяются при каждом изменении, а геометрия окна измеряется, а не осматривается — но всё это на одной машине с Windows 11 при масштабе 100 %. HEIC и AVIF здесь ни разу по-настоящему не декодировались, масштабирование экрана только смоделировано, а порт на Linux и macOS не запускался вовсе.Интерфейс говорит на десяти языках, и каждая строка измерена по месту, в которое должна поместиться, но ни один носитель языка не прочитал девять переводов. Две ошибки, которые действительно имели значение, нашёл другой человек.",
+    p5:"Двадцать поведений проверяются при каждом изменении, а геометрия окна измеряется, а не осматривается — но всё это на одной машине с Windows 11 при масштабе 100 %. HEIC и AVIF здесь ни разу не декодировались, масштабирование только смоделировано, порт на Linux и macOS не запускался, и ни один носитель языка не прочитал девять переводов. Две ошибки, которые действительно имели значение, нашёл другой человек.",
     l1:"Скачать", l2:"Исходники", l3:"Руководство",
     foot:"Кодирование — <a href=\"https://github.com/google/jpegli\">jpegli</a>, сборка <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>. PNG сжимает <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>, WebP читает <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>. Лицензия MIT, без отношения к Google и комитету JPEG."
   },
   ja: {
     made:"<a href=\"https://claude.com/claude-code\">Claude</a> と一緒に作りました。このページの数字はすべて実測で、測っていないものは測っていないと書いてあります。 このキャラクターは Anthropic のものです。同社とは一切関係なく掲載しており、本プロジェクトのライセンスは及びません。",
-    s7:"あなたの言語で不自然ですか",
-    p6:"画面は十の言語に対応していますが、そのうち九つは母語話者が一度も読み返していません。ぎこちない、あるいはまるきり誤った文もあるはずです。一行だけでも知らせる価値があります。フォームが尋ねるのは、いま何と書いてあるか、どう書くべきか、それだけです。",
+SUPPRIMEE
+SUPPRIMEE
     l5:"一行なおす",
     status:"Windows 10 と 11、管理者権限は不要",
     h1a:"画像を右クリック。", h1b:"軽くなって返ってきます。",
@@ -547,22 +534,22 @@ var T = {
     r1:"写真", r2:"スキャンした書類", r3:"透過つきのロゴ",
     r4:"図版", r5:"スクリーンショット", r6:"すでに小さい JPEG", r6b:"そのまま",
     n1h:"より重いものを返す",
-    n1p:"JPEG は写真にはとても強く、べた塗りや文字にはとても弱い形式です。ここではスクリーンショットが 88 %、アイコンが 448 % 膨らみました。そうした JPEG は決して書き出しません。代わりに可逆で圧縮し、それでも大きくなるなら元のまま返します。",
+    n1p:"ここではスクリーンショットが 88 %、アイコンが 448 % 膨らみました。そうした JPEG は決して書き出しません。代わりに可逆で圧縮するか、元のまま返します。",
     n2h:"透過を白で塗りつぶす",
-    n2p:"JPEG にはアルファチャンネルがないため、透けるピクセルを持つ画像は PNG のまま可逆圧縮します。ピクセルもアルファもバイト単位で元どおりです。透明度がどの形式から来たかは問いません — PNG、WebP、GIF、TIFF、ICO。",
+    n2p:"透けるピクセルを持つ画像は、透明度がどの形式から来たかを問わず、PNG のまま可逆圧縮します。",
     n3h:"ファイルに付いてきたものを残す",
-    n3p:"スマートフォンが要求する回転は画素に適用したうえで、ほかのすべてと一緒に捨てます。どこで見ても正しい向きで、撮影場所を語ることもありません。",
+    n3p:"スマートフォンが要求する回転は画素に適用したうえで、ほかのすべてと一緒に捨てます。どこで見ても正しい向きで、撮影場所も語りません。",
     cap1:"変換中", cap2:"設定はこれで全部",
     unix:"<b>実験的で、作者自身が一度も実行していません。</b> GNOME Files、KDE Dolphin、XFCE Thunar、macOS の Finder 向けの移植があります。Windows 上で書かれ、シェルとプロパティリストが構文として正しいこと、確認できているのはそれだけです。",
     s6:"確認できたのは一台だけ",
-    p5:"変更のたびに二十の挙動を確認し、ウィンドウの寸法は目視ではなく実測しています。ただしすべて一台の Windows 11、拡大率 100 % での話です。HEIC と AVIF はここで実際に復号したことがなく、画面の拡大率は模擬しているだけ、Linux と macOS への移植は一度も動かしていません。画面は十の言語に対応し、どの文字列も収まるべき枠に対して実測しましたが、九つの翻訳を母語話者が読んだことはありません。 重要だった二つの不具合は、別の人が見つけました。",
+    p5:"変更のたびに二十の挙動を確認し、ウィンドウの寸法は目視ではなく実測しています。ただしすべて一台の Windows 11、拡大率 100 % での話です。HEIC と AVIF はここで復号したことがなく、拡大率は模擬しているだけ、Linux と macOS への移植は動かしたことがなく、九つの翻訳を母語話者が読んだこともありません。重要だった二つの不具合は、別の人が見つけました。",
     l1:"ダウンロード", l2:"ソース", l3:"説明書",
     foot:"符号化は <a href=\"https://github.com/google/jpegli\">jpegli</a>、ビルドは <a href=\"https://github.com/libjxl/libjxl\">libjxl</a>。PNG の圧縮は <a href=\"https://github.com/oxipng/oxipng\">oxipng</a>、WebP の読み込みは <a href=\"https://github.com/webmproject/libwebp\">libwebp</a>。MIT ライセンス。Google とも JPEG 委員会とも関係はありません。"
   },
   zh: {
     made:"与 <a href=\"https://claude.com/claude-code\">Claude</a> 共同创作。本页每一个数字都是实测的，没测过的地方也都写明了。 该形象归 Anthropic 所有，此处与其没有任何关联，也不在本项目的许可范围内。",
-    s7:"在你的语言里读着别扭吗？",
-    p6:"界面支持十种语言，其中九种从未经母语者过目，所以有些句子多半生硬，甚至完全不对。哪怕只有一行也值得告诉我们——表单只问现在写的是什么、应该写成什么，再无其他。",
+SUPPRIMEE
+SUPPRIMEE
     l5:"改一行",
     status:"Windows 10 与 11，无需管理员权限",
     h1a:"右键点一张图。", h1b:"它会变得更小。",
@@ -577,15 +564,15 @@ var T = {
     r1:"一张照片", r2:"一份扫描件", r3:"一个透明标志",
     r4:"一张示意图", r5:"一张截图", r6:"本来就很小的 JPEG", r6b:"原样保留",
     n1h:"还给你更大的文件",
-    n1p:"JPEG 对照片很在行，对纯色块和文字很不在行。这里截图涨了 88 %，图标涨了 448 %。这样的 JPEG 从不写出：图片改用无损方式压缩，如果连这样都更大，就原样奉还。",
+    n1p:"这里截图涨了 88 %，图标涨了 448 %。这样的 JPEG 从不写出：图片改用无损方式压缩，或者原样奉还。",
     n2h:"把透明压成白底",
-    n2p:"JPEG 没有 alpha 通道，所以含透明像素的图片会以 PNG 无损压缩：像素和 alpha 逐字节原样返回。无论透明度来自哪种格式——PNG、WebP、GIF、TIFF、ICO。",
+    n2p:"含透明像素的图片会以 PNG 无损压缩，无论透明度来自哪种格式。",
     n3h:"留下随文件一起来的东西",
-    n3p:"手机要求的旋转会作用到像素上，然后和其余信息一起丢弃：图片在哪儿看都是正的，也再说不出它是在哪里拍的。",
+    n3p:"手机要求的旋转会应用到像素上，然后和其他信息一起丢弃：图片到哪儿都是正的，也不会说出拍摄地点。",
     cap1:"转换过程中", cap2:"全部设置就这些",
     unix:"<b>实验性质，作者从未运行过。</b> 有一个面向 GNOME Files、KDE Dolphin、XFCE Thunar 和 macOS Finder 的移植版。它写于 Windows：shell 与属性列表语法有效，已核实的仅此而已。",
     s6:"只在一台机器上验证过",
-    p5:"每次改动都会检查二十项行为，窗口的几何尺寸是量出来的而不是看出来的——但这一切都只在一台 Windows 11、100 % 缩放的机器上。HEIC 与 AVIF 从未在这里真正解码过，屏幕缩放只是模拟，Linux 与 macOS 的移植一次也没运行过。界面支持十种语言，每一条文案都按它要占的位置量过，但九种译文没有任何母语者读过。 真正要紧的两个缺陷是别人发现的。",
+    p5:"每次改动都会检查二十项行为，窗口的几何尺寸是量出来的而不是看出来的——但这一切都只在一台 Windows 11、100 % 缩放的机器上。HEIC 与 AVIF 从未在这里解码过，缩放只是模拟，Linux 与 macOS 的移植一次也没运行过，九种译文也没有任何母语者读过。真正要紧的两个缺陷是别人发现的。",
     l1:"下载", l2:"源码", l3:"手册",
     foot:"编码由 <a href=\"https://github.com/google/jpegli\">jpegli</a> 完成，<a href=\"https://github.com/libjxl/libjxl\">libjxl</a> 构建。PNG 由 <a href=\"https://github.com/oxipng/oxipng\">oxipng</a> 压缩，WebP 由 <a href=\"https://github.com/webmproject/libwebp\">libwebp</a> 读取。MIT 许可，与 Google 及 JPEG 委员会无关。"
   }
