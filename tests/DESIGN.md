@@ -74,6 +74,11 @@ does not have opinions; it has a ruler.
   headline is real text in the markup and the scrambler animates *from* it, so
   nothing is garbled; the install block shows the Windows command and the tabs
   simply do not switch, which is the right thing to degrade to
+- **fixed** the whole title bar vanished — logo, language selector, github link.
+  I had named the table gauges `.bar`, which the header was already using. Two
+  rules, same name, mine second: the header went from `flex; height:56px` to
+  `block; height:2px; overflow:hidden` and swallowed everything inside it. The
+  gauges are `.meter` now, and the check learned to count a class defined twice
 - **fixed** the rail said nothing to a screen reader — a dot growing to 1.6× is
   not information. The current one carries `aria-current` now
 
@@ -102,3 +107,13 @@ up by staring at the page, which is the argument for the file.
 The two that the eye did catch — the ghosted GIF and the broken script — were
 both found by *rendering* the page rather than reading it, which is the other
 half of the argument.
+
+And one that neither caught. Adding the gauges reused a class name the header
+already had, and the header collapsed to a two-pixel line. The ruler said the
+page was fine, because it only ever asked whether a class was *unused* — never
+whether one was defined twice. The user saw it in a second by looking at the
+page. Three tries were needed to make the check see it: the first regex wanted a
+`}` before the selector and the offending rule followed a comment, so it
+reported "none"; the second counted `@media` overrides and accused `.rail`,
+which is not a collision but the entire point of a media query. It is checked
+both ways now — reintroduce the bug and it exits 1 naming `bar`.

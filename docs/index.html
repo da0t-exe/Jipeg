@@ -113,8 +113,8 @@ h1 .scr{color:var(--accent)}
 /* La barre sous chaque chiffre : sa longueur EST la reduction. Elle part de
    zero et s'etire quand la ligne arrive a l'ecran - une mesure qui se dessine
    plutot qu'un ornement. */
-.bar{display:block;height:2px;margin-top:6px;background:var(--edge);border-radius:2px;overflow:hidden}
-.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;
+.meter{display:block;height:2px;margin-top:6px;background:var(--edge);border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;
        transition:width 1.1s cubic-bezier(.2,.7,.3,1)}
 
 /* sections */
@@ -241,11 +241,11 @@ footer a{color:var(--dim)}
           <th class="n"></th>
         </tr></thead>
         <tbody>
-          <tr><td data-t="r1">a photograph</td><td class="n">630 KB</td><td class="n">66 KB</td><td class="n g">&minus;90%<span class="bar"><i data-pct="90"></i></span></td></tr>
-          <tr><td data-t="r2">a scanned document</td><td class="n">10 KB</td><td class="n">3 KB</td><td class="n g">&minus;68%<span class="bar"><i data-pct="68"></i></span></td></tr>
-          <tr><td data-t="r3">a transparent logo</td><td class="n">1.1 KB</td><td class="n">0.4 KB</td><td class="n g">&minus;62%<span class="bar"><i data-pct="62"></i></span></td></tr>
-          <tr><td data-t="r4">a diagram</td><td class="n">3.9 KB</td><td class="n">1.7 KB</td><td class="n g">&minus;57%<span class="bar"><i data-pct="57"></i></span></td></tr>
-          <tr><td data-t="r5">a screenshot</td><td class="n">36 KB</td><td class="n">26 KB</td><td class="n g">&minus;29%<span class="bar"><i data-pct="29"></i></span></td></tr>
+          <tr><td data-t="r1">a photograph</td><td class="n">630 KB</td><td class="n">66 KB</td><td class="n g">&minus;90%<span class="meter"><i data-pct="90"></i></span></td></tr>
+          <tr><td data-t="r2">a scanned document</td><td class="n">10 KB</td><td class="n">3 KB</td><td class="n g">&minus;68%<span class="meter"><i data-pct="68"></i></span></td></tr>
+          <tr><td data-t="r3">a transparent logo</td><td class="n">1.1 KB</td><td class="n">0.4 KB</td><td class="n g">&minus;62%<span class="meter"><i data-pct="62"></i></span></td></tr>
+          <tr><td data-t="r4">a diagram</td><td class="n">3.9 KB</td><td class="n">1.7 KB</td><td class="n g">&minus;57%<span class="meter"><i data-pct="57"></i></span></td></tr>
+          <tr><td data-t="r5">a screenshot</td><td class="n">36 KB</td><td class="n">26 KB</td><td class="n g">&minus;29%<span class="meter"><i data-pct="29"></i></span></td></tr>
           <tr><td data-t="r6">a JPEG already small</td><td class="n">40 KB</td><td class="n">&mdash;</td><td class="n" data-t="r6b">untouched</td></tr>
         </tbody>
       </table>
@@ -709,7 +709,7 @@ var OS = {
 // Les barres ne se remplissent qu'une fois vues : arriver sur une page ou tout
 // est deja etire ne montre rien.
 (function () {
-  var barres = document.querySelectorAll('.bar');
+  var barres = document.querySelectorAll('.meter');
   if (!barres.length) { return; }
   function etirer(bar) {
     var i = bar.querySelector('i');

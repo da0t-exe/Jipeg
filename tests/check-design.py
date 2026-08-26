@@ -130,6 +130,57 @@ print('  classes CSS sans emploi : %s' % (', '.join(mortes) if mortes else 'aucu
 if mortes:
     bad += 1
 
+# Une classe definie deux fois : la seconde regle gagne en silence. C'est
+# exactement ce qui a fait disparaitre la barre de titre - une classe .bar
+# ajoutee pour les jauges du tableau a repris un nom que l'en-tete employait
+# deja, et l'en-tete est passe de 56px a 2px avec overflow:hidden.
+# On decoupe la feuille en regles plutot que de deviner ce qui precede : la
+# premiere version de ce controle exigeait un } juste avant le selecteur, et la
+# regle fautive suivait un commentaire. Elle annoncait donc "aucune".
+def sansAtRules(t):
+    """Retire les blocs @media et @supports avec leur contenu : une classe qui
+    s'y repete est une surcharge voulue, pas une collision. La deuxieme version
+    de ce controle les comptait et accusait .rail a tort."""
+    bouts, i, n = [], 0, len(t)
+    tete = re.compile(r'@[\w-]+[^{;]*\{')
+    while i < n:
+        m = tete.search(t, i)
+        if not m:
+            bouts.append(t[i:])
+            break
+        bouts.append(t[i:m.start()])
+        prof, j = 1, m.end()
+        while j < n and prof:
+            if t[j] == '{':
+                prof += 1
+            elif t[j] == '}':
+                prof -= 1
+            j += 1
+        i = j
+    return ''.join(bouts)
+
+
+plat = sansAtRules(re.sub(r'/\*.*?\*/', ' ', css, flags=re.S))
+simples = Counter()
+for sel in re.findall(r'([^{}]+)\{[^{}]*\}', plat):
+    sel = sel.strip()
+    if re.match(r'^\.[a-zA-Z][\w-]*$', sel):
+        simples[sel[1:]] += 1
+doubles = sorted(c for c, k in simples.items() if k > 1)
+print('  classes definies deux fois : %s'
+      % (', '.join(doubles) if doubles else 'aucune'))
+if doubles:
+    print('    -> la seconde regle ecrase la premiere sans rien dire')
+    bad += 1
+
+# Une classe employee dans le balisage sans aucune regle : soit un oubli, soit
+# le vestige d'un nom qui a change.
+sans_regle = sorted(c for c in vues - classes if not c.startswith('lang-'))
+print('  classes du balisage sans regle CSS : %s'
+      % (', '.join(sans_regle) if sans_regle else 'aucune'))
+if sans_regle:
+    bad += 1
+
 print()
 print('  page conforme au regard de la regle' if not bad else '  %d point(s) a reprendre' % bad)
 sys.exit(1 if bad else 0)
