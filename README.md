@@ -448,6 +448,14 @@ Two things worth knowing before editing one:
 
 ## Credits and licences
 
+**The character in the footer of [the page](https://da0t-exe.github.io/Jipeg/) is
+Anthropic's.** It is Clawd, the Claude Code mascot, and it appears there with no
+affiliation to Anthropic of any kind — they have not endorsed, reviewed or had
+anything to do with Jipeg. `docs/clawd.gif` is three frames lifted from their own
+animation and is **not covered by this project's MIT licence**; every other file
+here is. If Anthropic would rather it were not there, say so and it goes.
+
+
 - The encoding is done by **[jpegli](https://github.com/google/jpegli)**, a Google
   project, shipped here as the `cjpegli.exe` binary built by
   **[libjxl](https://github.com/libjxl/libjxl)**. Jipeg is not affiliated with

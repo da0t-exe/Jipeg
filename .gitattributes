@@ -20,4 +20,5 @@
 *.exe binary
 *.ico binary
 *.png binary
+*.gif binary
 *.zip binary

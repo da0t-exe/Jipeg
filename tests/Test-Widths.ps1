@@ -8,7 +8,17 @@ $src = Join-Path (Split-Path -Parent $PSScriptRoot) 'src'
 . (Join-Path $src 'Jipeg-Common.ps1')
 
 # key, available width in design units, which font
+# Une entree dont la cle contient un + designe une etiquette qui affiche
+# plusieurs chaines collees par un saut de ligne. Mesurees une par une, deux
+# d'entre elles tenaient largement ; collees, la derniere ligne passait sous les
+# boutons. On mesure ce qui est affiche, pas ce qui est stocke.
+#
+# lignes : combien de lignes le cadre peut montrer. Sans cette limite on ne
+# verifie que la largeur, et un texte qui se replie une fois de trop est coupe
+# en bas sans que rien ne le dise.
 $BOXES = @(
+    @{ k = 'inChkHint+inRestart'; w = 456; f = 'hint'; lignes = 3 }
+    @{ k = 'inWhere+inNoAdmin';   w = 480; f = 'hint'; lignes = 2 }
     @{ k = 'lblQuality';  w = 176; f = 'body' }   # label column, up to the field at 204
     @{ k = 'lblChroma';   w = 176; f = 'body' }
     @{ k = 'lblLanguage'; w = 176; f = 'body' }
@@ -46,8 +56,20 @@ foreach ($code in $JipegLangs.Keys) {
     $L = Import-JipegLang $code
     $over = @()
     foreach ($b in $BOXES) {
-        $txt = [string]$L[$b.k]
-        if (-not $txt) { continue }
+        $txt = (($b.k -split '\+') | ForEach-Object { [string]$L[$_] }) -join [Environment]::NewLine
+        if (-not $txt.Trim()) { continue }
+        if ($b.lignes) {
+            # repliee dans la largeur reelle : c'est la hauteur qui deborde
+            $sz = [System.Windows.Forms.TextRenderer]::MeasureText(
+                    $txt, $fonts[$b.f], (New-Object System.Drawing.Size($b.w, 1000)),
+                    ($flags -bor [System.Windows.Forms.TextFormatFlags]::WordBreak))
+            $h1 = [System.Windows.Forms.TextRenderer]::MeasureText('Ag', $fonts[$b.f]).Height
+            $lignes = [math]::Ceiling($sz.Height / [double]$h1)
+            if ($lignes -gt $b.lignes) {
+                $over += ('{0} tient sur {1} lignes, {2} prevues' -f $b.k, $lignes, $b.lignes)
+            }
+            continue
+        }
         $px = [System.Windows.Forms.TextRenderer]::MeasureText(
                 $txt, $fonts[$b.f], (New-Object System.Drawing.Size(10000, 100)), $flags).Width
         if ($px -gt $b.w) { $over += ('{0} {1}>{2}' -f $b.k, $px, $b.w) }
