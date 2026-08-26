@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Verifie la page : chaque chaine traduite dans les neuf langues, aucune
 ressource externe, et le HTML se referme."""
-import io, os, re, sys
+import io, os, re, sys, subprocess, tempfile
 
 P = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'docs', 'index.html')
 s = io.open(P, encoding='utf-8').read()
@@ -25,6 +25,32 @@ for code in langs:
 
 # Ce qui compte est ce que la page CHARGE, pas ce vers quoi elle pointe : un
 # <a href> ne va rien chercher. Seuls src= et le href d'un <link> le font.
+# Le script de la page n'etait verifie par rien. Une ligne parasite laissee par
+# un correctif l'a casse entierement - langues, onglets, bouton copier - et la
+# page a ete livree deux fois dans cet etat sans qu'aucun controle bronche.
+js = re.search(r'<script>(.*?)</script>', s, re.S)
+if not js:
+    print('  script de la page : absent')
+    bad += 1
+else:
+    tmp = os.path.join(tempfile.gettempdir(), 'jipeg-page.js')
+    io.open(tmp, 'w', encoding='utf-8').write(js.group(1))
+    try:
+        r = subprocess.run(['node', '--check', tmp], capture_output=True, text=True)
+        if r.returncode == 0:
+            print('  script de la page : %d octets, syntaxe correcte' % len(js.group(1)))
+        else:
+            premiere = [l for l in r.stderr.splitlines() if l.strip()][:3]
+            print('  script de la page : SYNTAXE FAUSSE')
+            for l in premiere:
+                print('    ' + l.strip())
+            bad += 1
+    except FileNotFoundError:
+        print('  script de la page : %d octets, non verifie (node absent)' % len(js.group(1)))
+    finally:
+        try: os.unlink(tmp)
+        except OSError: pass
+
 ext = (re.findall(r'src="(https?://[^"]+)"', s)
        + re.findall(r'<link[^>]+href="(https?://[^"]+)"', s))
 print('  ressources externes chargees : %s' % (', '.join(ext) if ext else 'aucune'))

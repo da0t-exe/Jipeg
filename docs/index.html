@@ -91,8 +91,31 @@ h1 .scr{color:var(--accent)}
 .cmd-body .p{color:var(--accent);user-select:none}
 .copy{margin-left:auto;flex:none;border:1px solid var(--edge);background:transparent;color:var(--dim);
       font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:6px;cursor:pointer;transition:all .2s}
-.copy:hover{color:var(--ink);border-color:var(--mute)}
+.copy:hover{color:var(--ink);border-color:var(--mute);transform:translateY(-1px)}
 .after{margin-top:11px;font-size:12px;color:var(--mute)}
+
+/* Le rail : un point par section, celui de la section lue est plus gros, et
+   son nom sort au survol. Cache sous 1100 px, ou il n'y a pas la place a cote
+   de la colonne de texte. */
+.rail{position:fixed;top:50%;transform:translateY(-50%);z-index:15;
+      left:calc(50% + 360px + 40px);display:flex;flex-direction:column;gap:14px}
+@media (max-width:1100px){ .rail{display:none} }
+.rail a{position:relative;display:block;width:7px;height:7px;border-radius:50%;
+        background:var(--edge);transition:background .3s,transform .3s}
+.rail a:hover{background:var(--mute)}
+.rail a.on{background:var(--accent);transform:scale(1.6)}
+.rail .lab{position:absolute;left:16px;top:50%;transform:translateY(-50%) translateX(-6px);
+           white-space:nowrap;font-size:11px;color:var(--dim);background:var(--panel);
+           border:1px solid var(--edge);border-radius:999px;padding:3px 10px;
+           opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.rail a:hover .lab{opacity:1;transform:translateY(-50%) translateX(0)}
+
+/* La barre sous chaque chiffre : sa longueur EST la reduction. Elle part de
+   zero et s'etire quand la ligne arrive a l'ecran - une mesure qui se dessine
+   plutot qu'un ornement. */
+.bar{display:block;height:2px;margin-top:6px;background:var(--edge);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;
+       transition:width 1.1s cubic-bezier(.2,.7,.3,1)}
 
 /* sections */
 section{padding:56px 0;border-top:1px solid var(--edge)}
@@ -137,7 +160,8 @@ tbody tr:last-child td{border-bottom:0}
 .links{display:flex;flex-wrap:wrap;gap:10px}
 .btn{display:inline-flex;align-items:center;text-decoration:none;font-size:13px;padding:9px 16px;
      border-radius:8px;border:1px solid var(--edge);color:var(--ink);transition:all .2s}
-.btn:hover{border-color:var(--mute);background:var(--panel)}
+.btn:hover{border-color:var(--mute);background:var(--panel);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.primary:hover{filter:brightness(1.1);background:var(--accent)}
 footer{border-top:1px solid var(--edge);padding:30px 0 46px;font-size:11.5px;color:var(--mute);line-height:1.85}
@@ -217,11 +241,11 @@ footer a{color:var(--dim)}
           <th class="n"></th>
         </tr></thead>
         <tbody>
-          <tr><td data-t="r1">a photograph</td><td class="n">630 KB</td><td class="n">66 KB</td><td class="n g">&minus;90%</td></tr>
-          <tr><td data-t="r2">a scanned document</td><td class="n">10 KB</td><td class="n">3 KB</td><td class="n g">&minus;68%</td></tr>
-          <tr><td data-t="r3">a transparent logo</td><td class="n">1.1 KB</td><td class="n">0.4 KB</td><td class="n g">&minus;62%</td></tr>
-          <tr><td data-t="r4">a diagram</td><td class="n">3.9 KB</td><td class="n">1.7 KB</td><td class="n g">&minus;57%</td></tr>
-          <tr><td data-t="r5">a screenshot</td><td class="n">36 KB</td><td class="n">26 KB</td><td class="n g">&minus;29%</td></tr>
+          <tr><td data-t="r1">a photograph</td><td class="n">630 KB</td><td class="n">66 KB</td><td class="n g">&minus;90%<span class="bar"><i data-pct="90"></i></span></td></tr>
+          <tr><td data-t="r2">a scanned document</td><td class="n">10 KB</td><td class="n">3 KB</td><td class="n g">&minus;68%<span class="bar"><i data-pct="68"></i></span></td></tr>
+          <tr><td data-t="r3">a transparent logo</td><td class="n">1.1 KB</td><td class="n">0.4 KB</td><td class="n g">&minus;62%<span class="bar"><i data-pct="62"></i></span></td></tr>
+          <tr><td data-t="r4">a diagram</td><td class="n">3.9 KB</td><td class="n">1.7 KB</td><td class="n g">&minus;57%<span class="bar"><i data-pct="57"></i></span></td></tr>
+          <tr><td data-t="r5">a screenshot</td><td class="n">36 KB</td><td class="n">26 KB</td><td class="n g">&minus;29%<span class="bar"><i data-pct="29"></i></span></td></tr>
           <tr><td data-t="r6">a JPEG already small</td><td class="n">40 KB</td><td class="n">&mdash;</td><td class="n" data-t="r6b">untouched</td></tr>
         </tbody>
       </table>
@@ -308,8 +332,6 @@ var T = {
   en: {},
   fr: {
     made:"Co-créé avec <a href=\"https://claude.com/claude-code\">Claude</a>. Chaque chiffre de cette page a été mesuré, et ce qui ne l'a jamais été le dit. Le personnage appartient à Anthropic ; il est repris sans aucune affiliation avec eux et n'est couvert par aucune licence de ce projet.",
-SUPPRIMEE
-SUPPRIMEE
     l5:"Corriger une ligne",
     status:"Windows 10 et 11, sans droits administrateur",
     h1a:"Clic droit sur une image.", h1b:"Elle ressort plus légère.",
@@ -338,8 +360,6 @@ SUPPRIMEE
   },
   es: {
     made:"Co-creado con <a href=\"https://claude.com/claude-code\">Claude</a>. Cada cifra de esta página se midió, y lo que nunca se midió lo dice. El personaje pertenece a Anthropic; aparece aquí sin ninguna afiliación con ellos y no lo cubre ninguna licencia de este proyecto.",
-SUPPRIMEE
-SUPPRIMEE
     l5:"Corregir una línea",
     status:"Windows 10 y 11, sin permisos de administrador",
     h1a:"Clic derecho en una imagen.", h1b:"Vuelve más ligera.",
@@ -368,8 +388,6 @@ SUPPRIMEE
   },
   de: {
     made:"Mitentwickelt mit <a href=\"https://claude.com/claude-code\">Claude</a>. Jede Zahl auf dieser Seite wurde gemessen, und was nie gemessen wurde, sagt es. Die Figur gehört Anthropic; sie steht hier ohne jede Verbindung zu ihnen und fällt unter keine Lizenz dieses Projekts.",
-SUPPRIMEE
-SUPPRIMEE
     l5:"Eine Zeile berichtigen",
     status:"Windows 10 und 11, ohne Administratorrechte",
     h1a:"Rechtsklick auf ein Bild.", h1b:"Es kommt leichter zurück.",
@@ -398,8 +416,6 @@ SUPPRIMEE
   },
   pt: {
     made:"Co-criado com <a href=\"https://claude.com/claude-code\">Claude</a>. Todos os números desta página foram medidos, e o que nunca foi medido di-lo. A personagem pertence à Anthropic; aparece aqui sem qualquer afiliação com eles e não está coberta por nenhuma licença deste projeto.",
-SUPPRIMEE
-SUPPRIMEE
     l5:"Corrigir uma linha",
     status:"Windows 10 e 11, sem direitos de administrador",
     h1a:"Clique direito numa imagem.", h1b:"Ela volta mais leve.",
@@ -428,8 +444,6 @@ SUPPRIMEE
   },
   it: {
     made:"Co-creato con <a href=\"https://claude.com/claude-code\">Claude</a>. Ogni cifra di questa pagina è stata misurata, e ciò che non lo è mai stato lo dice. Il personaggio appartiene ad Anthropic; compare qui senza alcuna affiliazione con loro e non è coperto da nessuna licenza di questo progetto.",
-SUPPRIMEE
-SUPPRIMEE
     l5:"Correggere una riga",
     status:"Windows 10 e 11, senza diritti di amministratore",
     h1a:"Clic destro su un'immagine.", h1b:"Torna più leggera.",
@@ -458,8 +472,6 @@ SUPPRIMEE
   },
   pl: {
     made:"Współtworzone z <a href=\"https://claude.com/claude-code\">Claude</a>. Każda liczba na tej stronie została zmierzona, a to, czego nigdy nie zmierzono, mówi o tym wprost. Postać należy do Anthropic; pojawia się tu bez żadnego powiązania z nimi i nie obejmuje jej żadna licencja tego projektu.",
-SUPPRIMEE
-SUPPRIMEE
     l5:"Poprawić linijkę",
     status:"Windows 10 i 11, bez uprawnień administratora",
     h1a:"Kliknij obraz prawym przyciskiem.", h1b:"Wraca lżejszy.",
@@ -488,8 +500,6 @@ SUPPRIMEE
   },
   ru: {
     made:"Создано вместе с <a href=\"https://claude.com/claude-code\">Claude</a>. Каждая цифра на этой странице измерена, а то, что не измерялось, так и сказано. Персонаж принадлежит Anthropic; он приведён здесь без какой-либо связи с ними и не покрывается никакой лицензией этого проекта.",
-SUPPRIMEE
-SUPPRIMEE
     l5:"Исправить строку",
     status:"Windows 10 и 11, без прав администратора",
     h1a:"Правый клик по картинке.", h1b:"Она возвращается легче.",
@@ -518,8 +528,6 @@ SUPPRIMEE
   },
   ja: {
     made:"<a href=\"https://claude.com/claude-code\">Claude</a> と一緒に作りました。このページの数字はすべて実測で、測っていないものは測っていないと書いてあります。 このキャラクターは Anthropic のものです。同社とは一切関係なく掲載しており、本プロジェクトのライセンスは及びません。",
-SUPPRIMEE
-SUPPRIMEE
     l5:"一行なおす",
     status:"Windows 10 と 11、管理者権限は不要",
     h1a:"画像を右クリック。", h1b:"軽くなって返ってきます。",
@@ -548,8 +556,6 @@ SUPPRIMEE
   },
   zh: {
     made:"与 <a href=\"https://claude.com/claude-code\">Claude</a> 共同创作。本页每一个数字都是实测的，没测过的地方也都写明了。 该形象归 Anthropic 所有，此处与其没有任何关联，也不在本项目的许可范围内。",
-SUPPRIMEE
-SUPPRIMEE
     l5:"改一行",
     status:"Windows 10 与 11，无需管理员权限",
     h1a:"右键点一张图。", h1b:"它会变得更小。",
@@ -596,6 +602,16 @@ function apply(code) {
     if (d[k]) n[i].innerHTML = d[k];
   }
   document.documentElement.lang = code;
+  // les pastilles du rail portent le nom de leur section : il change avec elle
+  if (window.jipegRail) {
+    for (var r = 0; r < window.jipegRail.length; r++) {
+      var h = window.jipegRail[r].sec.querySelector('h2');
+      if (h) {
+        window.jipegRail[r].lab.textContent = h.textContent;
+        window.jipegRail[r].a.setAttribute('aria-label', h.textContent);
+      }
+    }
+  }
   try { localStorage.setItem('jipeg-lang', code); } catch (e) {}
   scramble();
 }
@@ -641,6 +657,68 @@ var OS = {
   mac: { shell:'bash',
          cmd:'curl -fsSL https://raw.githubusercontent.com/da0t-exe/Jipeg/main/platform/install.sh | bash' }
 };
+// Le rail se construit tout seul a partir des sections : ajouter une section
+// suffit, et les noms suivent la langue puisqu'ils sont lus dans les titres.
+(function () {
+  var sections = document.querySelectorAll('main section');
+  if (!sections.length) { return; }
+  var rail = document.createElement('nav');
+  rail.className = 'rail';
+  var liens = [];
+  for (var i = 0; i < sections.length; i++) {
+    var h2 = sections[i].querySelector('h2');
+    if (!h2) { continue; }
+    sections[i].id = 'sec' + i;
+    var a = document.createElement('a');
+    a.href = '#sec' + i;
+    a.setAttribute('aria-label', h2.textContent);
+    var lab = document.createElement('span');
+    lab.className = 'lab';
+    lab.textContent = h2.textContent;
+    a.appendChild(lab);
+    a.dataset.pour = h2.getAttribute('data-t') || '';
+    rail.appendChild(a);
+    liens.push({ a: a, sec: sections[i], lab: lab });
+  }
+  document.body.appendChild(rail);
+  window.jipegRail = liens;
+  if (liens.length) { liens[0].a.classList.add('on'); }
+
+  if (!('IntersectionObserver' in window)) { return; }
+  var vues = new IntersectionObserver(function (entrees) {
+    entrees.forEach(function (e) {
+      for (var i = 0; i < liens.length; i++) {
+        if (liens[i].sec === e.target && e.isIntersecting) {
+          for (var j = 0; j < liens.length; j++) { liens[j].a.classList.remove('on'); }
+          liens[i].a.classList.add('on');
+        }
+      }
+    });
+  }, { rootMargin: '-45% 0px -45% 0px' });
+  for (var k = 0; k < liens.length; k++) { vues.observe(liens[k].sec); }
+})();
+
+// Les barres ne se remplissent qu'une fois vues : arriver sur une page ou tout
+// est deja etire ne montre rien.
+(function () {
+  var barres = document.querySelectorAll('.bar');
+  if (!barres.length) { return; }
+  function etirer(bar) {
+    var i = bar.querySelector('i');
+    if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
+  }
+  if (!('IntersectionObserver' in window)) {
+    for (var i = 0; i < barres.length; i++) { etirer(barres[i]); }
+    return;
+  }
+  var vues = new IntersectionObserver(function (entrees, obs) {
+    entrees.forEach(function (e) {
+      if (e.isIntersecting) { etirer(e.target); obs.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -8% 0px' });   // des qu'elle entre, pas au tiers
+  for (var j = 0; j < barres.length; j++) { vues.observe(barres[j]); }
+})();
+
 
 function showOS(key) {
   var o = OS[key] || OS.win;
