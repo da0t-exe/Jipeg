@@ -69,15 +69,17 @@ nothing about what was never asked.
 - **no** **right-clicking a folder** — the `Directory` verb is registered and has
   never been exercised
 - **no** several hundred files at once
-- **no** two conversions started **at the same time** — the lock exists and only
-  its stale-file case has been tested
+- **done** two conversions started at the same time — twelve files across two
+  folders, both finish, nothing lost, the lock is handed back
 - **no** files **dropped into the selection while it is running** — the watcher
   runs every 400 ms and has never been made to pick anything up
 
 ### 2.3 During
-- **no** pressing **Cancel** halfway
-- **no** closing the window with the cross while it works
-- **no** the source being **deleted or renamed** mid-conversion
+- **done** pressing **Cancel** halfway — three files out of twenty-four came
+  out, so it really did stop, and nothing was left behind
+- **done** closing the window with the cross while an encoder is running
+- **done** the source being **deleted** mid-batch — reported, batch finishes
+- **no** the source being **renamed** rather than deleted
 - **no** the disk filling up
 - **done** an encoder that never returns — the timeout guard, 2.1 s, no process left
 
@@ -149,15 +151,27 @@ nothing about what was never asked.
 
 ---
 
+## What the tree cost, and what it caught
+
+Nine scenarios were run out of it so far. **One defect in Jipeg** — the alpha
+channel taken for transparency, which had a photograph coming back eight times
+heavier — and **three faults in these scripts**: a batch that finished before
+the Cancel click landed, and a default setting that makes a finished window wait
+for OK, counted twice as a hang and a leaked lock.
+
+That ratio is the reason for the warning at the bottom of the README here. It
+has held all day: the harness is wrong more often than the thing it measures.
+
 ## Where the gaps actually are
 
-Counted: **29 rows never checked at all**, and they are not spread evenly. Three
+Counted: **24 rows never checked at all**, and they are not spread evenly. Three
 clusters carry most of the risk:
 
-1. **Everything that happens *while* it runs** — cancel, close, delete the
-   source, add files mid-batch, two at once. The whole of section 2.3 and half of
-   2.2 is untouched, and this is where a converter with a queue and a watcher and
-   a lock is most likely to be wrong.
+1. ~~Everything that happens *while* it runs.~~ **Mostly done.** Cancel, the
+   cross, two at once, a source deleted under it: the process always ends,
+   nothing is left in the folder or in `%TEMP%`, the lock always comes back and
+   every partial output opens. What is left of this cluster is the watcher —
+   files dropped into a selection that is already running.
 2. ~~Every setting except the default one.~~ **Done**, and it paid: the very
    first run of it found the alpha-channel-without-transparency bug. Which is
    the argument for the whole tree — the branch was not written because anything

@@ -97,6 +97,15 @@ function Wait-Fin($p, [int]$secondes) {
     return $p.HasExited
 }
 
+# Sans cela, une fenetre qui a termine reste ouverte a attendre un OK - et
+# garde le verrou avec elle. Le premier passage a compte ca comme un blocage et
+# comme un verrou non rendu, alors que c'est le reglage par defaut qui parlait.
+. (Join-Path $Root 'Jipeg-Common.ps1')
+$reglages = Get-JipegSettings
+$avantClose = $reglages.closeWhenDone
+$reglages.closeWhenDone = $true
+Save-JipegSettings $reglages
+
 $base = Join-Path $env:TEMP ('jipeg-during-{0}' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $base -Force | Out-Null
 Get-ChildItem -LiteralPath $env:TEMP -Filter 'jipeg-*' -ErrorAction SilentlyContinue |
@@ -110,14 +119,19 @@ try {
     $p = Start-Batch $d1
     $h = Get-Fenetre
     Note ($h -ne [IntPtr]::Zero) 'annuler : la fenetre est la' ''
-    Start-Sleep -Seconds 3
     $b = Get-Bouton $h
     Note ($b -ne [IntPtr]::Zero) 'annuler : le bouton est trouve' ''
+    Start-Sleep -Milliseconds 900          # assez pour etre dedans, pas pour finir
     [void][Dr.W]::SendMessageW($b, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)   # BM_CLICK
-    Start-Sleep -Seconds 3
-    # Une conversion annulee garde sa fenetre expres, pour qu'on lise le compte.
-    $titre = New-Object System.Text.StringBuilder 256
-    [void][Dr.W]::GetWindowTextW($h, $titre, 256)
+    Start-Sleep -Seconds 4
+    # La preuve qu'une annulation a mordu n'est pas dans le titre : c'est qu'il
+    # manque des sorties. Le premier passage cliquait apres la fin du lot et
+    # trouvait douze sur douze, sans rien annuler du tout.
+    $faits = @(Get-ChildItem -LiteralPath $d1 -Filter '*_jipeg.*').Count
+    Note ($faits -lt $Files) 'annuler : le lot s est arrete avant la fin' (
+        '{0} sortie(s) sur {1}' -f $faits, $Files)
+    # Une conversion annulee garde sa fenetre expres, pour qu'on lise le compte,
+    # meme avec la fermeture automatique demandee.
     Note (-not $p.HasExited) 'annuler : la fenetre reste, comme voulu' 'elle attend un OK'
     [void][Dr.W]::PostMessageW($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)   # WM_CLOSE
     Note (Wait-Fin $p 30) 'annuler : le processus se termine' ''
@@ -175,6 +189,9 @@ try {
     Test-Proprete $d5 'disparu'
 } finally {
     Get-Process | Where-Object { $_.MainWindowTitle -eq 'Jipeg' } | ForEach-Object { $_.Kill() }
+    $reglages = Get-JipegSettings
+    $reglages.closeWhenDone = $avantClose
+    Save-JipegSettings $reglages
     Remove-Item -LiteralPath $base -Recurse -Force -ErrorAction SilentlyContinue
 }
 ''
