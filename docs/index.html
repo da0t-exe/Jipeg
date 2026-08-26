@@ -145,8 +145,11 @@ footer a{color:var(--dim)}
 .made{display:flex;align-items:center;gap:12px;margin-top:22px;padding-top:20px;
       border-top:1px solid var(--edge);font-size:11.5px;color:var(--mute)}
 .made svg{flex:none;display:block}
-/* Rendu net plutot que lisse : le dessin est en pixels, un lissage le
-   rendrait flou a cette taille. */
+/* Affiche a sa taille exacte, sans mise a l'echelle : reduire du pixel art a
+   une echelle non entiere fabrique des blocs de tailles differentes, et ca se
+   voit tout de suite. L'image est deja rechantillonnee sur sa propre grille,
+   un bloc de dessin valant trois pixels. pixelated ne sert que sur les ecrans
+   qui doublent tout. */
 .made img{image-rendering:pixelated}
 
 </style>
@@ -305,7 +308,7 @@ footer a{color:var(--dim)}
   affiliated with Google or the JPEG committee.</div>
 
   <div class="wrap made">
-    <img src="clawd.gif" alt="" width="76" height="51" loading="lazy">
+    <img src="clawd.gif" alt="" width="102" height="69" loading="lazy">
     <span data-t="made">Co-created with <a href="https://claude.com/claude-code">Claude</a>.
     Every figure on this page was measured, and what was never measured says so. The character is
     Anthropic's, used with no affiliation to them and covered by no licence of this project.</span>
