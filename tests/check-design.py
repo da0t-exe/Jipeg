@@ -140,6 +140,17 @@ if sans_alt:
     bad += 1
 boutons = re.findall(r'<button[^>]*>', s)
 sans_nom = [b for b in boutons if 'aria-label' not in b and '>' == b[-1]]
+# Un contour de focus epouse deja la forme de ce qu'il entoure. S'il declare un
+# rayon a lui, il redessine l'element au lieu de l'entourer : la pastille des
+# langues passait de 999px a 3px des qu'on cliquait dessus, et devenait carree.
+focusLarge = re.search(r'(?<![\w.:-]):focus-visible\s*\{([^}]*)\}', css)
+if focusLarge and 'border-radius' in focusLarge.group(1):
+    print('  regle :focus-visible generale : elle impose un border-radius')
+    print('    -> elle redessine tout element qui a deja une forme a lui')
+    bad += 1
+else:
+    print('  regle :focus-visible generale : elle n impose pas de forme')
+
 print('  focus-visible declare : %s' % ('oui' if ':focus-visible' in css else 'NON'))
 if ':focus-visible' not in css:
     bad += 1

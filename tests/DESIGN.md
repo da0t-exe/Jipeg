@@ -212,6 +212,14 @@ does not have opinions; it has a ruler.
 - **ok** one file, no external request of any kind, 57 KB
 - **ok** two images, 5.4 KB and 1.2 KB, both at their natural size
 - **ok** `alt` on every image, `lang` on `<html>`, `:focus-visible` present
+- **fixed** the focus ring was reshaping what it framed. The blanket
+  `:focus-visible` rule declared `border-radius:3px`, which lands on the element
+  itself rather than on the outline — so the language selector went from a
+  999 px pill to a 3 px box the moment it was clicked, and the tabs, the copy
+  button and the rail dots went with it. An outline already follows the shape it
+  surrounds; only text links, which have no shape of their own, are given a
+  radius now. Confirmed by clicking for real: 999 px before and after, with the
+  ring still drawn
 - **fixed** at 360 px the copy button sat at x=609 on a 360 px screen — the
   command refused to shrink and pushed the only useful control in that block off
   the side. The command scrolls now; the button stays put

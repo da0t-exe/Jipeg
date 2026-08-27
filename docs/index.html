@@ -29,7 +29,13 @@ body{
    is held there while the table and the screenshots keep the full width. */
 .lede,.note p,.warn{max-width:64ch}
 ::selection{background:var(--accent);color:#fff}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+/* Le contour epouse deja la forme de l'element : lui imposer un rayon ici le
+   redessine au lieu de l'entourer. La pastille des langues passait de 999px a
+   3px des qu'on cliquait dessus - elle devenait carree - et avec elle les
+   onglets, le bouton copier et les points du rail. Seuls les liens de texte,
+   qui n'ont pas de forme a eux, recoivent un arrondi. */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a:focus-visible{border-radius:3px}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
