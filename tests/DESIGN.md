@@ -115,7 +115,15 @@ does not have opinions; it has a ruler.
   links live inside translated strings injected as `innerHTML`, so a class would
   have to be repeated in all ten languages
 - **ok** a screenshot lifts three pixels under the cursor
-- **ok** every one of those is inside `prefers-reduced-motion`
+- **ok** every one of those is inside `prefers-reduced-motion` — but reduced
+  motion no longer means a dead page. What causes trouble is displacement, not
+  a fade, so the sequence still plays at the same cadence with the rise removed
+  and no text scrambling. This matters more than it sounds: Windows ships with
+  system animations off on plenty of machines, Chrome reports that as
+  `prefers-reduced-motion: reduce`, and the page was then perfectly still —
+  which reads as broken rather than as considerate. Measured on the real page in
+  that mode: beats at 85, 157, 242, 348, 421, 492, 565 ms, the headline fading
+  through 23 opacity steps, and `transform` reading `none` throughout
 - **fixed** the bar observer watched an element of zero width, which can never
   meet an intersection threshold — it watches the container now
 - **fixed** four ways the new arrival animation could leave the page blank, all

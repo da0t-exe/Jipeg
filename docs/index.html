@@ -34,9 +34,13 @@ body{
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
                        transition-duration:.01ms!important}
-  /* neutraliser la transition ne suffit pas : sans ceci .rev resterait
-     invisible, puisque c'est l'etat de depart et non l'animation */
-  .rev{opacity:1!important;transform:none!important}
+  /* Mouvement reduit ne veut pas dire page morte. Ce qui gene, ce qui donne
+     le vertige, c'est le deplacement - pas le fondu. Les elements arrivent
+     donc a la meme cadence, mais sans bouger d'un seul pixel, et aucun texte
+     ne se brouille. La regle generale ci-dessus ramene toutes les transitions
+     a un centieme de milliseconde, il faut donc redonner sa duree a celle-la. */
+  .rev{transform:none!important}
+  .rev.vu{transition-duration:.28s!important}
 }
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -846,7 +850,11 @@ var OUVERTURE = [
 var ouvertureEnCours = false;
 
 (function () {
-  if (mouvementReduit) { return; }   // rien n'est cache, donc rien a revoir
+  // Meme en mouvement reduit on joue la sequence : seul le deplacement est
+  // retire, par la feuille de style, et dechiffrer() se tait de lui-meme. Une
+  // machine dont les animations systeme sont coupees - ce qui est le reglage
+  // par defaut de beaucoup de Windows - voyait sinon une page parfaitement
+  // immobile, ce qui se lit comme un site casse plutot que comme un egard.
 
   function preparer(elements, pas) {
     var pris = [];
@@ -919,7 +927,9 @@ var ouvertureEnCours = false;
 
   for (var q = 0; q < partitions.length; q++) { partitions[q](); }
 
-  // Filet : si une minuterie saute, tout doit finir visible quand meme.
+  // Filet : si une minuterie saute, tout doit finir visible quand meme. Il
+  // compte davantage depuis que .rev n'est plus force a opacity:1 en mouvement
+  // reduit - c'est desormais le seul filin sous les deux modes.
   setTimeout(function () {
     for (var j = 0; j < tout.length; j++) { tout[j].classList.add('vu'); }
   }, fin + 900);
