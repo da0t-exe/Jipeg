@@ -75,6 +75,16 @@ does not have opinions; it has a ruler.
   an instrument. Replayed outside the browser on both cases: a fast page gives
   15 steps from 6% to 95% across 450 ms, a slow one is held at 75% at 900 ms by
   the network
+- **ok** it plays on every load, because nothing about it is remembered — the
+  only thing this page stores is the chosen language. The one case that does
+  *not* replay on its own is a back/forward restore: the browser hands back the
+  page exactly as it kept it, curtain already removed and elements already
+  shown, without running a line. That reloads outright rather than unpicking
+  twenty-one elements, two flags, a registry and a deleted node by hand — which
+  is precisely where invisible text would come back. Checked that a normal load
+  never triggers it, so there is no reload loop
+- **choice** switching back to the tab does not replay it. An intro that runs
+  every time a tab regains focus is a nuisance, not a welcome
 - **ok** the curtain cannot stick. It is `hidden` in the markup and only script
   removes that, so no-JS never sees it; reduced motion never unhides it; and a
   hard 2.2 s cap lifts it whatever happens to the network or the events

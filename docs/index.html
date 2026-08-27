@@ -1101,6 +1101,18 @@ function showOS(key) {
   setTimeout(partir, 2200);
 })();
 
+// Un rechargement rejoue tout de lui-meme : la page repart de zero et rien
+// n'est memorise. Le retour arriere, lui, ne rejoue rien - le navigateur
+// restitue la page telle qu'il l'avait gardee, rideau deja retire et elements
+// deja montres, sans reexecuter une ligne. On recharge alors franchement,
+// plutot que de defaire a la main vingt-et-un elements, deux drapeaux, un
+// registre et un noeud supprime : c'est la ou l'on remettrait du texte
+// invisible sans s'en apercevoir.
+window.rejouerIntro = function () { location.reload(); };
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) { window.rejouerIntro(); }
+});
+
 verifier();   // ce qui est deja a l'ecran au chargement
 
 var sel = document.getElementById('lang');
