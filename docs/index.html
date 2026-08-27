@@ -116,6 +116,22 @@ h1 .scr{color:var(--accent)}
 /* La barre sous chaque chiffre : sa longueur EST la reduction. Elle part de
    zero et s'etire quand la ligne arrive a l'ecran - une mesure qui se dessine
    plutot qu'un ornement. */
+/* Le trait sous un lien de prose se deroule depuis la gauche plutot que de
+   s'allumer d'un bloc : c'est le seul endroit de la page ou une ligne dessine
+   sa propre longueur. */
+footer a,.note a,.warn a{
+  text-decoration:none;background-image:linear-gradient(currentColor,currentColor);
+  background-repeat:no-repeat;background-position:0 100%;background-size:0 1px;
+  transition:background-size .32s cubic-bezier(.2,.7,.3,1),color .2s;padding-bottom:2px;
+}
+footer a:hover,footer a:focus-visible,.note a:hover,.note a:focus-visible,
+.warn a:hover,.warn a:focus-visible{background-size:100% 1px;color:var(--ink)}
+
+/* La capture se souleve d'un cheveu : assez pour repondre, pas assez pour
+   bouger la page autour d'elle. */
+.shots img{transition:transform .45s cubic-bezier(.2,.7,.3,1),filter .45s}
+.shots figure:hover img{transform:translateY(-3px) scale(1.006)}
+
 /* Rien n'est cache dans le balisage : c'est le script qui pose .rev, et
    seulement apres avoir verifie qu'il saura le retirer. Sans JavaScript, ou en
    mouvement reduit, la page arrive entiere du premier coup - une animation
@@ -649,23 +665,54 @@ function pick() {
   return 'en';
 }
 
-var timer = null;
-function scramble() {
-  var el = document.getElementById('scramble');
-  if (!el) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (timer) clearInterval(timer);
-  var text = el.textContent, chars = '-_~`!@#$%^&*()+=[]{}|;:,.<>?', shown = 0;
-  timer = setInterval(function () {
-    shown++;
-    if (shown >= text.length) { el.textContent = text; clearInterval(timer); timer = null; return; }
-    var noise = '';
-    for (var i = shown; i < text.length; i++) {
-      var c = text.charAt(i);
-      noise += (c === ' ') ? ' ' : chars.charAt(Math.floor(Math.random() * chars.length));
+var SYMBOLES = '-_~`!@#$%^&*()+=[]{}|;:,.<>?';
+
+// Le texte se revele de gauche a droite ; ce qui reste est tire au hasard et
+// retire a chaque image. Le vrai texte est l'etat final et aussi celui du
+// balisage, donc une animation qui n'aboutit jamais ne fait rien de pire que
+// de ne pas se produire.
+function dechiffrer(el, duree) {
+  if (!el || mouvementReduit) { return; }
+  // Un onglet en arriere-plan gele les minuteries : le texte resterait fige sur
+  // du bruit, ce qui est pire que pas d'animation du tout.
+  if (document.hidden) { return; }
+  // Une course en cours est annulee avant qu'on lise le texte : sinon on
+  // prendrait son bruit pour la verite lors d'un changement de langue.
+  if (el.rythme) { clearInterval(el.rythme); }
+  if (el.filet) { clearTimeout(el.filet); }
+
+  var vrai = el.textContent;
+  if (!vrai) { return; }
+  duree = duree || 620;
+  var pas = Math.max(16, Math.round(duree / vrai.length));
+  var montres = 0;
+
+  el.rythme = setInterval(function () {
+    montres++;
+    if (montres >= vrai.length) {
+      el.textContent = vrai;
+      clearInterval(el.rythme);
+      el.rythme = null;
+      return;
     }
-    el.textContent = text.slice(0, shown) + noise;
-  }, 42);
+    var bruit = '';
+    for (var i = montres; i < vrai.length; i++) {
+      var c = vrai.charAt(i);
+      bruit += (c === ' ') ? ' ' : SYMBOLES.charAt(Math.floor(Math.random() * SYMBOLES.length));
+    }
+    el.textContent = vrai.slice(0, montres) + bruit;
+  }, pas);
+
+  // Filet : quoi qu'il arrive a la minuterie, le vrai texte est remis.
+  el.filet = setTimeout(function () {
+    if (el.rythme) { clearInterval(el.rythme); el.rythme = null; }
+    el.textContent = vrai;
+  }, pas * vrai.length + 500);
+}
+
+function scramble() {
+  dechiffrer(document.getElementById('scramble'), 620);
+  dechiffrer(document.querySelector('.status [data-t="status"]'), 520);
 }
 
 // One command per system. Linux and macOS share it, because the script works
@@ -782,9 +829,12 @@ var mouvementReduit = !!(window.matchMedia &&
     return pris;
   }
 
-  function montrer(elements) {
+  function montrer(elements, titre) {
     return function () {
       for (var i = 0; i < elements.length; i++) { elements[i].classList.add('vu'); }
+      // le titre se dechiffre pendant que sa section monte, avec un temps de
+      // retard : les deux en meme temps ne se lisent plus
+      if (titre) { setTimeout(function () { dechiffrer(titre, 460); }, 150); }
     };
   }
 
@@ -796,7 +846,8 @@ var mouvementReduit = !!(window.matchMedia &&
   setTimeout(montrerHaut, 700);
 
   for (var k = 0; k < sections.length; k++) {
-    quandVisible(sections[k], montrer(preparer(sections[k].children)));
+    quandVisible(sections[k],
+      montrer(preparer(sections[k].children), sections[k].querySelector('h2')));
   }
 })();
 

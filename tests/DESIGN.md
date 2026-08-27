@@ -65,7 +65,17 @@ does not have opinions; it has a ruler.
 - **ok** the rail dot grows to 1.6× when its section is in view
 - **ok** the bars draw themselves to the length of the reduction they sit under
 - **ok** buttons lift 1 px under the cursor and settle on click
-- **ok** the headline scrambles once on load and once per language change
+- **ok** the headline scrambles once on load and once per language change. The
+  reference applies that effect to exactly two elements, both in its own
+  headline; here it also runs on the status line and on each section heading as
+  the section arrives, 150 ms behind the rise so the two do not compete. Verified
+  on Japanese as well as Latin text — the remainder is drawn from the same
+  symbol set the reference uses
+- **ok** links in the footer and in note blocks draw their underline from the
+  left rather than switching it on. Targeted by selector, not by class: those
+  links live inside translated strings injected as `innerHTML`, so a class would
+  have to be repeated in all ten languages
+- **ok** a screenshot lifts three pixels under the cursor
 - **ok** every one of those is inside `prefers-reduced-motion`
 - **fixed** the bar observer watched an element of zero width, which can never
   meet an intersection threshold — it watches the container now
@@ -78,6 +88,12 @@ does not have opinions; it has a ruler.
   invisible forever. The number counter froze on its first frame in a background
   tab and displayed **−0%** for a 90% reduction. And the hero waited on
   `requestAnimationFrame`, which a background tab never runs
+- **ok** the decrypt effect cannot strand text on noise: it refuses to start
+  while the document is hidden, a timer rewrites the true string regardless, and
+  a run in progress is cancelled before the text is read — otherwise a language
+  change mid-animation would take the noise for the truth. Checked by chaining
+  three languages inside 380 ms: the headline still landed on the exact Japanese
+  string
 - **fixed** the first OS tab click did not fade: the flag that suppresses the
   animation during setup was only cleared inside `showOS`, which is never called
   at load on Windows
@@ -128,6 +144,11 @@ up by staring at the page, which is the argument for the file.
 The two that the eye did catch — the ghosted GIF and the broken script — were
 both found by *rendering* the page rather than reading it, which is the other
 half of the argument.
+
+One near-miss worth recording: the status line and headline appeared not to
+animate at all, and the reason was that I was querying the wrong browser tab —
+the real page, under reduced motion, where not animating is the correct
+behaviour. The reading was right; the question was aimed at the wrong document.
 
 And one that neither caught. Adding the gauges reused a class name the header
 already had, and the header collapsed to a two-pixel line. The ruler said the
