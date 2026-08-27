@@ -711,6 +711,9 @@ function dechiffrer(el, duree) {
 }
 
 function scramble() {
+  // pendant l'ouverture c'est elle qui mene : la mise en langue au chargement
+  // appelle scramble(), et le titre partirait deux fois, hors sequence
+  if (ouvertureEnCours) { return; }
   dechiffrer(document.getElementById('scramble'), 620);
   dechiffrer(document.querySelector('.status [data-t="status"]'), 520);
 }
@@ -812,18 +815,33 @@ document.addEventListener('visibilitychange', verifier);
 var mouvementReduit = !!(window.matchMedia &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+// L'ouverture est ecrite en temps, pas en boucle. La source tient un demi-
+// seconde sans rien bouger, puis deroule ses elements par pas de cent
+// millisecondes. Une page qui s'anime pendant qu'elle se compose a l'air de
+// ramer ; une page qui se pose, marque un temps, puis se deploie a l'air
+// d'etre arrivee. Chaque temps porte un nom parce qu'il se regle a l'oreille.
+var OUVERTURE = [
+  { quoi: 'header .bar > *', a: 420, pas: 70 },
+  { quoi: '.status',         a: 600, dire: '.status [data-t="status"]', duree: 520 },
+  { quoi: 'h1',              a: 720, dire: '#scramble',                 duree: 620 },
+  { quoi: '.lede',           a: 900 },
+  { quoi: '.tabs',           a: 1020 },
+  { quoi: '.cmd',            a: 1120 },
+  { quoi: '.after',          a: 1240 }
+];
+
+// Vraie tant que l'ouverture mene le texte : sans ce drapeau, la mise en
+// langue au chargement lancerait le dechiffrement du titre hors sequence.
+var ouvertureEnCours = false;
+
 (function () {
   if (mouvementReduit) { return; }   // rien n'est cache, donc rien a revoir
-  // le haut de page est un .hero, pas un .wrap : le premier essai visait une
-  // classe qui n'existe pas ici et ne preparait donc rien du tout
-  var entete = document.querySelectorAll('header .bar > *, .hero > *');
-  var sections = document.querySelectorAll('main section');
 
-  function preparer(elements) {
+  function preparer(elements, pas) {
     var pris = [];
     for (var i = 0; i < elements.length; i++) {
       elements[i].classList.add('rev');
-      elements[i].style.transitionDelay = (i * 70) + 'ms';
+      elements[i].style.transitionDelay = (i * (pas || 0)) + 'ms';
       pris.push(elements[i]);
     }
     return pris;
@@ -832,22 +850,52 @@ var mouvementReduit = !!(window.matchMedia &&
   function montrer(elements, titre) {
     return function () {
       for (var i = 0; i < elements.length; i++) { elements[i].classList.add('vu'); }
-      // le titre se dechiffre pendant que sa section monte, avec un temps de
-      // retard : les deux en meme temps ne se lisent plus
-      if (titre) { setTimeout(function () { dechiffrer(titre, 460); }, 150); }
+      // meme raison pour les titres de section : ils arrivent brouilles
+      if (titre) { dechiffrer(titre, 460); }
     };
   }
 
-  // Le haut de page n'attend rien : il est deja a l'ecran quand on arrive.
-  var montrerHaut = montrer(preparer(entete));
-  requestAnimationFrame(function () { requestAnimationFrame(montrerHaut); });
-  // Filet : requestAnimationFrame ne s'execute pas non plus dans un onglet
-  // ouvert en arriere-plan.
-  setTimeout(montrerHaut, 700);
+  // --- l'ouverture ------------------------------------------------------
+  ouvertureEnCours = true;
+  var fin = 0;
+  var tout = [];
 
+  for (var b = 0; b < OUVERTURE.length; b++) {
+    (function (temps) {
+      var els = document.querySelectorAll(temps.quoi);
+      if (!els.length) { return; }
+      var montrerCe = montrer(preparer(els, temps.pas));
+      for (var i = 0; i < els.length; i++) { tout.push(els[i]); }
+      setTimeout(function () {
+        montrerCe();
+        if (temps.dire) {
+          // Le dechiffrement part avec l'apparition, pas apres : la ligne
+          // commence a opacity:0, donc elle se materialise deja brouillee et
+          // se resout en montant. Avec 220 ms de retard on voyait le vrai
+          // texte s'installer puis partir en bruit, c'est-a-dire l'envers.
+          dechiffrer(document.querySelector(temps.dire), temps.duree);
+        }
+      }, temps.a);
+      if (temps.a > fin) { fin = temps.a; }
+    })(OUVERTURE[b]);
+  }
+
+  // Filet : aucun de ces temps ne repose sur requestAnimationFrame, mais si
+  // une minuterie saute, tout doit finir visible quand meme.
+  setTimeout(function () {
+    for (var i = 0; i < tout.length; i++) { tout[i].classList.add('vu'); }
+  }, fin + 1200);
+
+  // La main est rendue des le dernier temps parti : le drapeau ne sert qu'a
+  // empecher la mise en langue du chargement de doubler le titre, et un
+  // visiteur qui change de langue apres ne doit rien perdre.
+  setTimeout(function () { ouvertureEnCours = false; }, fin + 400);
+
+  // --- puis les sections, au defilement ---------------------------------
+  var sections = document.querySelectorAll('main section');
   for (var k = 0; k < sections.length; k++) {
     quandVisible(sections[k],
-      montrer(preparer(sections[k].children), sections[k].querySelector('h2')));
+      montrer(preparer(sections[k].children, 70), sections[k].querySelector('h2')));
   }
 })();
 

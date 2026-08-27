@@ -61,6 +61,14 @@ does not have opinions; it has a ruler.
   swap is visible instead of the text jumping
 - **ok** the copy button pulses once and turns accent-coloured on success
 - **ok** the note blocks grow their left border on hover
+- **ok** the load is a written sequence rather than a loop. The reference holds
+  half a second before moving anything, then walks its elements at 100 ms
+  intervals; here the beats are a table read top to bottom — bar 420, status
+  600, headline 720, lede 900, tabs 1020, command 1120, note 1240. Measured from
+  real page load: 451, 625, 751, 925, 1050, 1151, 1276, every one within about
+  30 ms of its mark
+- **ok** `.rev` is applied while the document is still parsing, before first
+  paint at 192 ms, so nothing flashes visible and then hides
 - **ok** the status dot pulses, 3.2 s, the slowest thing on the page
 - **ok** the rail dot grows to 1.6× when its section is in view
 - **ok** the bars draw themselves to the length of the reduction they sit under
@@ -88,6 +96,14 @@ does not have opinions; it has a ruler.
   invisible forever. The number counter froze on its first frame in a background
   tab and displayed **−0%** for a 90% reduction. And the hero waited on
   `requestAnimationFrame`, which a background tab never runs
+- **fixed** the headline appeared in clear for 250 ms and only then scrambled,
+  which is the effect backwards. The decrypt was starting 220 ms after the
+  reveal; it starts with it now, so the line materialises already scrambled and
+  resolves as it rises. Noise now begins one 25 ms sample after the beat fires
+- **fixed** the language applied at load called `scramble()` on its own, so the
+  headline started a second time outside the sequence. A flag hands the text to
+  the overture and releases it 400 ms after the last beat — checked that a
+  language change after that still decrypts
 - **ok** the decrypt effect cannot strand text on noise: it refuses to start
   while the document is hidden, a timer rewrites the true string regardless, and
   a run in progress is cancelled before the text is read — otherwise a language
