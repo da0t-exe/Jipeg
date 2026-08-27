@@ -605,6 +605,10 @@ function Start-Next {
         if ($script:Mode -eq 'png') {
             $script:TmpOut = Join-Path (Split-Path -Parent $src) ('.jipeg-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
             Copy-Item -LiteralPath $src -Destination $script:TmpOut -Force
+            # Copy-Item emporte les attributs avec lui : sans cela un original
+            # cache ou systeme donne un temporaire cache, que les lectures
+            # ordinaires ne retrouvent plus.
+            (Get-Item -LiteralPath $script:TmpOut -Force).Attributes = 'Normal'
             $psi = New-Object System.Diagnostics.ProcessStartInfo
             $psi.FileName               = $Oxipng
             $psi.Arguments              = '-o 4 --strip safe -q "{0}"' -f $script:TmpOut
@@ -662,6 +666,7 @@ function Start-Next {
             $script:Mode = 'png'
             $script:TmpOut = Join-Path (Split-Path -Parent $src) ('.jipeg-{0}.png' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
             Copy-Item -LiteralPath $source -Destination $script:TmpOut -Force
+            (Get-Item -LiteralPath $script:TmpOut -Force).Attributes = 'Normal'
             $psi = New-Object System.Diagnostics.ProcessStartInfo
             $psi.FileName               = $Oxipng
             $psi.Arguments              = '-o 4 --strip safe -q "{0}"' -f $script:TmpOut
@@ -782,8 +787,11 @@ function Complete-Current {
             $dir    = Split-Path -Parent $script:Current
             $base   = [System.IO.Path]::GetFileNameWithoutExtension($script:Current)
             $srcExt = [System.IO.Path]::GetExtension($script:Current).ToLower()
-            $inLen  = (Get-Item -LiteralPath $script:Current).Length
-            $outLen = (Get-Item -LiteralPath $script:TmpOut).Length
+            # -Force, sinon un fichier cache est introuvable : Get-Item sans lui
+            # ecarte les attributs Hidden et System, et la conversion echoue sur
+            # "Could not find item" pour un fichier que Test-Path venait de voir.
+            $inLen  = (Get-Item -LiteralPath $script:Current -Force).Length
+            $outLen = (Get-Item -LiteralPath $script:TmpOut -Force).Length
 
             # A result heavier than the file it came from is of no use to
             # anyone, whatever the source was. JPEG is simply worse than PNG at
@@ -823,8 +831,8 @@ function Complete-Current {
                 # date: a converted holiday folder still sorts by when the
                 # pictures were taken rather than by when they were converted
                 try {
-                    $stamp = Get-Item -LiteralPath $script:Current
-                    $made  = Get-Item -LiteralPath $target
+                    $stamp = Get-Item -LiteralPath $script:Current -Force
+                    $made  = Get-Item -LiteralPath $target -Force
                     $made.CreationTime   = $stamp.CreationTime
                     $made.LastWriteTime  = $stamp.LastWriteTime
                 } catch { }

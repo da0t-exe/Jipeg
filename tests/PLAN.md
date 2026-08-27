@@ -23,31 +23,51 @@ nothing about what was never asked.
 - **can't** HEIC, HEIF, AVIF, JPEG XR — the codecs are not installed, so only the
   message naming the missing one has ever run
 - **no** JPEG XL as a *source*, though Windows now ships a decoder for it
-- **no** a PNG with an ICC profile that is not sRGB
+- **done** a PNG and a JPEG carrying an AdobeRGB profile, built by rewriting
+  the primaries of the sRGB profile Windows ships so the structure stays
+  valid. Both converted. Two earlier attempts embedded a Lab and a CMYK
+  profile, which libpng rejects outright and rightly so - a PNG iCCP chunk
+  must carry an RGB or grey profile - so those measured a malformed file
+  rather than a colour space. They are kept as exactly that: the software
+  refuses them cleanly
 - **no** a 12-bit or arithmetic-coded JPEG
 
 ### 1.2 Shape and size
 - **done** 1×1, 2000×40, 37×1301, 1600×1200, and a few hundred random sizes
-- **no** anything above about 4000 px on a side, or over 50 MB
-- **no** a picture large enough to matter for memory — a 100 MP panorama
+- **done** 4200 x 2800, converted in 7 s, 1.1 MB down to 76 KB
+- **done** 12000 x 8400, 100.8 megapixels, converted in 15 s
 
 ### 1.3 The file itself
 - **done** empty, truncated, a JPEG named `.png`, a PNG named `.jpg`, plain text
   wearing an image extension, a PNG header with nothing behind it
 - **done** 300 files with bytes flipped at random, five seeds
 - **done** read-only source
-- **no** a source that is **open in another program** while converting
+- **done** held under an exclusive lock for the whole conversion: refused,
+  which is the only honest answer when the bytes cannot be read
 - **no** a source on a **network share**, a USB stick, or a OneDrive folder that
   is online-only
-- **no** a source whose folder cannot be written to
-- **no** a **hidden** or **system** file
+- **done** write and append denied on the folder by ACL: refused in 3 s
+- **done**, and it was broken. A hidden file failed with "Could not find
+  item" for a path `Test-Path` had just confirmed, because `Get-Item`
+  without `-Force` skips Hidden and System. Fixing that moved the failure
+  one step along, onto Jipeg's own temporary file: `Copy-Item` carries the
+  attributes across, so a hidden original made a hidden temporary. The
+  temporary is ours and now has its attributes cleared. Both convert
 
 ### 1.4 The name
 - **done** spaces, accents, Japanese, 130 characters, already carrying `_jipeg`
-- **no** a path near the **260-character limit**
-- **no** a name with `[`, `]` or `#` in it — PowerShell wildcards, everywhere it
-  matters `-LiteralPath` is used, but that has never been proven with a file
-- **no** a name ending in a space or a dot
+- **partial** a 258-character path converted on two runs out of three; the
+  third produced nothing in 5 s with no line in the log. Recorded as
+  unstable rather than dressed up as either result. A 264-character path -
+  the output name of that same file - fails to be read back
+- **done** `crochets [1] et #diese.png` converted. The first run reported it
+  broken, and the harness was at fault: it looked for the output with `-like`,
+  which read `[1]` as a character class. The wildcard test defeated by a
+  wildcard. `-LiteralPath` in the software held throughout
+- **done** refused, both of them. Creating the files needed `CreateFileW`
+  with the `\?\` prefix: Python's `open()` goes through the CRT, which
+  strips the trailing character, so the first two attempts tested perfectly
+  ordinary files without either of us noticing
 
 ---
 
@@ -66,9 +86,9 @@ nothing about what was never asked.
 ### 2.2 How it is started
 - **done** one file, a handful, 48 at once, 160 at once
 - **done** the same file twice in one selection
-- **no** **right-clicking a folder** — the `Directory` verb is registered and has
-  never been exercised
-- **no** several hundred files at once
+- **done** a folder handed straight to the converter, the way the `Directory`
+  verb passes `%V`: 300 files in, 300 out, 43 s
+- **done** 300 in one batch, all converted, no failure
 - **done** two conversions started at the same time — twelve files across two
   folders, both finish, nothing lost, the lock is handed back
 - **no** files **dropped into the selection while it is running** — the watcher
@@ -79,7 +99,8 @@ nothing about what was never asked.
   out, so it really did stop, and nothing was left behind
 - **done** closing the window with the cross while an encoder is running
 - **done** the source being **deleted** mid-batch — reported, batch finishes
-- **no** the source being **renamed** rather than deleted
+- **done** three of six sources renamed 2.5 s into a batch: three outputs,
+  and no original lost - which is the property that matters
 - **no** the disk filling up
 - **done** an encoder that never returns — the timeout guard, 2.1 s, no process left
 
@@ -94,8 +115,13 @@ nothing about what was never asked.
 - **can't** another system language or accent colour
 - **no** a **standard user** account rather than an administrator one
 - **no** a machine where `%LOCALAPPDATA%` is redirected to a network profile
-- **no** PowerShell **7** rather than Windows PowerShell 5.1
-- **no** ExecutionPolicy set to `AllSigned`
+- **can't** PowerShell 7 is not installed on this machine
+- **done** AllSigned set for real on the user scope, then launched through
+  `launch.vbs` as Explorer does: it converts, because the launcher passes
+  `-ExecutionPolicy Bypass` on the command line. Testing it by running the
+  script directly, as the first attempt did, only proved that nobody starts
+  Jipeg that way. A policy pushed by Group Policy would still block it, and
+  that needs a domain to try
 - **can't** an antivirus other than Defender, or a corporate policy
 
 ---

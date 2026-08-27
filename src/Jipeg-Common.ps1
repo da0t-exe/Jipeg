@@ -198,7 +198,7 @@ function Write-JipegLog([string]$what) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
         }
         if (Test-Path -LiteralPath $JipegLogPath) {
-            if ((Get-Item -LiteralPath $JipegLogPath).Length -gt 131072) {
+            if ((Get-Item -LiteralPath $JipegLogPath -Force).Length -gt 131072) {
                 $keep = Get-Content -LiteralPath $JipegLogPath -Tail 200
                 Set-Content -LiteralPath $JipegLogPath -Value $keep -Encoding UTF8
             }

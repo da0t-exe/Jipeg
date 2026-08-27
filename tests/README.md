@@ -32,6 +32,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File src\Install-Jipeg.ps1 -Silen
 | `check-site.py` | The page: every `data-t` string present in all ten tables, no external resource loaded, tags balanced, images where the markup says they are. |
 | `check-dead-code.py` | Functions defined and never called, variables assigned and never read. |
 | `banc-dechiffrement.js` | Sort la fonction de dechiffrement de la page et la fait tourner sur une horloge qu'on avance image par image, en mouvement normal puis reduit. `requestAnimationFrame` ne s'execute pas dans un onglet qui ne rend pas et `document.hidden` y est vrai : c'est le seul moyen d'observer l'effet ici. `node tests/banc-dechiffrement.js`. |
+| `edges-build.py` | Fabrique les cas limites que l'arbre portait comme jamais essayes : noms hostiles, chemin de 258 caracteres, fichier cache, profil ICC non sRGB, panorama de 100 megapixels, 300 fichiers. |
+| `Test-Edges.ps1` | Les convertit pour de vrai avec la copie installee et dit ce qui est sorti. Un refus peut etre la bonne reponse et compte comme tel. |
 | `check-design.py` | The page against a ruler rather than an opinion: the contrast of every text colour on every surface it sits on, how many type sizes are in play, whether the spacing is a grid or a habit, and CSS classes that belong to nothing. See [`DESIGN.md`](DESIGN.md) for what it found. |
 
 ## The ones that need Python **and Pillow**
