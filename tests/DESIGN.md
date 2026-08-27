@@ -85,6 +85,21 @@ does not have opinions; it has a ruler.
   every time a tab regains focus is a nuisance, not a welcome
 - **ok** `.rev` is applied while the document is still parsing, before first
   paint at 148 ms, so nothing flashes visible and then hides
+- **ok** the decrypt runs on animation frames rather than a 17 ms timer.
+  Writing text forces a layout, and doing it off-cadence is exactly the judder
+  the effect is meant to avoid
+- **ok** an element that has arrived becomes an ordinary element again: classes,
+  inline delay and `will-change` all removed on its own `transitionend`. Without
+  it, twenty-one elements keep a compositing layer and an `opacity:0` underneath
+  for the rest of the visit. Measured at the end of a run: zero `.rev`, zero
+  `will-change`, zero leftover delays
+- **fixed** that cleanup fired 15 ms after an element rose instead of 340 ms,
+  because `transitionend` bubbles up from children — a button's own transition
+  was tidying away the block containing it. It checks `e.target` now
+- **choice** the scroll check is not throttled. A version routed through
+  `requestAnimationFrame` removed real layout reads and left twelve elements
+  invisible, because no frame ever arrives in a tab that is not rendering. The
+  list empties as it goes, so after one pass it is a loop over nothing
 - **ok** the status dot pulses, 3.2 s, the slowest thing on the page
 - **ok** the rail dot grows to 1.6× when its section is in view
 - **ok** the bars draw themselves to the length of the reduction they sit under

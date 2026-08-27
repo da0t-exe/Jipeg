@@ -137,7 +137,7 @@ footer a:hover,footer a:focus-visible,.note a:hover,.note a:focus-visible,
    seulement apres avoir verifie qu'il saura le retirer. Sans JavaScript, ou en
    mouvement reduit, la page arrive entiere du premier coup - une animation
    d'arrivee qui reste bloquee est une page blanche. */
-.rev{opacity:0;transform:translateY(14px)}
+.rev{opacity:0;transform:translateY(14px);will-change:opacity,transform}
 .rev.vu{opacity:1;transform:none;
         transition:opacity .34s cubic-bezier(.2,.7,.3,1),
                    transform .34s cubic-bezier(.2,.7,.3,1)}
@@ -679,20 +679,23 @@ function dechiffrer(el, duree) {
   if (document.hidden) { return; }
   // Une course en cours est annulee avant qu'on lise le texte : sinon on
   // prendrait son bruit pour la verite lors d'un changement de langue.
-  if (el.rythme) { clearInterval(el.rythme); }
+  if (el.rythme) { cancelAnimationFrame(el.rythme); }
   if (el.filet) { clearTimeout(el.filet); }
 
   var vrai = el.textContent;
   if (!vrai) { return; }
-  duree = duree || 620;
-  var pas = Math.max(16, Math.round(duree / vrai.length));
-  var montres = 0;
+  duree = duree || 380;
 
-  el.rythme = setInterval(function () {
-    montres++;
+  // Une image du navigateur par ecriture, et pas une minuterie a dix-sept
+  // millisecondes : ecrire du texte force un recalcul de mise en page, et le
+  // faire hors cadence donne exactement la saccade qu'on cherche a eviter.
+  var depart = null;
+  function pas(t) {
+    if (depart === null) { depart = t; }
+    var k = Math.min(1, (t - depart) / duree);
+    var montres = Math.round(k * vrai.length);
     if (montres >= vrai.length) {
       el.textContent = vrai;
-      clearInterval(el.rythme);
       el.rythme = null;
       return;
     }
@@ -702,13 +705,15 @@ function dechiffrer(el, duree) {
       bruit += (c === ' ') ? ' ' : SYMBOLES.charAt(Math.floor(Math.random() * SYMBOLES.length));
     }
     el.textContent = vrai.slice(0, montres) + bruit;
-  }, pas);
+    el.rythme = requestAnimationFrame(pas);
+  }
+  el.rythme = requestAnimationFrame(pas);
 
-  // Filet : quoi qu'il arrive a la minuterie, le vrai texte est remis.
+  // Filet : quoi qu'il arrive aux images, le vrai texte est remis.
   el.filet = setTimeout(function () {
-    if (el.rythme) { clearInterval(el.rythme); el.rythme = null; }
+    if (el.rythme) { cancelAnimationFrame(el.rythme); el.rythme = null; }
     el.textContent = vrai;
-  }, pas * vrai.length + 500);
+  }, duree + 600);
 }
 
 function scramble() {
@@ -806,6 +811,12 @@ function verifier() {
   }
 }
 
+// Appele directement, sans limiteur. Une version passant par
+// requestAnimationFrame a bien supprime des lectures de mise en page, et a
+// laisse douze elements invisibles : aucune image n'arrive dans un onglet qui
+// ne rend pas, donc la verification n'avait jamais lieu. La liste se vide au
+// fur et a mesure - apres le premier passage c'est une boucle sur rien - et un
+// defilement n'emet de toute facon guere plus d'un evenement par image.
 window.addEventListener('scroll', verifier, { passive: true });
 window.addEventListener('resize', verifier);
 document.addEventListener('visibilitychange', verifier);
@@ -847,9 +858,32 @@ var ouvertureEnCours = false;
     return pris;
   }
 
+  // Une fois monte, l'element redevient un element ordinaire : on lui retire
+  // ses classes, son delai et son will-change. Sans cela vingt-et-un elements
+  // gardent une couche de composition et un opacity:0 sous-jacent pour le
+  // reste de la visite, ce qui est du travail que le navigateur refait pour
+  // rien a chaque peinture.
+  function ranger(el) {
+    el.classList.remove('rev', 'vu');
+    el.style.transitionDelay = '';
+    el.style.willChange = '';
+  }
+
   function montrer(elements, titre) {
     return function () {
-      for (var i = 0; i < elements.length; i++) { elements[i].classList.add('vu'); }
+      for (var i = 0; i < elements.length; i++) {
+        (function (el) {
+          el.classList.add('vu');
+          el.addEventListener('transitionend', function fini(e) {
+            // transitionend remonte depuis les enfants : sans verifier la
+            // cible, le survol d'un bouton range son bloc quinze millisecondes
+            // apres qu'il soit monte, transition a peine commencee.
+            if (e.target !== el || e.propertyName !== 'opacity') { return; }
+            el.removeEventListener('transitionend', fini);
+            ranger(el);
+          });
+        })(elements[i]);
+      }
       // meme raison pour les titres de section : ils arrivent brouilles
       if (titre) { dechiffrer(titre, 300); }
     };
@@ -883,15 +917,16 @@ var ouvertureEnCours = false;
     })(OUVERTURE[b]);
   }
 
-  window.ouvrir = function () {
-    if (window.ouvrir.faite) { return; }   // une seule fois, quoi qu'il arrive
-    window.ouvrir.faite = true;
-    for (var i = 0; i < partitions.length; i++) { partitions[i](); }
-    setTimeout(function () {
-      for (var j = 0; j < tout.length; j++) { tout[j].classList.add('vu'); }
-    }, fin + 1200);
-    setTimeout(function () { ouvertureEnCours = false; }, fin + 400);
-  };
+  for (var q = 0; q < partitions.length; q++) { partitions[q](); }
+
+  // Filet : si une minuterie saute, tout doit finir visible quand meme.
+  setTimeout(function () {
+    for (var j = 0; j < tout.length; j++) { tout[j].classList.add('vu'); }
+  }, fin + 900);
+
+  // La main est rendue des le dernier temps parti : le drapeau ne sert qu'a
+  // empecher la mise en langue du chargement de doubler le titre.
+  setTimeout(function () { ouvertureEnCours = false; }, fin + 300);
 
   // --- puis les sections, au defilement ---------------------------------
   var sections = document.querySelectorAll('main section');
@@ -996,8 +1031,6 @@ window.rejouerIntro = function () { location.reload(); };
 window.addEventListener('pageshow', function (e) {
   if (e.persisted) { window.rejouerIntro(); }
 });
-
-if (window.ouvrir) { window.ouvrir(); }   // l'ouverture part au chargement
 
 verifier();   // ce qui est deja a l'ecran au chargement
 
