@@ -86,6 +86,21 @@ if len(tailles) > 8:
     print('    -> trop de valeurs : une echelle se lit quand elle est courte')
     bad += 1
 
+# --- les durees d'animation ---------------------------------------------
+# Meme question que pour les tailles de texte : une page qui emploie six
+# durees en emploie quatre de trop, et personne ne distingue 180 ms de 200 ms.
+durees = Counter(re.findall(r'(?:transition|animation)[a-z-]*:[^;}]*?([\d.]+)s', css))
+print()
+print('  durees employees : %d valeurs' % len(durees))
+print('    ' + '  '.join('%ss(%d)' % (d, k) for d, k in
+                         sorted(durees.items(), key=lambda kv: float(kv[0]))))
+# La pulsation de la pastille est a part : c'est une boucle lente, pas une
+# reponse a un geste, et elle ne se compare a rien d'autre sur la page.
+durees.pop('2', None)
+if len(durees) > 3:
+    print('    -> trop de valeurs : deux ou trois suffisent a tenir une page')
+    bad += 1
+
 # --- le rythme des espacements ------------------------------------------
 esp = Counter()
 for m in re.finditer(r'(?:margin|padding|gap)[a-z-]*:\s*([^;}\n]+)', css):

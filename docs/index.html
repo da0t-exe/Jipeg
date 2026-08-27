@@ -40,7 +40,7 @@ body{
      ne se brouille. La regle generale ci-dessus ramene toutes les transitions
      a un centieme de milliseconde, il faut donc redonner sa duree a celle-la. */
   .rev{transform:none!important}
-  .rev.vu{transition-duration:.28s!important}
+  .rev.vu{transition-duration:.3s!important}
 }
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -73,7 +73,7 @@ select option{background:var(--bg);color:var(--ink)}
 /* hero */
 .hero{padding:84px 0 60px}
 .status{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim);margin-bottom:24px}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 3.2s cubic-bezier(.4,0,.6,1) infinite}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 h1{font-size:clamp(1.6rem,4.6vw,2.4rem);line-height:1.22;font-weight:700;letter-spacing:-.03em;margin-bottom:20px}
 h1 .scr{color:var(--accent)}
@@ -110,12 +110,13 @@ h1 .scr{color:var(--accent)}
 .rail a{position:relative;display:block;width:7px;height:7px;border-radius:50%;
         background:var(--edge);transition:background .3s,transform .3s}
 .rail a:hover{background:var(--mute)}
-.rail a.on{background:var(--accent);transform:scale(1.6)}
-.rail .lab{position:absolute;left:16px;top:50%;transform:translateY(-50%) translateX(-6px);
+.rail a.on{background:var(--accent);transform:scale(1.5)}
+.rail .lab{position:absolute;left:16px;top:50%;
+           transform:translateY(-50%) translateX(-6px) scale(.95);
            white-space:nowrap;font-size:11px;color:var(--dim);background:var(--panel);
            border:1px solid var(--edge);border-radius:999px;padding:4px 10px;
            opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
-.rail a:hover .lab{opacity:1;transform:translateY(-50%) translateX(0)}
+.rail a:hover .lab{opacity:1;transform:translateY(-50%) translateX(0) scale(1)}
 
 /* La barre sous chaque chiffre : sa longueur EST la reduction. Elle part de
    zero et s'etire quand la ligne arrive a l'ecran - une mesure qui se dessine
@@ -127,14 +128,14 @@ h1 .scr{color:var(--accent)}
 footer a,.note a,.warn a{
   text-decoration:none;background-image:linear-gradient(currentColor,currentColor);
   background-repeat:no-repeat;background-position:0 100%;background-size:0 1px;
-  transition:background-size .32s cubic-bezier(.2,.7,.3,1),color .2s;padding-bottom:2px;
+  transition:background-size .3s cubic-bezier(.2,.7,.3,1),color .2s;padding-bottom:2px;
 }
 footer a:hover,footer a:focus-visible,.note a:hover,.note a:focus-visible,
 .warn a:hover,.warn a:focus-visible{background-size:100% 1px;color:var(--ink)}
 
 /* La capture se souleve d'un cheveu : assez pour repondre, pas assez pour
    bouger la page autour d'elle. */
-.shots img{transition:transform .45s cubic-bezier(.2,.7,.3,1),filter .45s}
+.shots img{transition:transform .3s cubic-bezier(.2,.7,.3,1),filter .3s}
 .shots figure:hover img{transform:translateY(-3px) scale(1.006)}
 
 /* Rien n'est cache dans le balisage : c'est le script qui pose .rev, et
@@ -143,21 +144,21 @@ footer a:hover,footer a:focus-visible,.note a:hover,.note a:focus-visible,
    d'arrivee qui reste bloquee est une page blanche. */
 .rev{opacity:0;transform:translateY(14px);will-change:opacity,transform}
 .rev.vu{opacity:1;transform:none;
-        transition:opacity .34s cubic-bezier(.2,.7,.3,1),
-                   transform .34s cubic-bezier(.2,.7,.3,1)}
+        transition:opacity .3s cubic-bezier(.2,.7,.3,1),
+                   transform .3s cubic-bezier(.2,.7,.3,1)}
 
 /* La commande change de systeme : elle s'efface le temps d'etre remplacee,
    sinon le texte saute d'un mot a l'autre sans qu'on voie ce qui a bouge. */
-.cmd-body code{transition:opacity .18s ease}
+.cmd-body code{transition:opacity .2s ease}
 .cmd-body code.chg{opacity:0}
 
 /* Le bouton confirme d'un a-coup plutot que par un mot de plus. */
 @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.09)}100%{transform:scale(1)}}
-.copy.ok{color:var(--accent);border-color:var(--accent);animation:pop .34s ease}
+.copy.ok{color:var(--accent);border-color:var(--accent);animation:pop .3s ease}
 
 .meter{display:block;height:2px;margin-top:6px;background:var(--edge);border-radius:2px;overflow:hidden}
 .meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;
-       transition:width 1.1s cubic-bezier(.2,.7,.3,1)}
+       transition:width 1s cubic-bezier(.2,.7,.3,1)}
 
 /* sections */
 section{padding:56px 0;border-top:1px solid var(--edge)}
@@ -204,6 +205,8 @@ tbody tr:last-child td{border-bottom:0}
 .btn{display:inline-flex;align-items:center;text-decoration:none;font-size:13px;padding:10px 16px;
      border-radius:8px;border:1px solid var(--edge);color:var(--ink);transition:all .2s}
 .btn:hover{border-color:var(--mute);background:var(--panel);transform:translateY(-1px)}
+/* le bouton principal grandit au survol, comme celui de la source */
+.btn.primary:hover{transform:translateY(-1px) scale(1.05)}
 .btn:active{transform:translateY(0)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.primary:hover{filter:brightness(1.1);background:var(--accent)}
@@ -672,6 +675,12 @@ function pick() {
 
 var SYMBOLES = '-_~`!@#$%^&*()+=[]{}|;:,.<>?';
 
+// La source ne fixe pas une duree mais une cadence : un caractere toutes les
+// cinquante millisecondes, quelle que soit la longueur de la ligne. Une phrase
+// courte se resout donc vite et une longue prend son temps, ce qui est plus
+// juste qu'une duree unique ou chaque ligne file a une vitesse differente.
+var MS_PAR_CARACTERE = 50;
+
 // Le texte se revele de gauche a droite ; ce qui reste est tire au hasard et
 // retire a chaque image. Le vrai texte est l'etat final et aussi celui du
 // balisage, donc une animation qui n'aboutit jamais ne fait rien de pire que
@@ -688,7 +697,7 @@ function dechiffrer(el, duree) {
 
   var vrai = el.textContent;
   if (!vrai) { return; }
-  duree = duree || 380;
+  duree = duree || MS_PAR_CARACTERE * vrai.length;
 
   // Le brouillon derriere le curseur est retire au sort. A chaque image, cela
   // scintille ; c'est la partie de l'effet qui fatigue, bien plus que la
@@ -739,8 +748,8 @@ function scramble() {
   // pendant l'ouverture c'est elle qui mene : la mise en langue au chargement
   // appelle scramble(), et le titre partirait deux fois, hors sequence
   if (ouvertureEnCours) { return; }
-  dechiffrer(document.getElementById('scramble'), 380);
-  dechiffrer(document.querySelector('.status [data-t="status"]'), 300);
+  dechiffrer(document.getElementById('scramble'));
+  dechiffrer(document.querySelector('.status [data-t="status"]'));
 }
 
 // One command per system. Linux and macOS share it, because the script works
@@ -846,18 +855,19 @@ document.addEventListener('visibilitychange', verifier);
 var mouvementReduit = !!(window.matchMedia &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-// L'ouverture est ecrite en temps, pas en boucle : chaque temps porte un nom
-// parce qu'il se regle a l'oreille. Elle part au chargement et le dernier
-// element est en place avant six cents millisecondes - assez pour qu'on voie
-// la page se faire, pas assez pour qu'on l'attende.
+// Les temps de la source, repris tels quels : elle tient cinq cents
+// millisecondes sans rien bouger, puis deroule ses elements par pas de cent.
+// Ce temps d'arret est le coeur de l'effet - une page qui s'anime pendant
+// qu'elle se compose a l'air de ramer, une page qui se pose, marque un temps,
+// puis se deploie a l'air d'etre arrivee.
 var OUVERTURE = [
-  { quoi: 'header .bar > *', a:  60, pas: 40 },
-  { quoi: '.status',         a: 140, dire: '.status [data-t="status"]', duree: 300 },
-  { quoi: 'h1',              a: 220, dire: '#scramble',                 duree: 380 },
-  { quoi: '.lede',           a: 320 },
-  { quoi: '.tabs',           a: 400 },
-  { quoi: '.cmd',            a: 470 },
-  { quoi: '.after',          a: 540 }
+  { quoi: 'header .bar > *', a:  500, pas: 100 },
+  { quoi: '.status',         a:  600, dire: '.status [data-t="status"]' },
+  { quoi: 'h1',              a:  700, dire: '#scramble' },
+  { quoi: '.lede',           a:  800 },
+  { quoi: '.tabs',           a:  900 },
+  { quoi: '.cmd',            a: 1000 },
+  { quoi: '.after',          a: 1100 }
 ];
 
 // Vraie tant que l'ouverture mene le texte : sans ce drapeau, la mise en
@@ -908,7 +918,7 @@ var ouvertureEnCours = false;
         })(elements[i]);
       }
       // meme raison pour les titres de section : ils arrivent brouilles
-      if (titre) { dechiffrer(titre, 300); }
+      if (titre) { dechiffrer(titre); }
     };
   }
 
@@ -932,7 +942,7 @@ var ouvertureEnCours = false;
             // commence a opacity:0, donc elle se materialise deja brouillee et
             // se resout en montant. Avec 220 ms de retard on voyait le vrai
             // texte s'installer puis partir en bruit, c'est-a-dire l'envers.
-            dechiffrer(document.querySelector(temps.dire), temps.duree);
+            dechiffrer(document.querySelector(temps.dire));
           }
         }, temps.a);
       });
@@ -993,15 +1003,19 @@ function compter(cellule, duree) {
 // est deja etire ne montre rien.
 (function () {
   var barres = document.querySelectorAll('.meter');
-  function etirer(bar) {
+  // La source decale ses chiffres de cent millisecondes l'un apres l'autre et
+  // les fait courir une seconde. Les jauges partent ensemble avec leur ligne,
+  // les chiffres se suivent.
+  function etirer(bar, rang) {
     return function () {
       var i = bar.querySelector('i');
       if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
       // Un chiffre qui monte ne scintille pas : il n'y a rien a menager ici.
-      if (bar.parentNode) { compter(bar.parentNode, 900); }
+      if (!bar.parentNode) { return; }
+      setTimeout(function () { compter(bar.parentNode, 1000); }, rang * 100);
     };
   }
-  for (var j = 0; j < barres.length; j++) { quandVisible(barres[j], etirer(barres[j])); }
+  for (var j = 0; j < barres.length; j++) { quandVisible(barres[j], etirer(barres[j], j)); }
 })();
 
 
@@ -1016,7 +1030,7 @@ function showOS(key) {
   };
   if (osPose && !mouvementReduit) {
     code.classList.add('chg');
-    setTimeout(function () { poser(); code.classList.remove('chg'); }, 180);
+    setTimeout(function () { poser(); code.classList.remove('chg'); }, 200);
   } else {
     poser();
   }

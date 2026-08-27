@@ -67,13 +67,22 @@ does not have opinions; it has a ruler.
   page is one file, ready in about 150 ms, so the curtain was 1.16 s of waiting
   invented to be looked at. Five kilobytes of markup, styles and progress logic
   went with it
-- **ok** the load is a written sequence rather than a loop, and a quick one. The
-  reference holds half a second before moving anything, then walks its elements
-  at 100 ms intervals; the hold is gone here because fast was asked for. The
-  beats are a table read top to bottom — bar 60, status 140, headline 220, lede
-  320, tabs 400, command 470, note 540. Measured from real page load: 80, 161,
-  241, 350, 432, 501, 571, with the headline resolved at 612 ms. The whole page
-  is in place in less time than the reference spends holding still
+- **ok** the load runs on the reference's own timings, hold included: 500 ms
+  where nothing moves, then a beat every 100 ms — bar 500, status 600, headline
+  700, lede 800, tabs 900, command 1000, note 1100. The mechanism is unchanged
+  from the version measured at 80/161/241/350/432/501/571 against a plan of
+  60/140/220/320/400/470/540, so it is the constants that moved and not the
+  wiring
+- **ok** the decrypt takes its cadence from the reference rather than a duration:
+  one character every 50 ms, whatever the line's length. A short line resolves
+  quickly and a long one takes its time, which is fairer than one duration that
+  makes every line run at a different speed. Verified against the shipped
+  function: 22 characters in 1100 ms, 42 in 2100 ms
+- **fixed** six transition durations were in play — .18, .2, .3, .32, .45 and
+  1 s — where the reference uses two, 200 and 300 ms, plus the second its bars
+  take. Nobody tells 180 ms from 200 ms; it is the type-scale question again.
+  Three now, and `check-design.py` counts them from here on
+- **ok** the primary button grows 5% under the cursor, as the reference's does
 - **ok** it plays on every load, because nothing about it is remembered — the
   only thing this page stores is the chosen language. The one case that does
   *not* replay on its own is a back/forward restore: the browser hands back the
