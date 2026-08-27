@@ -29,7 +29,8 @@ function extraire(depuis, jusqua, quoi) {
 
 const source = [
   extraire("var SYMBOLES = '", "';", 'le jeu de symboles'),
-  extraire('var MS_PAR_CARACTERE', ';', 'la cadence'),
+  extraire('var TEMPS =', ';', 'la duree commune'),
+  extraire('var PAS =', ';', 'le pas'),
   extraire('function dechiffrer(el, duree) {', '}, duree + 600);\n}', 'dechiffrer')
 ].join('\n\n');
 
@@ -38,7 +39,8 @@ let horloge = 0;
 let file = [];
 const bac = {
   SYMBOLES: null,
-  MS_PAR_CARACTERE: null,
+  TEMPS: null,
+  PAS: null,
   mouvementReduit: false,
   document: { hidden: false },
   requestAnimationFrame: (f) => file.push(f),
@@ -78,26 +80,30 @@ function essai(nom, reduit, vrai) {
   const duree = Math.round(horloge);
   console.log('  ' + nom);
   console.log('    ' + vrai.length + ' caracteres -> ' + duree + ' ms  (attendu '
-              + bac.MS_PAR_CARACTERE * vrai.length + ' ms)');
+              + bac.TEMPS + ' ms, quelle que soit la longueur)');
   console.log('    etats traverses : ' + etats.length + '   tirages de brouillon : ' + tirages);
   console.log('    milieu : ' + (etats[Math.floor(etats.length / 2)] || '-'));
   console.log('    exact a l arrivee : ' + (el.textContent === vrai ? 'oui' : 'NON'));
   return { duree, tirages, exact: el.textContent === vrai };
 }
 
-console.log('  cadence lue dans la page : ' + bac.MS_PAR_CARACTERE + ' ms par caractere');
+console.log('  duree lue dans la page : TEMPS = ' + bac.TEMPS + ' ms, PAS = ' + bac.PAS + ' ms');
 console.log('');
 const a = essai('mouvement normal   (brouillon retire a chaque image)', false, 'It comes back lighter.');
 console.log('');
 const b = essai('mouvement reduit   (brouillon retire 8 fois par seconde)', true, 'It comes back lighter.');
 console.log('');
-const c = essai('ligne longue       (la cadence tient quelle que soit la longueur)', false,
+const c = essai('ligne longue       (meme duree, elle defile juste plus vite)', false,
                 'Windows 10 and 11, no administrator rights');
 
 const soucis = [];
 if (!a.exact || !b.exact || !c.exact) { soucis.push('une ligne n arrive pas sur son texte exact'); }
 if (b.tirages >= a.tirages) { soucis.push('le mouvement reduit ne calme pas le brouillon'); }
-if (Math.abs(a.duree - bac.MS_PAR_CARACTERE * 22) > 60) { soucis.push('la cadence ne tient pas'); }
+for (const [nom, r] of [['courte', a], ['reduite', b], ['longue', c]]) {
+  if (Math.abs(r.duree - bac.TEMPS) > 40) {
+    soucis.push('la ligne ' + nom + ' dure ' + r.duree + ' ms au lieu de ' + bac.TEMPS);
+  }
+}
 
 console.log(soucis.length ? '  ' + soucis.join('\n  ') : '  banc conforme');
 process.exit(soucis.length ? 1 : 0);

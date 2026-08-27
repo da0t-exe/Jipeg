@@ -87,18 +87,36 @@ if len(tailles) > 8:
     bad += 1
 
 # --- les durees d'animation ---------------------------------------------
-# Meme question que pour les tailles de texte : une page qui emploie six
-# durees en emploie quatre de trop, et personne ne distingue 180 ms de 200 ms.
-durees = Counter(re.findall(r'(?:transition|animation)[a-z-]*:[^;}]*?([\d.]+)s', css))
+# La page tient toutes ses transitions sur une seule variable. La question
+# n'est donc plus "combien de valeurs" mais "en reste-t-il une ecrite a la
+# main", ce qui est plus facile a verifier et impossible a contourner par
+# distraction. La pulsation de la pastille est a part : c'est une boucle lente,
+# pas une reponse a un geste, et elle ne se compare a rien d'autre.
+temps = re.search(r'--t\s*:\s*([\d.]+m?s)', css)
 print()
-print('  durees employees : %d valeurs' % len(durees))
-print('    ' + '  '.join('%ss(%d)' % (d, k) for d, k in
-                         sorted(durees.items(), key=lambda kv: float(kv[0]))))
-# La pulsation de la pastille est a part : c'est une boucle lente, pas une
-# reponse a un geste, et elle ne se compare a rien d'autre sur la page.
-durees.pop('2', None)
-if len(durees) > 3:
-    print('    -> trop de valeurs : deux ou trois suffisent a tenir une page')
+print('  duree commune --t : %s' % (temps.group(1) if temps else 'ABSENTE'))
+if not temps:
+    bad += 1
+
+# re.S : une declaration ecrite sur deux lignes avait garde un .3s sur sa
+# seconde propriete, et la premiere version de ce controle ne lisait que la
+# premiere ligne.
+enDur = []
+for m in re.finditer(r'(transition[a-z-]*|animation)\s*:([^;}]*)', css, re.S):
+    if m.group(1) == 'animation' and 'pulse' in m.group(2):
+        continue
+    for v in re.findall(r'(?<![\w-])([\d.]+m?s)', m.group(2)):
+        # .01ms n'est pas une duree, c'est la facon d'en supprimer une : c'est
+        # la regle qui coupe tout en mouvement reduit, et elle doit rester
+        # ecrite en clair.
+        if v == '.01ms':
+            continue
+        enDur.append(' '.join((m.group(1) + ':' + m.group(2)).split())[:58] + '  ->  ' + v)
+print('  durees ecrites a la main : %s' % (len(enDur) if enDur else 'aucune'))
+for e in enDur:
+    print('    ' + e)
+if enDur:
+    print('    -> tout ce qui bouge doit passer par var(--t)')
     bad += 1
 
 # --- le rythme des espacements ------------------------------------------

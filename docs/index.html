@@ -13,7 +13,7 @@
   --accent:#4A7BE8; --accent-soft:rgba(74,123,232,.10);
   --ok:#4ade80;
   --mono:ui-monospace,SFMono-Regular,Monaco,Consolas,"Liberation Mono",Menlo,monospace;
-}
+ --t:.2s;}
 @media (prefers-color-scheme:light){
   :root{ --bg:#fbfbfc; --panel:#fff; --edge:#e6e6ea; --ink:#15151a; --dim:#55555f; --mute:#73737d;
          --accent:#2f5fd0; --accent-soft:rgba(47,95,208,.08); --ok:#1a9d52; }
@@ -40,12 +40,12 @@ body{
      ne se brouille. La regle generale ci-dessus ramene toutes les transitions
      a un centieme de milliseconde, il faut donc redonner sa duree a celle-la. */
   .rev{transform:none!important}
-  .rev.vu{transition-duration:.3s!important}
+  .rev.vu{transition-duration:var(--t)!important}
   /* La jauge aussi garde sa duree. Elle ne decore rien : sa longueur EST la
      reduction dont parle la ligne, et une barre qui apparait deja pleine ne
      dit plus rien. C'est un mouvement, on l'assume - il est lent, unique, et
      il ne se repete pas. */
-  .meter i{transition-duration:1s!important}
+  .meter i{transition-duration:var(--t)!important}
 }
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -65,12 +65,12 @@ header{
 .mark{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em}
 .mark svg{display:block;border-radius:5px}
 .right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:12px;color:var(--dim)}
-.right a{text-decoration:none;transition:color .2s}
+.right a{text-decoration:none;transition:color var(--t)}
 .right a:hover{color:var(--ink)}
 select{
   font-family:var(--mono);font-size:12px;color:var(--dim);background:transparent;
   border:1px solid var(--edge);border-radius:999px;padding:4px 8px;cursor:pointer;
-  transition:color .2s,border-color .2s;
+  transition:color var(--t),border-color var(--t);
 }
 select:hover{color:var(--ink);border-color:var(--mute)}
 select option{background:var(--bg);color:var(--ink)}
@@ -90,7 +90,7 @@ h1 .scr{color:var(--accent)}
 .tab{
   font-family:var(--mono);font-size:11px;color:var(--mute);background:transparent;
   border:1px solid var(--edge);border-bottom:0;border-radius:8px 8px 0 0;
-  padding:6px 12px;cursor:pointer;transition:color .2s,background .2s;
+  padding:6px 12px;cursor:pointer;transition:color var(--t),background var(--t);
 }
 .tab:hover{color:var(--ink)}
 .tab.on{color:var(--ink);background:var(--panel)}
@@ -102,7 +102,7 @@ h1 .scr{color:var(--accent)}
 .cmd-body code{font-size:13px;white-space:nowrap;min-width:0;overflow-x:auto;flex:1;scrollbar-width:thin}
 .cmd-body .p{color:var(--accent);user-select:none}
 .copy{margin-left:auto;flex:none;border:1px solid var(--edge);background:transparent;color:var(--dim);
-      font-family:var(--mono);font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;transition:all .2s}
+      font-family:var(--mono);font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;transition:all var(--t)}
 .copy:hover{color:var(--ink);border-color:var(--mute);transform:translateY(-1px)}
 .after{margin-top:12px;font-size:12px;color:var(--mute)}
 
@@ -113,14 +113,14 @@ h1 .scr{color:var(--accent)}
       left:calc(50% + 360px + 40px);display:flex;flex-direction:column;gap:14px}
 @media (max-width:1100px){ .rail{display:none} }
 .rail a{position:relative;display:block;width:7px;height:7px;border-radius:50%;
-        background:var(--edge);transition:background .3s,transform .3s}
+        background:var(--edge);transition:background var(--t),transform var(--t)}
 .rail a:hover{background:var(--mute)}
 .rail a.on{background:var(--accent);transform:scale(1.5)}
 .rail .lab{position:absolute;left:16px;top:50%;
            transform:translateY(-50%) translateX(-6px) scale(.95);
            white-space:nowrap;font-size:11px;color:var(--dim);background:var(--panel);
            border:1px solid var(--edge);border-radius:999px;padding:4px 10px;
-           opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+           opacity:0;pointer-events:none;transition:opacity var(--t),transform var(--t)}
 .rail a:hover .lab{opacity:1;transform:translateY(-50%) translateX(0) scale(1)}
 
 /* La barre sous chaque chiffre : sa longueur EST la reduction. Elle part de
@@ -133,14 +133,14 @@ h1 .scr{color:var(--accent)}
 footer a,.note a,.warn a{
   text-decoration:none;background-image:linear-gradient(currentColor,currentColor);
   background-repeat:no-repeat;background-position:0 100%;background-size:0 1px;
-  transition:background-size .3s cubic-bezier(.2,.7,.3,1),color .2s;padding-bottom:2px;
+  transition:background-size var(--t) cubic-bezier(.2,.7,.3,1),color var(--t);padding-bottom:2px;
 }
 footer a:hover,footer a:focus-visible,.note a:hover,.note a:focus-visible,
 .warn a:hover,.warn a:focus-visible{background-size:100% 1px;color:var(--ink)}
 
 /* La capture se souleve d'un cheveu : assez pour repondre, pas assez pour
    bouger la page autour d'elle. */
-.shots img{transition:transform .3s cubic-bezier(.2,.7,.3,1),filter .3s}
+.shots img{transition:transform var(--t) cubic-bezier(.2,.7,.3,1),filter var(--t)}
 .shots figure:hover img{transform:translateY(-3px) scale(1.006)}
 
 /* Rien n'est cache dans le balisage : c'est le script qui pose .rev, et
@@ -149,21 +149,21 @@ footer a:hover,footer a:focus-visible,.note a:hover,.note a:focus-visible,
    d'arrivee qui reste bloquee est une page blanche. */
 .rev{opacity:0;transform:translateY(14px);will-change:opacity,transform}
 .rev.vu{opacity:1;transform:none;
-        transition:opacity .3s cubic-bezier(.2,.7,.3,1),
-                   transform .3s cubic-bezier(.2,.7,.3,1)}
+        transition:opacity var(--t) cubic-bezier(.2,.7,.3,1),
+                   transform var(--t) cubic-bezier(.2,.7,.3,1)}
 
 /* La commande change de systeme : elle s'efface le temps d'etre remplacee,
    sinon le texte saute d'un mot a l'autre sans qu'on voie ce qui a bouge. */
-.cmd-body code{transition:opacity .2s ease}
+.cmd-body code{transition:opacity var(--t) ease}
 .cmd-body code.chg{opacity:0}
 
 /* Le bouton confirme d'un a-coup plutot que par un mot de plus. */
 @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.09)}100%{transform:scale(1)}}
-.copy.ok{color:var(--accent);border-color:var(--accent);animation:pop .3s ease}
+.copy.ok{color:var(--accent);border-color:var(--accent);animation:pop var(--t) ease}
 
 .meter{display:block;height:2px;margin-top:6px;background:var(--edge);border-radius:2px;overflow:hidden}
 .meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;
-       transition:width 1s cubic-bezier(.2,.7,.3,1)}
+       transition:width var(--t) cubic-bezier(.2,.7,.3,1)}
 
 /* sections */
 section{padding:56px 0;border-top:1px solid var(--edge)}
@@ -184,7 +184,7 @@ tbody tr:last-child td{border-bottom:0}
 
 /* the list, borrowed from the reference's project list */
 .notes{display:flex;flex-direction:column}
-.note{border-left:2px solid var(--edge);padding:16px 0 16px 22px;transition:border-color .3s,padding .3s}
+.note{border-left:2px solid var(--edge);padding:16px 0 16px 22px;transition:border-color var(--t),padding var(--t)}
 .note:hover{border-color:var(--accent);padding-left:26px}
 .note:hover{border-color:var(--accent);padding-left:26px}
 .note h3{font-size:13px;font-weight:600;margin-bottom:6px}
@@ -208,7 +208,7 @@ tbody tr:last-child td{border-bottom:0}
 .warn b{color:var(--ink)}
 .links{display:flex;flex-wrap:wrap;gap:10px}
 .btn{display:inline-flex;align-items:center;text-decoration:none;font-size:13px;padding:10px 16px;
-     border-radius:8px;border:1px solid var(--edge);color:var(--ink);transition:all .2s}
+     border-radius:8px;border:1px solid var(--edge);color:var(--ink);transition:all var(--t)}
 .btn:hover{border-color:var(--mute);background:var(--panel);transform:translateY(-1px)}
 /* le bouton principal grandit au survol, comme celui de la source */
 .btn.primary:hover{transform:translateY(-1px) scale(1.05)}
@@ -680,11 +680,10 @@ function pick() {
 
 var SYMBOLES = '-_~`!@#$%^&*()+=[]{}|;:,.<>?';
 
-// La source ne fixe pas une duree mais une cadence : un caractere toutes les
-// cinquante millisecondes, quelle que soit la longueur de la ligne. Une phrase
-// courte se resout donc vite et une longue prend son temps, ce qui est plus
-// juste qu'une duree unique ou chaque ligne file a une vitesse differente.
-var MS_PAR_CARACTERE = 50;
+// Le dechiffrement suivait la cadence de la source - cinquante millisecondes
+// par caractere - ce qui donnait 1100 ms sur le titre et 2100 sur la ligne
+// d'etat : trois vitesses differentes sur la meme page. Il prend TEMPS comme
+// tout le reste, et les lignes longues defilent simplement plus vite.
 
 // Le texte se revele de gauche a droite ; ce qui reste est tire au hasard et
 // retire a chaque image. Le vrai texte est l'etat final et aussi celui du
@@ -702,13 +701,13 @@ function dechiffrer(el, duree) {
 
   var vrai = el.textContent;
   if (!vrai) { return; }
-  duree = duree || MS_PAR_CARACTERE * vrai.length;
+  duree = duree || TEMPS;
 
   // Le brouillon derriere le curseur est retire au sort. A chaque image, cela
   // scintille ; c'est la partie de l'effet qui fatigue, bien plus que la
   // revelation elle-meme. En mouvement reduit on ne le retire donc que huit
   // fois par seconde : le texte se resout toujours, mais il ne clignote pas.
-  var intervalleBruit = mouvementReduit ? 115 : 0;
+  var intervalleBruit = mouvementReduit ? PAS : 0;
   var bruit = '', dernierTirage = -1e9;
 
   function tirer() {
@@ -860,19 +859,23 @@ document.addEventListener('visibilitychange', verifier);
 var mouvementReduit = !!(window.matchMedia &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-// Les temps de la source, repris tels quels : elle tient cinq cents
-// millisecondes sans rien bouger, puis deroule ses elements par pas de cent.
-// Ce temps d'arret est le coeur de l'effet - une page qui s'anime pendant
-// qu'elle se compose a l'air de ramer, une page qui se pose, marque un temps,
-// puis se deploie a l'air d'etre arrivee.
+// Deux nombres pour toute la page. TEMPS est la duree de tout ce qui bouge -
+// le meme que --t dans la feuille de style - et PAS est l'ecart entre deux
+// elements qui se suivent. Les ecrire une fois est la seule facon de garantir
+// qu'ils restent alignes : quinze durees dispersees finissent par diverger.
+var TEMPS = 200;
+var PAS = 60;
+
+// L'ouverture n'est plus qu'une suite de pas : le dernier element part a
+// 420 ms et tout est pose a 620.
 var OUVERTURE = [
-  { quoi: 'header .bar > *', a:  500, pas: 100 },
-  { quoi: '.status',         a:  600, dire: '.status [data-t="status"]' },
-  { quoi: 'h1',              a:  700, dire: '#scramble' },
-  { quoi: '.lede',           a:  800 },
-  { quoi: '.tabs',           a:  900 },
-  { quoi: '.cmd',            a: 1000 },
-  { quoi: '.after',          a: 1100 }
+  { quoi: 'header .bar > *', a: PAS,     pas: PAS },
+  { quoi: '.status',         a: PAS * 2, dire: '.status [data-t="status"]' },
+  { quoi: 'h1',              a: PAS * 3, dire: '#scramble' },
+  { quoi: '.lede',           a: PAS * 4 },
+  { quoi: '.tabs',           a: PAS * 5 },
+  { quoi: '.cmd',            a: PAS * 6 },
+  { quoi: '.after',          a: PAS * 7 }
 ];
 
 // Vraie tant que l'ouverture mene le texte : sans ce drapeau, la mise en
@@ -1018,8 +1021,8 @@ function compter(cellule, duree) {
         var i = bar.querySelector('i');
         if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
         // Un chiffre qui monte ne scintille pas : il n'y a rien a menager ici.
-        if (bar.parentNode) { compter(bar.parentNode, 1000); }
-      }, rang * 100);
+        if (bar.parentNode) { compter(bar.parentNode, TEMPS); }
+      }, rang * PAS);
     };
   }
   for (var j = 0; j < barres.length; j++) { quandVisible(barres[j], etirer(barres[j], j)); }
@@ -1037,7 +1040,7 @@ function showOS(key) {
   };
   if (osPose && !mouvementReduit) {
     code.classList.add('chg');
-    setTimeout(function () { poser(); code.classList.remove('chg'); }, 200);
+    setTimeout(function () { poser(); code.classList.remove('chg'); }, TEMPS);
   } else {
     poser();
   }

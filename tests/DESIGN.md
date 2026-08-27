@@ -67,21 +67,26 @@ does not have opinions; it has a ruler.
   page is one file, ready in about 150 ms, so the curtain was 1.16 s of waiting
   invented to be looked at. Five kilobytes of markup, styles and progress logic
   went with it
-- **ok** the load runs on the reference's own timings, hold included: 500 ms
-  where nothing moves, then a beat every 100 ms — bar 500, status 600, headline
-  700, lede 800, tabs 900, command 1000, note 1100. The mechanism is unchanged
-  from the version measured at 80/161/241/350/432/501/571 against a plan of
-  60/140/220/320/400/470/540, so it is the constants that moved and not the
-  wiring
-- **ok** the decrypt takes its cadence from the reference rather than a duration:
-  one character every 50 ms, whatever the line's length. A short line resolves
-  quickly and a long one takes its time, which is fairer than one duration that
-  makes every line run at a different speed. Verified against the shipped
-  function: 22 characters in 1100 ms, 42 in 2100 ms
-- **fixed** six transition durations were in play — .18, .2, .3, .32, .45 and
-  1 s — where the reference uses two, 200 and 300 ms, plus the second its bars
-  take. Nobody tells 180 ms from 200 ms; it is the type-scale question again.
-  Three now, and `check-design.py` counts them from here on
+- **ok** everything that moves lasts the same 200 ms, and elements that follow
+  one another are 60 ms apart. Two numbers for the whole page: `--t` in the
+  stylesheet and `TEMPS`/`PAS` in the script. The load is bar 60, status 120,
+  headline 180, lede 240, tabs 300, command 360, note 420 — last element placed
+  at 420 ms, everything settled by 620
+- **ok** the decrypt takes that same 200 ms instead of the reference's 50 ms per
+  character. That cadence gave 1100 ms on the headline and 2100 on the status
+  line — three different speeds on one page. Long lines simply scroll past
+  faster now. Verified on the shipped function: 22 characters and 42 both in
+  217 ms
+- **fixed** durations were written out fifteen times over, in six different
+  values — .18, .2, .3, .32, .45 and 1 s. They all read `var(--t)` now, so
+  there is one place to change and nothing to keep in step by hand
+- **fixed** one of them survived the pass: a declaration split across two lines
+  kept `.3s` on its second property, because the pattern stopped at the line
+  break. Found by reading the rule out of the CSSOM rather than trusting the
+  edit. `check-design.py` reads across line breaks now, and no longer counts
+  values — it checks that no transition writes a duration by hand at all, which
+  is the rule that actually holds the alignment. `.01ms` is exempt: that is not
+  a duration, it is how you remove one
 - **ok** the primary button grows 5% under the cursor, as the reference's does
 - **ok** it plays on every load, because nothing about it is remembered — the
   only thing this page stores is the chosen language. The one case that does
