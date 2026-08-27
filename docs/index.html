@@ -116,6 +116,21 @@ h1 .scr{color:var(--accent)}
 /* La barre sous chaque chiffre : sa longueur EST la reduction. Elle part de
    zero et s'etire quand la ligne arrive a l'ecran - une mesure qui se dessine
    plutot qu'un ornement. */
+/* Le rideau. Il n'existe que si le script tourne : sans JavaScript l'attribut
+   hidden ne bouge pas et la page arrive directement, parce qu'un rideau qui ne
+   se leve pas est un site mort. */
+#rideau{position:fixed;inset:0;z-index:100;background:var(--bg);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+        transition:opacity .36s ease}
+#rideau[hidden]{display:none}
+#rideau.parti{opacity:0;pointer-events:none}
+#rideau .marque{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink)}
+#rideau .piste{width:160px;height:1px;background:var(--edge);overflow:hidden}
+#rideau .piste i{display:block;height:100%;width:0;background:var(--accent);
+                 transition:width .3s cubic-bezier(.2,.7,.3,1)}
+#rideau .pct{font-size:11px;color:var(--mute);font-variant-numeric:tabular-nums;
+             letter-spacing:.06em}
+
 /* Le trait sous un lien de prose se deroule depuis la gauche plutot que de
    s'allumer d'un bloc : c'est le seul endroit de la page ou une ligne dessine
    sa propre longueur. */
@@ -218,6 +233,29 @@ footer a{color:var(--dim)}
 </style>
 </head>
 <body>
+<div id="rideau" hidden aria-hidden="true">
+  <span class="marque">
+    <svg width="19" height="19" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="6.4" fill="#4A7BE8"/>
+      <path d="M6.9 9.4h13.1v13.1H6.9z" fill="#fff"/>
+      <path d="M15.4 17.6h6.7v6.6h-6.7z" fill="#4A7BE8"/>
+      <rect x="20.6" y="17.6" width="4.7" height="4.7" fill="#fff"/>
+    </svg>
+    jipeg
+  </span>
+  <span class="piste"><i></i></span>
+  <span class="pct">0%</span>
+</div>
+<script>
+// Le rideau est decouvert ici, tout en haut du corps, pour qu'il soit en place
+// avant la premiere peinture. Sans script il reste hidden et personne ne le
+// voit ; en mouvement reduit on ne le montre pas non plus.
+(function () {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
+  var r = document.getElementById('rideau');
+  if (r) { r.hidden = false; }
+})();
+</script>
 
 <header>
   <div class="wrap bar">
@@ -856,9 +894,13 @@ var ouvertureEnCours = false;
   }
 
   // --- l'ouverture ------------------------------------------------------
+  // Elle ne part plus au chargement mais quand le rideau se leve : sinon les
+  // temps s'ecouleraient derriere lui et la page serait deja deployee au
+  // moment ou on la decouvre.
   ouvertureEnCours = true;
   var fin = 0;
   var tout = [];
+  var partitions = [];
 
   for (var b = 0; b < OUVERTURE.length; b++) {
     (function (temps) {
@@ -866,30 +908,32 @@ var ouvertureEnCours = false;
       if (!els.length) { return; }
       var montrerCe = montrer(preparer(els, temps.pas));
       for (var i = 0; i < els.length; i++) { tout.push(els[i]); }
-      setTimeout(function () {
-        montrerCe();
-        if (temps.dire) {
-          // Le dechiffrement part avec l'apparition, pas apres : la ligne
-          // commence a opacity:0, donc elle se materialise deja brouillee et
-          // se resout en montant. Avec 220 ms de retard on voyait le vrai
-          // texte s'installer puis partir en bruit, c'est-a-dire l'envers.
-          dechiffrer(document.querySelector(temps.dire), temps.duree);
-        }
-      }, temps.a);
+      partitions.push(function (avance) {
+        setTimeout(function () {
+          montrerCe();
+          if (temps.dire) {
+            // Le dechiffrement part avec l'apparition, pas apres : la ligne
+            // commence a opacity:0, donc elle se materialise deja brouillee et
+            // se resout en montant. Avec 220 ms de retard on voyait le vrai
+            // texte s'installer puis partir en bruit, c'est-a-dire l'envers.
+            dechiffrer(document.querySelector(temps.dire), temps.duree);
+          }
+        }, Math.max(60, temps.a - avance));
+      });
       if (temps.a > fin) { fin = temps.a; }
     })(OUVERTURE[b]);
   }
 
-  // Filet : aucun de ces temps ne repose sur requestAnimationFrame, mais si
-  // une minuterie saute, tout doit finir visible quand meme.
-  setTimeout(function () {
-    for (var i = 0; i < tout.length; i++) { tout[i].classList.add('vu'); }
-  }, fin + 1200);
-
-  // La main est rendue des le dernier temps parti : le drapeau ne sert qu'a
-  // empecher la mise en langue du chargement de doubler le titre, et un
-  // visiteur qui change de langue apres ne doit rien perdre.
-  setTimeout(function () { ouvertureEnCours = false; }, fin + 400);
+  // Appelee par le rideau quand il se leve, ou tout de suite s'il n'y en a pas.
+  window.ouvrir = function (avance) {
+    if (window.ouvrir.faite) { return; }   // une seule fois, quoi qu'il arrive
+    window.ouvrir.faite = true;
+    for (var i = 0; i < partitions.length; i++) { partitions[i](avance || 0); }
+    setTimeout(function () {
+      for (var j = 0; j < tout.length; j++) { tout[j].classList.add('vu'); }
+    }, fin + 1200);
+    setTimeout(function () { ouvertureEnCours = false; }, fin + 400);
+  };
 
   // --- puis les sections, au defilement ---------------------------------
   var sections = document.querySelectorAll('main section');
@@ -981,6 +1025,80 @@ function showOS(key) {
   // balisage est deja bon et showOS n'est jamais appele ci-dessus : le drapeau
   // serait reste a faux et le premier clic du visiteur n'aurait pas fondu.
   osPose = true;
+})();
+
+// Le rideau avance sur ce qui charge vraiment - les images de la page, puis le
+// document entier - et non sur une minuterie qui ferait semblant. Il ne dure
+// jamais plus de deux secondes et jamais moins de six cents millisecondes : au
+// dessous il clignote, au dessus il fait attendre pour rien.
+(function () {
+  var rideau = document.getElementById('rideau');
+  var lever = function (avance) { if (window.ouvrir) { window.ouvrir(avance); } };
+
+  if (!rideau || rideau.hidden) { lever(); return; }   // pas de rideau, on ouvre
+
+  var PLANCHER = 450;   // au dessous, le rideau clignote
+  var jauge = rideau.querySelector('i');
+  var pct = rideau.querySelector('.pct');
+  var valeur = 0, parti = false, ne = performance.now(), reel = 0;
+
+  function poser(v) {
+    v = Math.min(100, Math.round(v));
+    if (v <= valeur) { return; }
+    valeur = v;
+    jauge.style.width = v + '%';
+    pct.textContent = v + '%';
+  }
+
+  function partir() {
+    if (parti) { return; }
+    parti = true;
+    clearInterval(course);
+    poser(100);
+    setTimeout(function () {
+      rideau.classList.add('parti');
+      setTimeout(function () {
+        if (rideau.parentNode) { rideau.parentNode.removeChild(rideau); }
+        // Le rideau a deja fait le temps d'arret : l'ouverture reprend les
+        // siens en avance, sinon on attend deux fois de suite.
+        lever(300);
+      }, 280);
+    }, 120);
+  }
+
+  // La barre avance au plus LENT des deux : jamais plus loin que ce qui est
+  // reellement charge, jamais plus loin que le temps ecoule avant qu'on ouvre.
+  // Sur une page lente c'est le reseau qui commande ; sur celle-ci, ou les
+  // images sont deja la et le reel saute a 95% en soixante millisecondes,
+  // c'est le temps - et la barre voyage au lieu d'etre pleine tout de suite.
+  // Le premier essai prenait le plus rapide des deux et n'affichait rien.
+  var course = setInterval(function () {
+    var ecoule = (performance.now() - ne) / PLANCHER * 95;
+    poser(Math.min(reel, ecoule));
+  }, 30);
+
+  // Chaque image comptee une fois, plus le document lui-meme.
+  var images = document.images, total = images.length + 1, faits = 0;
+  function avance() { faits++; reel = faits / total * 95; }
+  for (var i = 0; i < images.length; i++) {
+    if (images[i].complete) { avance(); }
+    else {
+      images[i].addEventListener('load', avance);
+      images[i].addEventListener('error', avance);   // une image manquante
+    }                                                // ne doit pas bloquer
+  }
+
+  function pret() {
+    avance();
+    var reste = PLANCHER - (performance.now() - ne);
+    setTimeout(partir, reste > 0 ? reste : 0);   // jamais un clignotement
+  }
+  if (document.readyState === 'complete') { pret(); }
+  else { window.addEventListener('load', pret); }
+
+  // Plafond dur : quoi qu'il arrive au reseau ou aux evenements, le rideau
+  // se leve. Un rideau bloque est pire que pas de rideau du tout.
+  setTimeout(partir, 2200);
 })();
 
 verifier();   // ce qui est deja a l'ecran au chargement

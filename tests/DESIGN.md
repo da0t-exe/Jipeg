@@ -61,12 +61,33 @@ does not have opinions; it has a ruler.
   swap is visible instead of the text jumping
 - **ok** the copy button pulses once and turns accent-coloured on success
 - **ok** the note blocks grow their left border on hover
+- **choice** the page opens behind a curtain: the mark, a 160 px track, and a
+  percentage in tabular figures. The reference has no loader — it renders
+  nothing until it has mounted, then everything arrives at once — so this is a
+  deliberate addition rather than a copy. It is also, honestly, a cost: this
+  page is one 63 KB file and is ready in about 190 ms, so a curtain adds time
+  rather than covering it. What makes it defensible is that it is bounded and
+  tells the truth
+- **ok** the progress bar advances at the **slower** of two measures: never past
+  what has actually loaded, and never past the time elapsed toward the floor.
+  The first version took the faster of the two and read 95% at 60 ms, then sat
+  there — a bar that is full before it is shown is a decoration pretending to be
+  an instrument. Replayed outside the browser on both cases: a fast page gives
+  15 steps from 6% to 95% across 450 ms, a slow one is held at 75% at 900 ms by
+  the network
+- **ok** the curtain cannot stick. It is `hidden` in the markup and only script
+  removes that, so no-JS never sees it; reduced motion never unhides it; and a
+  hard 2.2 s cap lifts it whatever happens to the network or the events
 - **ok** the load is a written sequence rather than a loop. The reference holds
   half a second before moving anything, then walks its elements at 100 ms
   intervals; here the beats are a table read top to bottom — bar 420, status
   600, headline 720, lede 900, tabs 1020, command 1120, note 1240. Measured from
   real page load: 451, 625, 751, 925, 1050, 1151, 1276, every one within about
   30 ms of its mark
+- **ok** the overture waits for the curtain instead of running behind it, and
+  takes 300 ms off every beat when one has been shown — otherwise the page holds
+  twice in a row. Measured end to end: curtain up at 48 ms, gone at 881 ms,
+  status 1201, headline 1320, last note 1841
 - **ok** `.rev` is applied while the document is still parsing, before first
   paint at 192 ms, so nothing flashes visible and then hides
 - **ok** the status dot pulses, 3.2 s, the slowest thing on the page
@@ -160,6 +181,14 @@ up by staring at the page, which is the argument for the file.
 The two that the eye did catch — the ghosted GIF and the broken script — were
 both found by *rendering* the page rather than reading it, which is the other
 half of the argument.
+
+Two near-misses in the curtain work, both caught by asking one more question
+instead of writing them up. Twelve elements sat at `opacity:0` after load, which
+looked exactly like the reveal bug from earlier — they were the sections below
+the fold, which are supposed to wait for a scroll, and scrolling revealed all
+21. And a run that showed the curtain lifting at 3.6 s, well past its own 2.2 s
+cap, was a throttled background tab rather than a broken timer; the honest way
+to settle the progress rule turned out to be replaying it outside the browser.
 
 One near-miss worth recording: the status line and headline appeared not to
 animate at all, and the reason was that I was querying the wrong browser tab —
