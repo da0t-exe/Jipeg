@@ -41,6 +41,11 @@ body{
      a un centieme de milliseconde, il faut donc redonner sa duree a celle-la. */
   .rev{transform:none!important}
   .rev.vu{transition-duration:.3s!important}
+  /* La jauge aussi garde sa duree. Elle ne decore rien : sa longueur EST la
+     reduction dont parle la ligne, et une barre qui apparait deja pleine ne
+     dit plus rien. C'est un mouvement, on l'assume - il est lent, unique, et
+     il ne se repete pas. */
+  .meter i{transition-duration:1s!important}
 }
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -1003,16 +1008,18 @@ function compter(cellule, duree) {
 // est deja etire ne montre rien.
 (function () {
   var barres = document.querySelectorAll('.meter');
-  // La source decale ses chiffres de cent millisecondes l'un apres l'autre et
-  // les fait courir une seconde. Les jauges partent ensemble avec leur ligne,
-  // les chiffres se suivent.
+  // La source decale ses barres de cent millisecondes l'une apres l'autre et
+  // les fait courir une seconde ; le chiffre part avec sa barre. Les cinq
+  // partaient ensemble ici, ce qui donne un bloc qui bouge au lieu d'une
+  // lecture qui descend.
   function etirer(bar, rang) {
     return function () {
-      var i = bar.querySelector('i');
-      if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
-      // Un chiffre qui monte ne scintille pas : il n'y a rien a menager ici.
-      if (!bar.parentNode) { return; }
-      setTimeout(function () { compter(bar.parentNode, 1000); }, rang * 100);
+      setTimeout(function () {
+        var i = bar.querySelector('i');
+        if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
+        // Un chiffre qui monte ne scintille pas : il n'y a rien a menager ici.
+        if (bar.parentNode) { compter(bar.parentNode, 1000); }
+      }, rang * 100);
     };
   }
   for (var j = 0; j < barres.length; j++) { quandVisible(barres[j], etirer(barres[j], j)); }

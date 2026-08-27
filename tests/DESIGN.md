@@ -111,7 +111,17 @@ does not have opinions; it has a ruler.
   list empties as it goes, so after one pass it is a loop over nothing
 - **ok** the status dot pulses, 3.2 s, the slowest thing on the page
 - **ok** the rail dot grows to 1.6× when its section is in view
-- **ok** the bars draw themselves to the length of the reduction they sit under
+- **ok** the bars draw themselves to the length of the reduction they sit under,
+  one every 100 ms as the reference does, each taking a second, with its figure
+  counting up alongside it. They used to start together, which reads as a block
+  moving rather than as a list being read down. Measured: starts at 0, 109, 209,
+  309 and 409 ms, filling to 90, 68, 62, 57 and 29 px
+- **choice** the bars keep their second under reduced motion, where the blanket
+  rule had crushed them to a hundredth of a millisecond and they simply appeared
+  full. A bar growing is motion and this does spend some of the preference — but
+  the bar decorates nothing: its length *is* the reduction the line is about, and
+  one that arrives already full says nothing at all. It is slow, single and never
+  repeats
 - **ok** buttons lift 1 px under the cursor and settle on click
 - **ok** the headline scrambles once on load and once per language change. The
   reference applies that effect to exactly two elements, both in its own
