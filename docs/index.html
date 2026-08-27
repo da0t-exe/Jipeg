@@ -677,7 +677,7 @@ var SYMBOLES = '-_~`!@#$%^&*()+=[]{}|;:,.<>?';
 // balisage, donc une animation qui n'aboutit jamais ne fait rien de pire que
 // de ne pas se produire.
 function dechiffrer(el, duree) {
-  if (!el || mouvementReduit) { return; }
+  if (!el) { return; }
   // Un onglet en arriere-plan gele les minuteries : le texte resterait fige sur
   // du bruit, ce qui est pire que pas d'animation du tout.
   if (document.hidden) { return; }
@@ -689,6 +689,22 @@ function dechiffrer(el, duree) {
   var vrai = el.textContent;
   if (!vrai) { return; }
   duree = duree || 380;
+
+  // Le brouillon derriere le curseur est retire au sort. A chaque image, cela
+  // scintille ; c'est la partie de l'effet qui fatigue, bien plus que la
+  // revelation elle-meme. En mouvement reduit on ne le retire donc que huit
+  // fois par seconde : le texte se resout toujours, mais il ne clignote pas.
+  var intervalleBruit = mouvementReduit ? 115 : 0;
+  var bruit = '', dernierTirage = -1e9;
+
+  function tirer() {
+    var b = '';
+    for (var i = 0; i < vrai.length; i++) {
+      var c = vrai.charAt(i);
+      b += (c === ' ') ? ' ' : SYMBOLES.charAt(Math.floor(Math.random() * SYMBOLES.length));
+    }
+    return b;
+  }
 
   // Une image du navigateur par ecriture, et pas une minuterie a dix-sept
   // millisecondes : ecrire du texte force un recalcul de mise en page, et le
@@ -703,12 +719,11 @@ function dechiffrer(el, duree) {
       el.rythme = null;
       return;
     }
-    var bruit = '';
-    for (var i = montres; i < vrai.length; i++) {
-      var c = vrai.charAt(i);
-      bruit += (c === ' ') ? ' ' : SYMBOLES.charAt(Math.floor(Math.random() * SYMBOLES.length));
+    if (t - dernierTirage >= intervalleBruit) {
+      bruit = tirer();
+      dernierTirage = t;
     }
-    el.textContent = vrai.slice(0, montres) + bruit;
+    el.textContent = vrai.slice(0, montres) + bruit.slice(montres);
     el.rythme = requestAnimationFrame(pas);
   }
   el.rythme = requestAnimationFrame(pas);
@@ -982,7 +997,8 @@ function compter(cellule, duree) {
     return function () {
       var i = bar.querySelector('i');
       if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
-      if (!mouvementReduit && bar.parentNode) { compter(bar.parentNode, 900); }
+      // Un chiffre qui monte ne scintille pas : il n'y a rien a menager ici.
+      if (bar.parentNode) { compter(bar.parentNode, 900); }
     };
   }
   for (var j = 0; j < barres.length; j++) { quandVisible(barres[j], etirer(barres[j])); }

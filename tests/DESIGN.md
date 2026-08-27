@@ -124,6 +124,15 @@ does not have opinions; it has a ruler.
   which reads as broken rather than as considerate. Measured on the real page in
   that mode: beats at 85, 157, 242, 348, 421, 492, 565 ms, the headline fading
   through 23 opacity steps, and `transform` reading `none` throughout
+- **fixed** the text effect had been cut out entirely in that mode, which threw
+  away the wrong half. What tires the eye is that the scrambled tail is re-rolled
+  on every frame, sixty times a second — not the revealing itself. It is re-rolled
+  eight times a second instead: the text still resolves, it just stops flickering.
+  Measured by running the shipped function on a clock advanced frame by frame —
+  24 states and 23 re-rolls at full motion, 21 states and 8 re-rolls reduced, both
+  landing on the exact string
+- **ok** the counting figures run in both modes. A number climbing to its value
+  does not flicker, so there was nothing to spare anyone from
 - **fixed** the bar observer watched an element of zero width, which can never
   meet an intersection threshold — it watches the container now
 - **fixed** four ways the new arrival animation could leave the page blank, all

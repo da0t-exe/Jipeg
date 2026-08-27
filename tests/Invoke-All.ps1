@@ -41,6 +41,7 @@ Etape 'encodages, fins de ligne, octets nuls' { & python (Join-Path $T 'check-en
 Etape 'la page et ses dix traductions'        { & python (Join-Path $T 'check-site.py') }
 Etape 'fonctions et variables mortes'         { & python (Join-Path $T 'check-dead-code.py') }
 Etape 'contrastes, echelle, rythme'           { & python (Join-Path $T 'check-design.py') }
+Etape 'dechiffrement, image par image'        { & node (Join-Path $T 'banc-dechiffrement.js') }
 Etape 'tout le PowerShell parse' {
     $mauvais = 0
     foreach ($f in (Get-ChildItem (Join-Path $Repo 'src') -Filter '*.ps1') +
