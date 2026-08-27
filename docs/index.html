@@ -34,6 +34,9 @@ body{
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
                        transition-duration:.01ms!important}
+  /* neutraliser la transition ne suffit pas : sans ceci .rev resterait
+     invisible, puisque c'est l'etat de depart et non l'animation */
+  .rev{opacity:1!important;transform:none!important}
 }
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -113,6 +116,24 @@ h1 .scr{color:var(--accent)}
 /* La barre sous chaque chiffre : sa longueur EST la reduction. Elle part de
    zero et s'etire quand la ligne arrive a l'ecran - une mesure qui se dessine
    plutot qu'un ornement. */
+/* Rien n'est cache dans le balisage : c'est le script qui pose .rev, et
+   seulement apres avoir verifie qu'il saura le retirer. Sans JavaScript, ou en
+   mouvement reduit, la page arrive entiere du premier coup - une animation
+   d'arrivee qui reste bloquee est une page blanche. */
+.rev{opacity:0;transform:translateY(14px)}
+.rev.vu{opacity:1;transform:none;
+        transition:opacity .6s cubic-bezier(.2,.7,.3,1),
+                   transform .6s cubic-bezier(.2,.7,.3,1)}
+
+/* La commande change de systeme : elle s'efface le temps d'etre remplacee,
+   sinon le texte saute d'un mot a l'autre sans qu'on voie ce qui a bouge. */
+.cmd-body code{transition:opacity .18s ease}
+.cmd-body code.chg{opacity:0}
+
+/* Le bouton confirme d'un a-coup plutot que par un mot de plus. */
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.09)}100%{transform:scale(1)}}
+.copy.ok{color:var(--accent);border-color:var(--accent);animation:pop .34s ease}
+
 .meter{display:block;height:2px;margin-top:6px;background:var(--edge);border-radius:2px;overflow:hidden}
 .meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;
        transition:width 1.1s cubic-bezier(.2,.7,.3,1)}
@@ -137,6 +158,7 @@ tbody tr:last-child td{border-bottom:0}
 /* the list, borrowed from the reference's project list */
 .notes{display:flex;flex-direction:column}
 .note{border-left:2px solid var(--edge);padding:16px 0 16px 22px;transition:border-color .3s,padding .3s}
+.note:hover{border-color:var(--accent);padding-left:26px}
 .note:hover{border-color:var(--accent);padding-left:26px}
 .note h3{font-size:13px;font-weight:600;margin-bottom:6px}
 .note p{font-size:12px;color:var(--dim);line-height:1.7;margin:0}
@@ -706,32 +728,136 @@ var OS = {
   for (var k = 0; k < liens.length; k++) { vues.observe(liens[k].sec); }
 })();
 
+// Un seul registre de choses a faire quand elles arrivent a l'ecran, verifie
+// au defilement. Il y avait deux IntersectionObserver ici ; ils ne s'executent
+// pas dans un onglet qui ne compose pas d'images - ouvert en arriere-plan, par
+// exemple. Onze elements restaient alors a opacity:0 pour toujours, c'est-a-dire
+// que la page s'ouvrait en partie blanche. Un rectangle qu'on mesure soi-meme
+// ne peut pas rester endormi.
+var aVoir = [];
+
+function quandVisible(el, faire) { aVoir.push({ el: el, faire: faire }); }
+
+function verifier() {
+  var haut = window.innerHeight || document.documentElement.clientHeight;
+  for (var i = aVoir.length - 1; i >= 0; i--) {
+    var b = aVoir[i].el.getBoundingClientRect();
+    // On ne demande pas que l'element soit encore visible, seulement que son
+    // haut soit passe sous le bord bas de l'ecran. La premiere version exigeait
+    // aussi bottom > 0 : une section deja depassee - arrivee par une ancre, ou
+    // par un defilement rapide - n'etait donc jamais montree et restait
+    // invisible pour de bon.
+    if (b.top < haut * 0.92) {
+      var faire = aVoir[i].faire;
+      aVoir.splice(i, 1);
+      faire();
+    }
+  }
+}
+
+window.addEventListener('scroll', verifier, { passive: true });
+window.addEventListener('resize', verifier);
+document.addEventListener('visibilitychange', verifier);
+
+// Une section se pose plutot qu'elle n'apparait : ses elements montent de
+// quatorze pixels les uns apres les autres. Le decalage compte plus que la
+// duree - c'est lui qui fait lire la section de haut en bas.
+var mouvementReduit = !!(window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+(function () {
+  if (mouvementReduit) { return; }   // rien n'est cache, donc rien a revoir
+  // le haut de page est un .hero, pas un .wrap : le premier essai visait une
+  // classe qui n'existe pas ici et ne preparait donc rien du tout
+  var entete = document.querySelectorAll('header .bar > *, .hero > *');
+  var sections = document.querySelectorAll('main section');
+
+  function preparer(elements) {
+    var pris = [];
+    for (var i = 0; i < elements.length; i++) {
+      elements[i].classList.add('rev');
+      elements[i].style.transitionDelay = (i * 70) + 'ms';
+      pris.push(elements[i]);
+    }
+    return pris;
+  }
+
+  function montrer(elements) {
+    return function () {
+      for (var i = 0; i < elements.length; i++) { elements[i].classList.add('vu'); }
+    };
+  }
+
+  // Le haut de page n'attend rien : il est deja a l'ecran quand on arrive.
+  var montrerHaut = montrer(preparer(entete));
+  requestAnimationFrame(function () { requestAnimationFrame(montrerHaut); });
+  // Filet : requestAnimationFrame ne s'execute pas non plus dans un onglet
+  // ouvert en arriere-plan.
+  setTimeout(montrerHaut, 700);
+
+  for (var k = 0; k < sections.length; k++) {
+    quandVisible(sections[k], montrer(preparer(sections[k].children)));
+  }
+})();
+
+// Le chiffre compte jusqu'a sa valeur pendant que la jauge s'etire : les deux
+// disent la meme chose, et arriver ensemble les rend lisibles d'un coup d'oeil.
+function compter(cellule, duree) {
+  var noeud = cellule.firstChild;
+  if (!noeud || noeud.nodeType !== 3) { return; }
+  var modele = noeud.nodeValue;
+  var chiffres = modele.match(/\d+/);
+  if (!chiffres) { return; }
+  // Un onglet ouvert en arriere-plan gele requestAnimationFrame. Le compteur
+  // s'arretait alors sur sa premiere image, c'est-a-dire sur zero, et y restait :
+  // la page affichait -0% pour une reduction de 90%. Un chiffre faux est pire
+  // qu'un chiffre qui n'a pas bouge, donc on ne commence pas.
+  if (document.hidden) { return; }
+  var cible = parseInt(chiffres[0], 10), depart = null;
+  // Et si l'onglet passe en arriere-plan pendant le comptage, la valeur vraie
+  // est reecrite de toute facon.
+  setTimeout(function () { noeud.nodeValue = modele; }, duree + 300);
+  function pas(t) {
+    if (depart === null) { depart = t; }
+    var k = Math.min(1, (t - depart) / duree);
+    var doux = 1 - Math.pow(1 - k, 3);
+    noeud.nodeValue = modele.replace(/\d+/, String(Math.round(cible * doux)));
+    if (k < 1) { requestAnimationFrame(pas); }
+    else { noeud.nodeValue = modele; }   // on finit sur le texte exact d'origine
+  }
+  requestAnimationFrame(pas);
+}
+
 // Les barres ne se remplissent qu'une fois vues : arriver sur une page ou tout
 // est deja etire ne montre rien.
 (function () {
   var barres = document.querySelectorAll('.meter');
-  if (!barres.length) { return; }
   function etirer(bar) {
-    var i = bar.querySelector('i');
-    if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
+    return function () {
+      var i = bar.querySelector('i');
+      if (i) { i.style.width = i.getAttribute('data-pct') + '%'; }
+      if (!mouvementReduit && bar.parentNode) { compter(bar.parentNode, 900); }
+    };
   }
-  if (!('IntersectionObserver' in window)) {
-    for (var i = 0; i < barres.length; i++) { etirer(barres[i]); }
-    return;
-  }
-  var vues = new IntersectionObserver(function (entrees, obs) {
-    entrees.forEach(function (e) {
-      if (e.isIntersecting) { etirer(e.target); obs.unobserve(e.target); }
-    });
-  }, { rootMargin: '0px 0px -8% 0px' });   // des qu'elle entre, pas au tiers
-  for (var j = 0; j < barres.length; j++) { vues.observe(barres[j]); }
+  for (var j = 0; j < barres.length; j++) { quandVisible(barres[j], etirer(barres[j])); }
 })();
 
 
+var osPose = false;   // le premier appel installe la page, il n'anime rien
+
 function showOS(key) {
   var o = OS[key] || OS.win;
-  document.getElementById('shell').textContent = o.shell;
-  document.getElementById('cmd').textContent = o.cmd;
+  var code = document.getElementById('cmd');
+  var poser = function () {
+    document.getElementById('shell').textContent = o.shell;
+    code.textContent = o.cmd;
+  };
+  if (osPose && !mouvementReduit) {
+    code.classList.add('chg');
+    setTimeout(function () { poser(); code.classList.remove('chg'); }, 180);
+  } else {
+    poser();
+  }
   var tabs = document.querySelectorAll('.tab');
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.toggle('on', tabs[i].getAttribute('data-os') === key);
@@ -752,7 +878,13 @@ function showOS(key) {
   var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
   if (/Mac/i.test(p)) { showOS('mac'); }
   else if (/Linux|X11/i.test(p) && !/Android/i.test(navigator.userAgent || '')) { showOS('lin'); }
+  // A partir d'ici tout appel vient d'un clic, donc s'anime. Sous Windows le
+  // balisage est deja bon et showOS n'est jamais appele ci-dessus : le drapeau
+  // serait reste a faux et le premier clic du visiteur n'aurait pas fondu.
+  osPose = true;
 })();
+
+verifier();   // ce qui est deja a l'ecran au chargement
 
 var sel = document.getElementById('lang');
 for (var code in NAMES) {
@@ -767,7 +899,11 @@ sel.addEventListener('change', function () { apply(this.value); });
 
 document.getElementById('copy').addEventListener('click', function () {
   var b = this, txt = document.getElementById('cmd').textContent, was = b.textContent;
-  var done = function () { b.textContent = '✓'; setTimeout(function () { b.textContent = was; }, 1500); };
+  var done = function () {
+    b.textContent = '✓';
+    b.classList.add('ok');
+    setTimeout(function () { b.textContent = was; b.classList.remove('ok'); }, 1500);
+  };
   if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(txt).then(done, done); return; }
   var a = document.createElement('textarea');
   a.value = txt; a.style.position = 'fixed'; a.style.opacity = '0';

@@ -52,6 +52,15 @@ does not have opinions; it has a ruler.
 
 ## 4. What moves
 
+- **ok** sections rise fourteen pixels and fade in as they arrive, their children
+  staggered 70 ms apart, so a section is read top to bottom rather than landing
+  as a block
+- **ok** the reduction figures count up to their value while the gauge beside
+  them stretches — the two say the same thing and arrive together
+- **ok** the install command fades out and back when the OS tab changes, so the
+  swap is visible instead of the text jumping
+- **ok** the copy button pulses once and turns accent-coloured on success
+- **ok** the note blocks grow their left border on hover
 - **ok** the status dot pulses, 3.2 s, the slowest thing on the page
 - **ok** the rail dot grows to 1.6× when its section is in view
 - **ok** the bars draw themselves to the length of the reduction they sit under
@@ -60,6 +69,18 @@ does not have opinions; it has a ruler.
 - **ok** every one of those is inside `prefers-reduced-motion`
 - **fixed** the bar observer watched an element of zero width, which can never
   meet an intersection threshold — it watches the container now
+- **fixed** four ways the new arrival animation could leave the page blank, all
+  found by rendering it rather than reading it. `IntersectionObserver` does not
+  run in a tab that is not compositing, so eleven elements sat at `opacity:0`
+  for good; both observers are one scroll-checked registry now. The check for
+  "is it visible" also required `bottom > 0`, so a section already scrolled past
+  — arrived at by anchor, or by scrolling fast — was skipped and stayed
+  invisible forever. The number counter froze on its first frame in a background
+  tab and displayed **−0%** for a 90% reduction. And the hero waited on
+  `requestAnimationFrame`, which a background tab never runs
+- **fixed** the first OS tab click did not fade: the flag that suppresses the
+  animation during setup was only cleared inside `showOS`, which is never called
+  at load on Windows
 - **fixed** the rail had no dot lit before the first scroll, which reads as
   broken rather than as waiting
 
