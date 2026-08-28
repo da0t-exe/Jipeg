@@ -80,7 +80,12 @@ nothing about what was never asked.
   eight times heavier than the same photograph saved as RGB
 - **done** chroma forced to `always` and to `never`
 - **done** the **light theme**, both with Mica and without
-- **no** `closeWhenDone` on with a batch that fails, off with one that does not
+- **done** all three ways round: on with a failing batch, the window stays,
+  which is the point of it; off with a batch that succeeds, it also stays;
+  on with one that succeeds, it closes. The middle one first reported as
+  closing on its own, and that was the harness: the previous case's window
+  had just been killed and the two runs overlapped. Run on its own it holds
+  for thirty seconds
 - **done** language: ten of them, in both windows and in the registry
 
 ### 2.2 How it is started
@@ -150,9 +155,16 @@ nothing about what was never asked.
 - **done** no Exif, no orientation tag left behind
 - **done** no temporary file left in the folder or in `%TEMP%`
 - **done** dimensions preserved, or swapped where the Exif said to
-- **no** the **quality** of the result measured — ssimulacra2 or butteraugli
-  against the source. Size is checked; fidelity is taken on trust
-- **no** the result opened by something other than Pillow — a browser, Photos
+- **partial** fidelity is measured now, though not with the tools named here.
+  ssimulacra2 and butteraugli are not installed and bringing them in means a
+  build chain, so `quality-check.py` computes SSIM, PSNR and the largest
+  per-channel error itself. On photographic sources: SSIM 0.991, PSNR 34.1 dB,
+  worst channel error 37, for 57% off. On the lossless path, across 300 files:
+  SSIM 1.0000, PSNR infinite, error 0 — bit-exact, which is the stronger result
+  of the two and was never checked before. SSIM is not ssimulacra2; it does not
+  model vision the same way, and this line says so
+- **done** ten outputs reopened by GDI+ and by WIC, two decoders that share
+  no code with Pillow: all ten read back at their right dimensions
 
 ---
 
@@ -160,8 +172,12 @@ nothing about what was never asked.
 
 - **done** the page: every string in ten languages, no external resource
 - **once** the page rendered in a browser and switched between languages
-- **no** the page on a **phone**, or at a narrow window
-- **no** the page with JavaScript **off**
+- **done** at 360 px: nothing overflows the viewport, no text is clipped, the
+  table folds to 159/44/44/65 px. It also found the copy button sitting at
+  x=609 on a 360 px screen, since fixed
+- **done** the headline is real text in the markup and the reveal classes are
+  added by script, so nothing is hidden and nothing is scrambled. The install
+  block shows the Windows command and the tabs simply do not switch
 - **done** Windows Defender on the scripts, the console installer and the
   published archive — clean. The installed folder cannot be scanned from here:
   `%LOCALAPPDATA%` is excluded on this machine, and reading the exclusion list

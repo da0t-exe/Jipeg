@@ -34,6 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File src\Install-Jipeg.ps1 -Silen
 | `banc-dechiffrement.js` | Sort la fonction de dechiffrement de la page et la fait tourner sur une horloge qu'on avance image par image, en mouvement normal puis reduit. `requestAnimationFrame` ne s'execute pas dans un onglet qui ne rend pas et `document.hidden` y est vrai : c'est le seul moyen d'observer l'effet ici. `node tests/banc-dechiffrement.js`. |
 | `edges-build.py` | Fabrique les cas limites que l'arbre portait comme jamais essayes : noms hostiles, chemin de 258 caracteres, fichier cache, profil ICC non sRGB, panorama de 100 megapixels, 300 fichiers. |
 | `Test-Edges.ps1` | Les convertit pour de vrai avec la copie installee et dit ce qui est sorti. Un refus peut etre la bonne reponse et compte comme tel. |
+| `quality-check.py` | Mesure la fidelite au lieu de la supposer : SSIM, PSNR et ecart maximum par canal entre chaque source et sa sortie. Ce n'est pas ssimulacra2, qui n'est pas installe ici, et le compte-rendu le dit. |
 | `check-design.py` | The page against a ruler rather than an opinion: the contrast of every text colour on every surface it sits on, how many type sizes are in play, whether the spacing is a grid or a habit, and CSS classes that belong to nothing. See [`DESIGN.md`](DESIGN.md) for what it found. |
 
 ## The ones that need Python **and Pillow**
