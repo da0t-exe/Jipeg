@@ -41,9 +41,43 @@ if ((Get-ItemProperty -Path $UninstKey -Name 'ClassicMenuSet' -ErrorAction Silen
 Remove-Item -Path $UninstKey -Recurse -Force
 
 # This script lives inside the folder being deleted, so hand that part to cmd.
+#
+# Two earlier shapes were wrong in opposite directions. One try, two seconds
+# later: a conversion running at the time holds the scripts and cjpegli open, rd
+# fails without a word, and 36 files stay behind for good - the menu gone, the
+# megabytes not. Retrying hard instead was worse: it deleted the scripts out
+# from under a running batch, which lost all five of its files.
+#
+# So it waits for the conversion rather than fighting it. The converter holds
+# TEMP\jipeg.lock open with no sharing for as long as it runs - the same signal
+# the quiet update already uses to keep out of the way. cmd can test it by
+# trying to open it for append: that fails while anything holds it.
 if (Test-Path -LiteralPath $Dest) {
-    Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -ArgumentList @(
-        '/c', 'ping', '127.0.0.1', '-n', '3', '>nul', '&', 'rd', '/s', '/q', ('"{0}"' -f $Dest))
+    $lock = Join-Path $env:TEMP 'jipeg.lock'
+    $bat  = Join-Path $env:TEMP ('jipeg-remove-{0}.cmd' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
+    $lignes = @(
+        '@echo off',
+        'setlocal',
+        ('set "VERROU=' + $lock + '"'),
+        ('set "DOSSIER=' + $Dest + '"'),
+        'rem on attend que la conversion rende le verrou, deux minutes au plus',
+        'for /l %%a in (1,1,60) do (',
+        '  if not exist "%VERROU%" goto libre',
+        '  2>nul ( >>"%VERROU%" call ) && goto libre',
+        '  ping 127.0.0.1 -n 3 >nul',
+        ')',
+        ':libre',
+        'rem puis on efface, en reessayant : un fichier peut rester une seconde',
+        'for /l %%b in (1,1,10) do (',
+        '  rd /s /q "%DOSSIER%" 2>nul',
+        '  if not exist "%DOSSIER%" goto fini',
+        '  ping 127.0.0.1 -n 2 >nul',
+        ')',
+        ':fini',
+        'del /f /q "%~f0" 2>nul'
+    )
+    Set-Content -LiteralPath $bat -Value $lignes -Encoding OEM
+    Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -ArgumentList @('/c', ('"{0}"' -f $bat))
 }
 
 if (-not $Silent) {

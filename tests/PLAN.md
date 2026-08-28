@@ -151,14 +151,15 @@ nothing about what was never asked.
 - **done** the installer run 1.5 s into a four-file batch: it exits 0, the
   batch finishes all four, and the installation is intact afterwards - 36
   files and the folder verb still registered
-- **partial** the uninstaller exits 0 in under a second, the context menu keys
-  all go, and the batch running underneath it finishes all five files with every
-  original intact - which is the property that matters. But the installed folder
-  survives with its 36 files, because the running conversion holds them open and
-  the uninstaller swallows the error. A menu entry that is gone while the folder
-  stays is not a clean removal, and nothing schedules the rest for a reboot.
-  Reinstalling afterwards puts everything back: 22 image associations, both
-  verbs, the uninstall entry
+- **done**, and it took three shapes to get right. The uninstaller handed the
+  folder to `cmd` with a single `rd /s /q` two seconds later; a conversion
+  running at the time holds the scripts and cjpegli open, `rd` failed silently,
+  and all 36 files stayed behind - menu gone, megabytes not. Retrying hard was
+  worse: it deleted the scripts out from under a running batch, which lost all
+  five of its files. It waits for the conversion now, by trying to open the same
+  `TEMP\jipeg.lock` the quiet update already respects, then deletes with a few
+  retries. Measured on a 300-file batch: 300 of 300 converted, the folder gone
+  afterwards, every registry key removed
 - **no** where a `settings.json` written by 2.8 came from after that uninstall
   and reinstall. The current one had been written by 3.0; the file that appeared
   was older and had lost its `language` key. `Get-JipegDefaults` is not the
