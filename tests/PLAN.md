@@ -102,8 +102,10 @@ nothing about what was never asked.
 - **done** 300 in one batch, all converted, no failure
 - **done** two conversions started at the same time — twelve files across two
   folders, both finish, nothing lost, the lock is handed back
-- **no** files **dropped into the selection while it is running** — the watcher
-  runs every 400 ms and has never been made to pick anything up
+- **done** four slow files started, three more handed to fresh processes 1.8 s
+  in, exactly as Explorer does it: seven converted in one batch, the three extra
+  processes queued their paths and exited on their own. The log shows the run
+  beginning with four files and ending with seven
 
 ### 2.3 During
 - **done** pressing **Cancel** halfway — three files out of twenty-four came
@@ -125,7 +127,10 @@ nothing about what was never asked.
 - **can't** two screens at **different** scales — known limitation, written down
 - **can't** another system language or accent colour
 - **no** a **standard user** account rather than an administrator one
-- **no** a machine where `%LOCALAPPDATA%` is redirected to a network profile
+- **done** and to a network path, not merely another folder: the whole
+  installation copied under `\localhost\C$\...`, `LOCALAPPDATA` pointed at
+  it, the converter run from there. It converts, and it writes its log into
+  the redirected profile
 - **can't** PowerShell 7 is not installed on this machine
 - **done** AllSigned set for real on the user scope, then launched through
   `launch.vbs` as Explorer does: it converts, because the launcher passes
@@ -143,9 +148,14 @@ nothing about what was never asked.
 - **done** the archive installed from the zip, on a cleared machine
 - **done** the archive missing `src\lang` — refused, as intended
 - **once** the **classic menu** path, which restarts Explorer
-- **no** installing **over a running conversion**
+- **done** the installer run 1.5 s into a four-file batch: it exits 0, the
+  batch finishes all four, and the installation is intact afterwards - 36
+  files and the folder verb still registered
 - **no** uninstalling **while a conversion is running**
-- **no** installing when `%LOCALAPPDATA%\Jipeg` exists but is **read-only**
+- **done** write, append and attribute-write denied by ACL on the whole tree:
+  the installer exits 1 and changes nothing. 36 files before, 36 after, and a
+  control reinstall right after succeeds - it fails without leaving half an
+  installation behind, which is the part that matters
 - **no** the console installer's **timed question** answered by hand — only the
   timeout and the switches have run
 - **done** the quiet update: nothing to do, and the trace in ten languages
