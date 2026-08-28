@@ -44,8 +44,14 @@ nothing about what was never asked.
 - **done** read-only source
 - **done** held under an exclusive lock for the whole conversion: refused,
   which is the only honest answer when the bytes cannot be read
-- **no** a source on a **network share**, a USB stick, or a OneDrive folder that
-  is online-only
+- **done**, and it was broken. A file reached through a UNC path failed every
+  time. `Resolve-Path ... .Path` returns the provider-qualified form on UNC -
+  `Microsoft.PowerShell.Core\FileSystem::\server\share\...` - which no
+  native executable can open, so the encoder was handed a path that could not
+  exist. `.ProviderPath` gives the bare one. Checked over `\localhost\C$`,
+  which puts the real SMB redirector in the loop: a file converts, and so does a
+  folder. A USB stick and an online-only OneDrive folder are still untried -
+  neither is here
 - **done** write and append denied on the folder by ACL: refused in 3 s
 - **done**, and it was broken. A hidden file failed with "Could not find
   item" for a path `Test-Path` had just confirmed, because `Get-Item`

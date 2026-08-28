@@ -51,7 +51,12 @@ function Expand-Inputs([string[]]$in) {
                     ForEach-Object { $out.Add($_.FullName) }
             } elseif (Test-Path -LiteralPath $p -PathType Leaf) {
                 if ($AllExt -contains ([System.IO.Path]::GetExtension($p).ToLower())) {
-                    $out.Add((Resolve-Path -LiteralPath $p).Path)
+                    # .ProviderPath et non .Path : sur un chemin UNC, .Path
+                    # renvoie la forme qualifiee du fournisseur -
+                    # Microsoft.PowerShell.Core\FileSystem::\serveur\partage\... -
+                    # qu'aucun executable natif ne sait ouvrir. Un fichier sur un
+                    # partage reseau echouait donc a la lecture, toujours.
+                    $out.Add((Resolve-Path -LiteralPath $p).ProviderPath)
                 }
             }
         } catch { }
