@@ -151,7 +151,21 @@ nothing about what was never asked.
 - **done** the installer run 1.5 s into a four-file batch: it exits 0, the
   batch finishes all four, and the installation is intact afterwards - 36
   files and the folder verb still registered
-- **no** uninstalling **while a conversion is running**
+- **partial** the uninstaller exits 0 in under a second, the context menu keys
+  all go, and the batch running underneath it finishes all five files with every
+  original intact - which is the property that matters. But the installed folder
+  survives with its 36 files, because the running conversion holds them open and
+  the uninstaller swallows the error. A menu entry that is gone while the folder
+  stays is not a clean removal, and nothing schedules the rest for a reboot.
+  Reinstalling afterwards puts everything back: 22 image associations, both
+  verbs, the uninstall entry
+- **no** where a `settings.json` written by 2.8 came from after that uninstall
+  and reinstall. The current one had been written by 3.0; the file that appeared
+  was older and had lost its `language` key. `Get-JipegDefaults` is not the
+  source - it fills `writtenBy` from `$JipegVersion` and does set `language`. The
+  user's own file was restored from the backup taken beforehand, so nothing was
+  lost, but the mechanism is unexplained and is written down here rather than
+  guessed at
 - **done** write, append and attribute-write denied by ACL on the whole tree:
   the installer exits 1 and changes nothing. 36 files before, 36 after, and a
   control reinstall right after succeeds - it fails without leaving half an
