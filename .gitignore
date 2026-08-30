@@ -12,3 +12,7 @@ tests/corpus/
 tests/random/
 tests/corpus-expected.json
 tests/random-index.json
+
+# l'archive que Build-Release fabrique : elle part en piece jointe de release,
+# jamais dans l'historique
+Jipeg-*.zip
