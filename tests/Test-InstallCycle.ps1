@@ -66,3 +66,4 @@ Write-Host ''
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $src 'Install-Jipeg.ps1') -Silent | Out-Null
 ''
 if ($fautes) { "  $Tours tours, $fautes ecart(s)" } else { "  $Tours tours, aucun ecart : chaque installation pose exactement la meme chose, chaque desinstallation ne laisse rien" }
+exit $(if ($fautes) { 1 } else { 0 })

@@ -55,10 +55,10 @@ try {
 # overflowed its box and the drop-down below wrote over the line above it.
 #
 # It starts as what Windows asks for, then is capped by what the screen can hold:
-# the settings window is 760 points tall, which is 1140 at 150%, more than a
+# the settings window is 798 points tall, which is 1197 at 150%, more than a
 # 1080p laptop has room for, and OK and Cancel fell off the bottom. Slightly
 # smaller than Windows asked and entirely visible beats exactly right and cut off.
-$JipegDesignHeight = 760
+$JipegDesignHeight = 798
 $JipegRealDpi = 1.0
 try {
     $g = [System.Drawing.Graphics]::FromHwnd([IntPtr]::Zero)

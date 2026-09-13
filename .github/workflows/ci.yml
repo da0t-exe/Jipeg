@@ -38,6 +38,9 @@ jobs:
       - name: Imaging and installer regression tests
         shell: powershell
         run: ./tests/Test-Headless.ps1
+      - name: Settings layout at 150 percent
+        shell: powershell
+        run: ./tests/Test-WindowLayout.ps1 -Scale 1.5
       - name: Build release archive (no publication)
         shell: powershell
         run: ./Build-Release.ps1 -Out $env:RUNNER_TEMP

@@ -4,6 +4,8 @@ param([switch]$Silent)
 $ErrorActionPreference = 'SilentlyContinue'
 [void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms')
 
+. (Join-Path $PSScriptRoot 'Jipeg-Common.ps1')
+
 $Dest      = Join-Path $env:LOCALAPPDATA 'Jipeg'
 $L = Import-JipegLang (Get-JipegSettings).language
 $UninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jipeg'
@@ -40,44 +42,61 @@ if ((Get-ItemProperty -Path $UninstKey -Name 'ClassicMenuSet' -ErrorAction Silen
 
 Remove-Item -Path $UninstKey -Recurse -Force
 
-# This script lives inside the folder being deleted, so hand that part to cmd.
-#
-# Two earlier shapes were wrong in opposite directions. One try, two seconds
-# later: a conversion running at the time holds the scripts and cjpegli open, rd
-# fails without a word, and 36 files stay behind for good - the menu gone, the
-# megabytes not. Retrying hard instead was worse: it deleted the scripts out
-# from under a running batch, which lost all five of its files.
-#
-# So it waits for the conversion rather than fighting it. The converter holds
-# TEMP\jipeg.lock open with no sharing for as long as it runs - the same signal
-# the quiet update already uses to keep out of the way. cmd can test it by
-# trying to open it for append: that fails while anything holds it.
+# Cleanup runs outside the install folder and waits for conversions to finish.
+# Use literal PowerShell paths throughout, including names with shell characters.
 if (Test-Path -LiteralPath $Dest) {
-    $lock = Join-Path $env:TEMP 'jipeg.lock'
-    $bat  = Join-Path $env:TEMP ('jipeg-remove-{0}.cmd' -f [guid]::NewGuid().ToString('N').Substring(0, 8))
-    $lignes = @(
-        '@echo off',
-        'setlocal',
-        ('set "VERROU=' + $lock + '"'),
-        ('set "DOSSIER=' + $Dest + '"'),
-        'rem on attend que la conversion rende le verrou, deux minutes au plus',
-        'for /l %%a in (1,1,60) do (',
-        '  if not exist "%VERROU%" goto libre',
-        '  2>nul ( >>"%VERROU%" call ) && goto libre',
-        '  ping 127.0.0.1 -n 3 >nul',
-        ')',
-        ':libre',
-        'rem puis on efface, en reessayant : un fichier peut rester une seconde',
-        'for /l %%b in (1,1,10) do (',
-        '  rd /s /q "%DOSSIER%" 2>nul',
-        '  if not exist "%DOSSIER%" goto fini',
-        '  ping 127.0.0.1 -n 2 >nul',
-        ')',
-        ':fini',
-        'del /f /q "%~f0" 2>nul'
-    )
-    Set-Content -LiteralPath $bat -Value $lignes -Encoding OEM
-    Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -ArgumentList @('/c', ('"{0}"' -f $bat))
+    $expected = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Jipeg'))
+    if ([IO.Path]::GetFullPath($Dest) -ne $expected) { throw 'Invalid uninstall target.' }
+    $worker = Join-Path $env:TEMP ('jipeg-remove-{0}.ps1' -f [guid]::NewGuid().ToString('N'))
+    $cleanup = @'
+$ErrorActionPreference = 'Stop'
+$target = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Jipeg'))
+$parent = [IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
+if ([IO.Path]::GetDirectoryName($target) -ne $parent -or [IO.Path]::GetFileName($target) -ne 'Jipeg') {
+    throw 'Refusing cleanup outside the Jipeg install folder.'
+}
+$lock = Join-Path $env:TEMP 'jipeg.lock'
+try {
+    # Hold the same queue mutex as the converter while checking/deleting, so a
+    # new batch cannot acquire its file lock between our check and the cleanup.
+    $mutex = New-Object Threading.Mutex($false, 'Local\JipegQueue')
+    $deadline = [DateTime]::UtcNow.AddMinutes(2)
+    do {
+        $owned = $false
+        try {
+            try { $owned = $mutex.WaitOne(1000) }
+            catch [Threading.AbandonedMutexException] { $owned = $true }
+            if (-not $owned) { continue }
+            $busy = $false
+            if (Test-Path -LiteralPath $lock) {
+                try { $stream = [IO.File]::Open($lock, 'Open', 'Write', 'None'); $stream.Dispose() }
+                catch { $busy = $true }
+            }
+            if (-not $busy) {
+                # A junction/reparse point must not redirect recursive cleanup.
+                if (Test-Path -LiteralPath $target) {
+                    $root = Get-Item -LiteralPath $target -Force
+                    if ($root.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Refusing reparse-point install folder.' }
+                    $links = @(Get-ChildItem -LiteralPath $target -Recurse -Force | Where-Object {
+                        $_.Attributes -band [IO.FileAttributes]::ReparsePoint
+                    })
+                    if ($links.Count) { throw 'Refusing cleanup containing reparse points.' }
+                    Remove-Item -LiteralPath $target -Recurse -Force
+                }
+                break
+            }
+        } finally { if ($owned) { $mutex.ReleaseMutex() } }
+        Start-Sleep -Milliseconds 500
+    } while ([DateTime]::UtcNow -lt $deadline)
+    # A timeout deliberately leaves files intact rather than breaking a batch.
+} finally {
+    if ($mutex) { $mutex.Dispose() }
+    Remove-Item -LiteralPath $PSCommandPath -Force
+}
+'@
+    Set-Content -LiteralPath $worker -Value $cleanup -Encoding UTF8
+    Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -ArgumentList @(
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ('"{0}"' -f $worker))
 }
 
 if (-not $Silent) {

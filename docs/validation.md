@@ -12,6 +12,10 @@ functions from `Jipeg-Common.ps1`.
 
 ## Device checks still required
 
+See [the 2026-09-13 test report](testing-2026-09-13.md) for installation and local
+screen-geometry results. HEIC/AVIF successful decoding and visual mixed-DPI tests
+remain blocked by missing codecs and unavailable UI capture, respectively.
+
 | Environment/input | Check | Status |
 |---|---|---|
 | Windows 10 and 11 on another person's PC | Install, convert, update, uninstall | Pending |
