@@ -3,8 +3,9 @@
 Everything the README claims about Jipeg was measured by something in this
 folder. It is here so the claims can be replayed rather than believed.
 
-Nothing runs on a schedule and there is no CI: these are scripts you point at a
-working copy. The PowerShell ones need nothing beyond Windows. The four that
+GitHub Actions runs static checks and headless imaging regression tests on each
+push and pull request. Installation, desktop interaction and device-specific
+tests below remain manual; CI does not imply those have passed. The PowerShell ones need nothing beyond Windows. The four that
 build or inspect images need **Python 3 with Pillow** (`pip install pillow`),
 because they have to produce a transparent WebP, a 16-bit PNG and an animated
 GIF, and Windows will not make those on its own.
@@ -14,6 +15,14 @@ Several of them convert files, which means they need Jipeg **installed**:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File src\Install-Jipeg.ps1 -Silent
 ```
+
+## Automated regression checks
+
+`Test-Syntax.ps1` parses all PowerShell scripts and language files.
+`Test-Headless.ps1` exercises PNG detection, all eight orientations, transparent
+decoding, the bundled JPEG/PNG encoders, and the installer's checksum rejection.
+Neither script installs Jipeg or changes the user's settings. The language and
+width checks return a nonzero exit code when they find a failure.
 
 ## The ones that need nothing but Windows
 

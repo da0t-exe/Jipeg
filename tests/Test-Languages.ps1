@@ -28,3 +28,4 @@ foreach ($c in $codes) {
 }
 ''
 if ($bad) { "$bad fichier(s) a corriger" } else { "10/10 fichiers de langue conformes" }
+exit $(if ($bad) { 1 } else { 0 })

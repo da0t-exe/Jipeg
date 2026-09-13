@@ -287,7 +287,7 @@ function Invoke-Install([scriptblock]$report, [bool]$classicMenu) {
     Get-Dwebp $report
     Get-Oxipng $report
     & $report 'Installing Jipeg'
-    foreach ($f in @('Jipeg-Common.ps1', 'Jipeg-Convert.ps1', 'Jipeg-Settings.ps1',
+    foreach ($f in @('Jipeg-Common.ps1', 'Jipeg-Imaging.ps1', 'Jipeg-Convert.ps1', 'Jipeg-Settings.ps1',
                      'Jipeg-Update.ps1', 'Uninstall-Jipeg.ps1',
                      'launch.vbs', 'settings.vbs', 'update.vbs')) {
         Copy-Item -LiteralPath (Join-Path $Here $f) -Destination $Dest -Force

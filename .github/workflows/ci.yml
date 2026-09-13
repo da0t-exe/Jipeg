@@ -1,0 +1,43 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: File encoding
+        run: python tests/check-encoding.py
+      - name: Website consistency
+        run: python tests/check-site.py
+      - name: Website animation
+        run: node tests/banc-dechiffrement.js
+      - name: PowerShell syntax
+        shell: powershell
+        run: ./tests/Test-Syntax.ps1
+      - name: Translation keys and placeholders
+        shell: powershell
+        run: ./tests/Test-Languages.ps1
+      - name: Translation layout
+        shell: powershell
+        run: ./tests/Test-Widths.ps1
+      - name: Imaging and installer regression tests
+        shell: powershell
+        run: ./tests/Test-Headless.ps1
+      - name: Build release archive (no publication)
+        shell: powershell
+        run: ./Build-Release.ps1 -Out $env:RUNNER_TEMP

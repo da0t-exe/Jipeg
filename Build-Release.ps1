@@ -49,7 +49,7 @@ foreach ($f in $files) {
 # paths it reaches for, and an archive missing one of them installs something
 # broken without saying so.
 $must = @(
-    'src\Install-Jipeg.ps1', 'src\Jipeg-Common.ps1', 'src\Jipeg-Convert.ps1',
+    'src\Install-Jipeg.ps1', 'src\Jipeg-Common.ps1', 'src\Jipeg-Imaging.ps1', 'src\Jipeg-Convert.ps1',
     'src\Jipeg-Settings.ps1', 'src\Jipeg-Update.ps1', 'src\Uninstall-Jipeg.ps1',
     'src\launch.vbs', 'src\settings.vbs', 'src\update.vbs',
     'src\lang\en.psd1',

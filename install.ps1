@@ -163,14 +163,16 @@ try {
     $wc.DownloadFile($asset.browser_download_url, $zip)
     $wc.Dispose()
 
-    # GitHub reports a digest for the asset; both it and the file come over
-    # HTTPS, so this catches a corrupted transfer rather than a hostile GitHub.
-    if ($asset.digest -and $asset.digest -match '^sha256:(?<hash>[0-9a-fA-F]{64})$') {
-        Say 'Checking SHA-256...'
-        $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
-        if ($actual -ne $Matches['hash'].ToUpper()) {
-            throw 'The download does not match the checksum GitHub published for it.'
-        }
+    # Refuse assets without a valid digest, just like the quiet updater.
+    # HTTPS and this hash detect corruption; they are not an independent signature.
+    if (-not $asset.digest -or $asset.digest -notmatch '^sha256:([0-9a-fA-F]{64})$') {
+        throw 'The release has no valid SHA-256 checksum. Installation refused.'
+    }
+    $expectedHash = $Matches[1]
+    Say 'Checking SHA-256...'
+    $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+    if ($actual -ne $expectedHash) {
+        throw 'The download does not match the checksum GitHub published for it.'
     }
 
     Say 'Unpacking...'

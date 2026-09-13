@@ -84,3 +84,4 @@ foreach ($code in $JipegLangs.Keys) {
 }
 ''
 if ($bad) { "$bad langue(s) a reprendre" } else { '10/10 : aucune chaine ne deborde de sa boite' }
+exit $(if ($bad) { 1 } else { 0 })

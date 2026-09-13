@@ -261,9 +261,7 @@ footer a{color:var(--dim)}
   <div class="hero">
     <div class="status"><span class="dot"></span><span data-t="status">Windows 10 and 11, no administrator rights</span></div>
     <h1><span data-t="h1a">Right-click an image.</span><br><span class="scr" id="scramble" data-t="h1b">It comes back lighter.</span></h1>
-    <p class="lede" data-t="lede">One entry in the right-click menu, encoding with Google's <b>jpegli</b>.
-    It never gives back a file heavier than the one you handed it, and it carries nothing over:
-    no Exif, no GPS, no colour profile.</p>
+    <p class="lede" data-t="lede">Optimize images with Google’s <b>jpegli</b>. JPEG compression is lossy; originals are preserved.</p>
 
     <div class="tabs">
       <button class="tab on" data-os="win">Windows</button>
@@ -289,7 +287,7 @@ footer a{color:var(--dim)}
   </div>
 
   <section>
-    <div class="h"><span></span><h2 data-t="s1">On real files</h2></div>
+    <div class="h"><span></span><h2 data-t="s1">Historical examples; savings vary</h2></div>
       <table>
         <thead><tr>
           <th data-t="th1">what you give it</th>
@@ -309,7 +307,7 @@ footer a{color:var(--dim)}
   </section>
 
   <section>
-    <div class="h"><span></span><h2 data-t="s2">Three things it will not do</h2></div>
+    <div class="h"><span></span><h2 data-t="s2">How it handles your files</h2></div>
     <div class="notes">
       <div class="note">
         <h3 data-t="n1h">Give you back something heavier</h3>
@@ -322,10 +320,8 @@ footer a{color:var(--dim)}
         losslessly, whichever format the transparency arrived in.</p>
       </div>
       <div class="note">
-        <h3 data-t="n3h">Keep what came with the file</h3>
-        <p data-t="n3p">The rotation a phone asks for is applied to the pixels and
-        thrown away with the rest, so the picture is upright everywhere and cannot say where it
-        was taken.</p>
+        <h3 data-t="n3h">Metadata</h3>
+        <p data-t="n3p">PNG may retain colour metadata. Unchanged files retain their metadata. This is not a verified anonymization tool.</p>
       </div>
     </div>
   </section>
@@ -392,12 +388,12 @@ var T = {
     l5:"Corriger une ligne",
     status:"Windows 10 et 11, sans droits administrateur",
     h1a:"Clic droit sur une image.", h1b:"Elle ressort plus légère.",
-    lede:"Une entrée dans le menu contextuel, l'encodage confié à <b>jpegli</b> de Google. Il ne rend jamais un fichier plus lourd que celui qu'on lui donne, et il ne reprend rien au passage : ni Exif, ni GPS, ni profil de couleur.",
+    lede:"Optimisez vos images avec <b>jpegli</b> de Google. La compression JPEG est avec perte ; les originaux sont conservés.",
     copy:"copier",
     after:"Vérifié contre l'empreinte SHA-256 que GitHub publie pour la release. Il se retire de la même façon, avec uninstall.ps1.",
     afterLin:"Nécessite cjpegli, et utilise oxipng et dwebp s'ils sont là : <code>apt install libjxl-tools oxipng webp</code>. Expérimental, et jamais exécuté par son auteur.",
     afterMac:"Nécessite cjpegli, et utilise oxipng et dwebp s'ils sont là : <code>brew install jpeg-xl oxipng webp</code>. Expérimental, et jamais exécuté par son auteur.",
-    s1:"Sur de vrais fichiers", s2:"Trois choses qu'il refuse de faire", s3:"Toute l'interface",
+    s1:"Exemples historiques ; gains variables", s2:"Le traitement de vos fichiers", s3:"Toute l'interface",
     s4:"Linux et macOS", s5:"L'installer",
     th1:"ce qu'on lui donne", th2:"avant", th3:"après",
     r1:"une photo", r2:"un document scanné", r3:"un logo transparent",
@@ -406,8 +402,8 @@ var T = {
     n1p:"Une capture d'écran a gonflé de 88 % ici, une icône de 448 %. Ces JPEG ne sont jamais écrits : l'image est compressée sans perte à la place, ou rendue intacte.",
     n2h:"Aplatir la transparence sur du blanc",
     n2p:"Une image à pixels transparents est compressée en PNG, sans perte, quel que soit le format d'où vient la transparence.",
-    n3h:"Garder ce qui accompagnait le fichier",
-    n3p:"La rotation demandée par un téléphone est appliquée aux pixels puis jetée avec le reste : l'image est droite partout et ne dit plus où elle a été prise.",
+    n3h:"Métadonnées",
+    n3p:"Les PNG peuvent conserver des métadonnées de couleur. Les fichiers inchangés gardent leurs métadonnées. Ce logiciel ne garantit pas l’anonymisation.",
     cap1:"pendant la conversion",
     unix:"<b>Expérimental, et jamais exécuté par son auteur.</b> Il existe un portage pour GNOME Files, KDE Dolphin, XFCE Thunar et le Finder de macOS. Il a été écrit sous Windows : le shell est syntaxiquement valide et les property lists aussi, c'est tout ce qui a été vérifié.",
     s6:"Testé sur une seule machine",
@@ -420,12 +416,12 @@ var T = {
     l5:"Corregir una línea",
     status:"Windows 10 y 11, sin permisos de administrador",
     h1a:"Clic derecho en una imagen.", h1b:"Vuelve más ligera.",
-    lede:"Una entrada en el menú contextual y la codificación a cargo de <b>jpegli</b>, de Google. Nunca devuelve un archivo más pesado que el que recibió, y no arrastra nada consigo: ni Exif, ni GPS, ni perfil de color.",
+    lede:"Optimiza imágenes con <b>jpegli</b> de Google. La compresión JPEG tiene pérdidas; se conservan los originales.",
     copy:"copiar",
     after:"Comprobado con el SHA-256 que GitHub publica para la versión. Se quita igual de fácil, con uninstall.ps1.",
     afterLin:"Necesita cjpegli, y usa oxipng y dwebp si están: <code>apt install libjxl-tools oxipng webp</code>. Experimental, y su autor nunca lo ha ejecutado.",
     afterMac:"Necesita cjpegli, y usa oxipng y dwebp si están: <code>brew install jpeg-xl oxipng webp</code>. Experimental, y su autor nunca lo ha ejecutado.",
-    s1:"Con archivos reales", s2:"Tres cosas que no hará", s3:"Toda la interfaz",
+    s1:"Ejemplos anteriores; el ahorro varía", s2:"Cómo se tratan tus archivos", s3:"Toda la interfaz",
     s4:"Linux y macOS", s5:"Instalarlo",
     th1:"lo que le das", th2:"antes", th3:"después",
     r1:"una fotografía", r2:"un documento escaneado", r3:"un logotipo transparente",
@@ -434,8 +430,8 @@ var T = {
     n1p:"Aquí una captura de pantalla creció un 88 %, un icono un 448 %. Esos JPEG no se escriben nunca: la imagen se comprime sin pérdida, o se devuelve intacta.",
     n2h:"Aplanar la transparencia sobre blanco",
     n2p:"Una imagen con píxeles transparentes se comprime como PNG, sin pérdida, venga la transparencia del formato que venga.",
-    n3h:"Conservar lo que venía con el archivo",
-    n3p:"La rotación que pide un teléfono se aplica a los píxeles y se tira con lo demás: la imagen está derecha en todas partes y ya no dice dónde se tomó.",
+    n3h:"Metadatos",
+    n3p:"Los PNG pueden conservar metadatos de color. Los archivos sin cambios conservan sus metadatos. No se garantiza la anonimización.",
     cap1:"durante la conversión",
     unix:"<b>Experimental, y su autor nunca lo ha ejecutado.</b> Hay una adaptación para GNOME Files, KDE Dolphin, XFCE Thunar y el Finder de macOS. Se escribió en Windows: el shell y las listas de propiedades son válidos, y eso es todo lo comprobado.",
     s6:"Probado en una sola máquina",
@@ -448,12 +444,12 @@ var T = {
     l5:"Eine Zeile berichtigen",
     status:"Windows 10 und 11, ohne Administratorrechte",
     h1a:"Rechtsklick auf ein Bild.", h1b:"Es kommt leichter zurück.",
-    lede:"Ein Eintrag im Kontextmenü, kodiert wird mit Googles <b>jpegli</b>. Es gibt nie eine Datei zurück, die schwerer ist als die übergebene, und es nimmt nichts mit: kein Exif, kein GPS, kein Farbprofil.",
+    lede:"Bilder mit Googles <b>jpegli</b> optimieren. JPEG-Komprimierung ist verlustbehaftet; Originale bleiben erhalten.",
     copy:"kopieren",
     after:"Geprüft gegen den SHA-256, den GitHub für die Version veröffentlicht. Ebenso einfach wieder entfernt, mit uninstall.ps1.",
     afterLin:"Braucht cjpegli und nutzt oxipng und dwebp, wenn sie da sind: <code>apt install libjxl-tools oxipng webp</code>. Experimentell, und vom Autor nie ausgeführt.",
     afterMac:"Braucht cjpegli und nutzt oxipng und dwebp, wenn sie da sind: <code>brew install jpeg-xl oxipng webp</code>. Experimentell, und vom Autor nie ausgeführt.",
-    s1:"An echten Dateien", s2:"Drei Dinge, die es nicht tut", s3:"Die ganze Oberfläche",
+    s1:"Frühere Beispiele; Einsparungen variieren", s2:"So werden Dateien behandelt", s3:"Die ganze Oberfläche",
     s4:"Linux und macOS", s5:"Holen",
     th1:"was man ihm gibt", th2:"vorher", th3:"nachher",
     r1:"ein Foto", r2:"ein gescanntes Dokument", r3:"ein transparentes Logo",
@@ -462,8 +458,8 @@ var T = {
     n1p:"Ein Screenshot wuchs hier um 88 %, ein Symbol um 448 %. Diese JPEGs werden nie geschrieben: das Bild wird stattdessen verlustfrei verkleinert oder unangetastet zurückgegeben.",
     n2h:"Transparenz auf Weiß plattdrücken",
     n2p:"Ein Bild mit durchsichtigen Pixeln wird als PNG verkleinert, verlustfrei, egal aus welchem Format die Transparenz kam.",
-    n3h:"Behalten, was an der Datei hing",
-    n3p:"Die Drehung, die ein Telefon verlangt, wird auf die Pixel angewendet und mit allem anderen weggeworfen: das Bild steht überall richtig und verrät nicht mehr, wo es entstand.",
+    n3h:"Metadaten",
+    n3p:"PNG kann Farbmetadaten behalten. Unveränderte Dateien behalten ihre Metadaten. Eine Anonymisierung wird nicht garantiert.",
     cap1:"während der Umwandlung",
     unix:"<b>Experimentell, und vom Autor nie ausgeführt.</b> Es gibt eine Portierung für GNOME Files, KDE Dolphin, XFCE Thunar und den macOS Finder. Sie entstand unter Windows: die Shell und die Property-Lists sind gültig, mehr wurde nicht geprüft.",
     s6:"Auf einem einzigen Rechner geprüft",
@@ -476,12 +472,12 @@ var T = {
     l5:"Corrigir uma linha",
     status:"Windows 10 e 11, sem direitos de administrador",
     h1a:"Clique direito numa imagem.", h1b:"Ela volta mais leve.",
-    lede:"Uma entrada no menu de contexto, com a codificação a cargo do <b>jpegli</b>, da Google. Nunca devolve um ficheiro mais pesado do que aquele que recebeu, e não leva nada consigo: nem Exif, nem GPS, nem perfil de cor.",
+    lede:"Otimize imagens com o <b>jpegli</b> da Google. A compressão JPEG tem perdas; os originais são preservados.",
     copy:"copiar",
     after:"Verificado com o SHA-256 que o GitHub publica para a versão. Sai da mesma forma, com uninstall.ps1.",
     afterLin:"Precisa do cjpegli e usa o oxipng e o dwebp quando existem: <code>apt install libjxl-tools oxipng webp</code>. Experimental, e nunca executado pelo autor.",
     afterMac:"Precisa do cjpegli e usa o oxipng e o dwebp quando existem: <code>brew install jpeg-xl oxipng webp</code>. Experimental, e nunca executado pelo autor.",
-    s1:"Em ficheiros reais", s2:"Três coisas que não faz", s3:"Toda a interface",
+    s1:"Exemplos anteriores; os ganhos variam", s2:"Como os ficheiros são tratados", s3:"Toda a interface",
     s4:"Linux e macOS", s5:"Obter",
     th1:"o que lhe dás", th2:"antes", th3:"depois",
     r1:"uma fotografia", r2:"um documento digitalizado", r3:"um logótipo transparente",
@@ -490,8 +486,8 @@ var T = {
     n1p:"Aqui uma captura de ecrã cresceu 88 %, um ícone 448 %. Esses JPEG nunca são escritos: a imagem é comprimida sem perdas, ou devolvida intacta.",
     n2h:"Achatar a transparência sobre branco",
     n2p:"Uma imagem com píxeis transparentes é comprimida como PNG, sem perdas, venha a transparência do formato que vier.",
-    n3h:"Guardar o que vinha com o ficheiro",
-    n3p:"A rotação que um telemóvel pede é aplicada aos píxeis e deitada fora com o resto: a imagem fica direita em todo o lado e já não diz onde foi tirada.",
+    n3h:"Metadados",
+    n3p:"Os PNG podem conservar metadados de cor. Ficheiros inalterados mantêm os metadados. A anonimização não é garantida.",
     cap1:"durante a conversão",
     unix:"<b>Experimental, e nunca executado pelo autor.</b> Existe uma adaptação para o GNOME Files, KDE Dolphin, XFCE Thunar e o Finder do macOS. Foi escrita no Windows: a shell e as property lists são válidas, e é tudo o que foi verificado.",
     s6:"Testado numa só máquina",
@@ -504,12 +500,12 @@ var T = {
     l5:"Correggere una riga",
     status:"Windows 10 e 11, senza diritti di amministratore",
     h1a:"Clic destro su un'immagine.", h1b:"Torna più leggera.",
-    lede:"Una voce nel menu contestuale e la codifica affidata a <b>jpegli</b>, di Google. Non restituisce mai un file più pesante di quello ricevuto, e non si porta dietro nulla: né Exif, né GPS, né profilo colore.",
+    lede:"Ottimizza le immagini con <b>jpegli</b> di Google. La compressione JPEG comporta perdite; gli originali vengono conservati.",
     copy:"copia",
     after:"Verificato con lo SHA-256 che GitHub pubblica per la versione. Si toglie allo stesso modo, con uninstall.ps1.",
     afterLin:"Richiede cjpegli e usa oxipng e dwebp quando ci sono: <code>apt install libjxl-tools oxipng webp</code>. Sperimentale, e mai eseguito dal suo autore.",
     afterMac:"Richiede cjpegli e usa oxipng e dwebp quando ci sono: <code>brew install jpeg-xl oxipng webp</code>. Sperimentale, e mai eseguito dal suo autore.",
-    s1:"Su file veri", s2:"Tre cose che non fa", s3:"Tutta l'interfaccia",
+    s1:"Esempi precedenti; il risparmio varia", s2:"Come vengono trattati i file", s3:"Tutta l'interfaccia",
     s4:"Linux e macOS", s5:"Scaricarlo",
     th1:"cosa gli dai", th2:"prima", th3:"dopo",
     r1:"una fotografia", r2:"un documento scansionato", r3:"un logo trasparente",
@@ -518,8 +514,8 @@ var T = {
     n1p:"Qui uno screenshot è cresciuto dell'88 %, un'icona del 448 %. Quei JPEG non vengono mai scritti: l'immagine viene compressa senza perdita, oppure restituita intatta.",
     n2h:"Appiattire la trasparenza sul bianco",
     n2p:"Un'immagine con pixel trasparenti viene compressa come PNG, senza perdita, da qualunque formato arrivi la trasparenza.",
-    n3h:"Conservare ciò che accompagnava il file",
-    n3p:"La rotazione che un telefono chiede viene applicata ai pixel e buttata via con il resto: l'immagine è dritta ovunque e non dice più dove è stata scattata.",
+    n3h:"Metadati",
+    n3p:"I PNG possono conservare metadati colore. I file invariati mantengono i metadati. Non è garantita l’anonimizzazione.",
     cap1:"durante la conversione",
     unix:"<b>Sperimentale, e mai eseguito dal suo autore.</b> Esiste un port per GNOME Files, KDE Dolphin, XFCE Thunar e il Finder di macOS. È stato scritto su Windows: la shell e le property list sono valide, ed è tutto ciò che è stato verificato.",
     s6:"Provato su una sola macchina",
@@ -532,12 +528,12 @@ var T = {
     l5:"Poprawić linijkę",
     status:"Windows 10 i 11, bez uprawnień administratora",
     h1a:"Kliknij obraz prawym przyciskiem.", h1b:"Wraca lżejszy.",
-    lede:"Jedna pozycja w menu kontekstowym, kodowanie po stronie <b>jpegli</b> od Google. Nigdy nie oddaje pliku cięższego niż otrzymany i niczego ze sobą nie zabiera: żadnego Exif, GPS ani profilu kolorów.",
+    lede:"Optymalizuj obrazy z <b>jpegli</b> od Google. Kompresja JPEG jest stratna; oryginały są zachowywane.",
     copy:"kopiuj",
     after:"Sprawdzone sumą SHA-256, którą GitHub publikuje dla wydania. Usuwa się tak samo prosto, przez uninstall.ps1.",
     afterLin:"Wymaga cjpegli, korzysta z oxipng i dwebp, jeśli są: <code>apt install libjxl-tools oxipng webp</code>. Eksperymentalne i nigdy nie uruchomione przez autora.",
     afterMac:"Wymaga cjpegli, korzysta z oxipng i dwebp, jeśli są: <code>brew install jpeg-xl oxipng webp</code>. Eksperymentalne i nigdy nie uruchomione przez autora.",
-    s1:"Na prawdziwych plikach", s2:"Trzy rzeczy, których nie zrobi", s3:"Cały interfejs",
+    s1:"Wcześniejsze przykłady; oszczędności są różne", s2:"Jak przetwarzamy pliki", s3:"Cały interfejs",
     s4:"Linux i macOS", s5:"Pobierz",
     th1:"co mu dajesz", th2:"przed", th3:"po",
     r1:"fotografia", r2:"zeskanowany dokument", r3:"przezroczyste logo",
@@ -546,8 +542,8 @@ var T = {
     n1p:"Zrzut ekranu urósł tu o 88 %, ikona o 448 %. Takie pliki JPEG nigdy nie powstają: obraz jest zmniejszany bezstratnie albo wracany nietknięty.",
     n2h:"Spłaszczy przezroczystość na biel",
     n2p:"Obraz z przezroczystymi pikselami jest zmniejszany jako PNG, bezstratnie, niezależnie od tego, z jakiego formatu przyszła przezroczystość.",
-    n3h:"Zachowa to, co przyszło z plikiem",
-    n3p:"Obrót, o który prosi telefon, jest nanoszony na piksele i wyrzucany razem z resztą: obraz stoi prosto wszędzie i nie mówi już, gdzie powstał.",
+    n3h:"Metadane",
+    n3p:"PNG może zachować metadane kolorów. Niezmienione pliki zachowują metadane. Anonimizacja nie jest gwarantowana.",
     cap1:"w trakcie konwersji",
     unix:"<b>Eksperymentalne i nigdy nie uruchomione przez autora.</b> Istnieje port dla GNOME Files, KDE Dolphin, XFCE Thunar i Findera na macOS. Powstał na Windows: powłoka i property listy są poprawne, i tylko tyle zostało sprawdzone.",
     s6:"Sprawdzone na jednej maszynie",
@@ -560,12 +556,12 @@ var T = {
     l5:"Исправить строку",
     status:"Windows 10 и 11, без прав администратора",
     h1a:"Правый клик по картинке.", h1b:"Она возвращается легче.",
-    lede:"Один пункт в контекстном меню, кодирование берёт на себя <b>jpegli</b> от Google. Он никогда не возвращает файл тяжелее полученного и ничего с собой не тащит: ни Exif, ни GPS, ни цветового профиля.",
+    lede:"Оптимизация изображений с <b>jpegli</b> от Google. Сжатие JPEG происходит с потерями; оригиналы сохраняются.",
     copy:"копировать",
     after:"Проверено по SHA-256, который GitHub публикует для релиза. Удаляется так же просто, через uninstall.ps1.",
     afterLin:"Нужен cjpegli, а oxipng и dwebp используются, если есть: <code>apt install libjxl-tools oxipng webp</code>. Экспериментально, автор это не запускал.",
     afterMac:"Нужен cjpegli, а oxipng и dwebp используются, если есть: <code>brew install jpeg-xl oxipng webp</code>. Экспериментально, автор это не запускал.",
-    s1:"На настоящих файлах", s2:"Три вещи, которых он не сделает", s3:"Весь интерфейс",
+    s1:"Примеры прошлых тестов; экономия различается", s2:"Как обрабатываются файлы", s3:"Весь интерфейс",
     s4:"Linux и macOS", s5:"Установить",
     th1:"что вы ему даёте", th2:"было", th3:"стало",
     r1:"фотография", r2:"отсканированный документ", r3:"логотип с прозрачностью",
@@ -574,8 +570,8 @@ var T = {
     n1p:"Снимок экрана здесь вырос на 88 %, значок — на 448 %. Такие JPEG не записываются никогда: изображение сжимается без потерь или возвращается нетронутым.",
     n2h:"Положит прозрачность на белое",
     n2p:"Изображение с прозрачными пикселями сжимается как PNG, без потерь, из какого бы формата прозрачность ни пришла.",
-    n3h:"Сохранит то, что пришло вместе с файлом",
-    n3p:"Поворот, о котором просит телефон, применяется к пикселям и выбрасывается вместе с остальным: снимок везде стоит правильно и больше не говорит, где он сделан.",
+    n3h:"Метаданные",
+    n3p:"PNG может сохранять метаданные цвета. Неизменённые файлы сохраняют свои метаданные. Анонимизация не гарантируется.",
     cap1:"во время преобразования",
     unix:"<b>Экспериментально, автор ни разу это не запускал.</b> Есть порт для GNOME Files, KDE Dolphin, XFCE Thunar и Finder на macOS. Он написан под Windows: оболочка и property-списки корректны, и это всё, что проверено.",
     s6:"Проверено на одной машине",
@@ -588,12 +584,12 @@ var T = {
     l5:"一行なおす",
     status:"Windows 10 と 11、管理者権限は不要",
     h1a:"画像を右クリック。", h1b:"軽くなって返ってきます。",
-    lede:"右クリックメニューに項目がひとつ。符号化は Google の <b>jpegli</b> が担当します。渡したものより重いファイルを返すことはなく、余計なものも持ち出しません。Exif も GPS もカラープロファイルもありません。",
+    lede:"Google の <b>jpegli</b> で画像を最適化します。JPEG 圧縮は非可逆です。元のファイルは保持されます。",
     copy:"コピー",
     after:"GitHub がリリースごとに公開する SHA-256 と照合しています。uninstall.ps1 で同じように外せます。",
     afterLin:"cjpegli が必要で、oxipng と dwebp があれば使います：<code>apt install libjxl-tools oxipng webp</code>。実験的で、作者は一度も実行していません。",
     afterMac:"cjpegli が必要で、oxipng と dwebp があれば使います：<code>brew install jpeg-xl oxipng webp</code>。実験的で、作者は一度も実行していません。",
-    s1:"実際のファイルで", s2:"やらないこと 3 つ", s3:"画面はこれで全部",
+    s1:"過去の測定例：削減量は画像によって異なります", s2:"ファイルの処理方法", s3:"画面はこれで全部",
     s4:"Linux と macOS", s5:"入手する",
     th1:"渡すもの", th2:"変換前", th3:"変換後",
     r1:"写真", r2:"スキャンした書類", r3:"透過つきのロゴ",
@@ -602,8 +598,8 @@ var T = {
     n1p:"ここではスクリーンショットが 88 %、アイコンが 448 % 膨らみました。そうした JPEG は決して書き出しません。代わりに可逆で圧縮するか、元のまま返します。",
     n2h:"透過を白で塗りつぶす",
     n2p:"透けるピクセルを持つ画像は、透明度がどの形式から来たかを問わず、PNG のまま可逆圧縮します。",
-    n3h:"ファイルに付いてきたものを残す",
-    n3p:"スマートフォンが要求する回転は画素に適用したうえで、ほかのすべてと一緒に捨てます。どこで見ても正しい向きで、撮影場所も語りません。",
+    n3h:"メタデータ",
+    n3p:"PNG には色に関するメタデータが残る場合があります。変更しないファイルのメタデータは保持されます。匿名化は保証されません。",
     cap1:"変換中",
     unix:"<b>実験的で、作者自身が一度も実行していません。</b> GNOME Files、KDE Dolphin、XFCE Thunar、macOS の Finder 向けの移植があります。Windows 上で書かれ、シェルとプロパティリストが構文として正しいこと、確認できているのはそれだけです。",
     s6:"確認できたのは一台だけ",
@@ -616,12 +612,12 @@ var T = {
     l5:"改一行",
     status:"Windows 10 与 11，无需管理员权限",
     h1a:"右键点一张图。", h1b:"它会变得更小。",
-    lede:"右键菜单里只多一项，编码交给 Google 的 <b>jpegli</b>。它绝不会还给你一个比原来更大的文件，也不会带走任何东西：没有 Exif，没有 GPS，没有色彩配置文件。",
+    lede:"使用 Google 的 <b>jpegli</b> 优化图片。JPEG 压缩是有损的，原文件会被保留。",
     copy:"复制",
     after:"已用 GitHub 为该版本发布的 SHA-256 校验。用 uninstall.ps1 同样干净地卸载。",
     afterLin:"需要 cjpegli，若装有 oxipng 与 dwebp 也会用上：<code>apt install libjxl-tools oxipng webp</code>。实验性质，作者从未运行过。",
     afterMac:"需要 cjpegli，若装有 oxipng 与 dwebp 也会用上：<code>brew install jpeg-xl oxipng webp</code>。实验性质，作者从未运行过。",
-    s1:"在真实文件上", s2:"它不做的三件事", s3:"界面就这些",
+    s1:"历史测试示例：压缩效果因图片而异", s2:"文件处理方式", s3:"界面就这些",
     s4:"Linux 与 macOS", s5:"获取",
     th1:"交给它的东西", th2:"之前", th3:"之后",
     r1:"一张照片", r2:"一份扫描件", r3:"一个透明标志",
@@ -630,8 +626,8 @@ var T = {
     n1p:"这里截图涨了 88 %，图标涨了 448 %。这样的 JPEG 从不写出：图片改用无损方式压缩，或者原样奉还。",
     n2h:"把透明压成白底",
     n2p:"含透明像素的图片会以 PNG 无损压缩，无论透明度来自哪种格式。",
-    n3h:"留下随文件一起来的东西",
-    n3p:"手机要求的旋转会应用到像素上，然后和其他信息一起丢弃：图片到哪儿都是正的，也不会说出拍摄地点。",
+    n3h:"元数据",
+    n3p:"PNG 可能保留颜色元数据。未修改的文件保留其元数据。本工具不保证匿名化。",
     cap1:"转换过程中",
     unix:"<b>实验性质，作者从未运行过。</b> 有一个面向 GNOME Files、KDE Dolphin、XFCE Thunar 和 macOS Finder 的移植版。它写于 Windows：shell 与属性列表语法有效，已核实的仅此而已。",
     s6:"只在一台机器上验证过",
