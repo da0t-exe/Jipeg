@@ -40,7 +40,7 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text            = $L.stTitle
 $form.FormBorderStyle = 'FixedDialog'
 $form.StartPosition   = 'CenterScreen'
-$form.ClientSize      = New-Object System.Drawing.Size($W, 798)
+$form.ClientSize      = New-Object System.Drawing.Size($W, $JipegDesignHeight)
 # Everything below is written in the units the window was designed in; WinForms
 # multiplies them by the screen's scaling for us, so long as the process is
 # DPI-aware, which Jipeg-Common arranges before any window exists.
@@ -544,5 +544,8 @@ $form.Add_Shown({
     Start-Check                    # look for a newer release straight away
 })
 Set-JipegScaleForm $form
+# Windows can clamp the unscaled window when a child creates its handle on a
+# small desktop. Restore the intended client size after scaling the controls.
+$form.ClientSize = New-Object System.Drawing.Size((Get-JipegScaled $W), (Get-JipegScaled $JipegDesignHeight))
 Update-JipegComboRows
 [System.Windows.Forms.Application]::Run($form)
